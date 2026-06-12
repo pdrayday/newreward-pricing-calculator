@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Reward — The Work Behind the Number</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070605; --panel:#100e0b; --panel2:#171410; --field:#0c0a08;
+  --gold:#d4a24a; --gold-bright:#eec77c; --gold-deep:#9a7430;
+  --gold-line:rgba(212,162,74,.28); --gold-line-soft:rgba(212,162,74,.14);
+  --text:#f4efe5; --muted:#a39a8a; --muted2:#6f675a;
+  --green:#7fb88a; --red:#d77a6c; --radius:14px;
+  --font:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 420px at 12% -5%, rgba(212,162,74,.10), transparent 60%),
+             radial-gradient(700px 380px at 95% 8%, rgba(212,162,74,.06), transparent 60%)}
+.wrap{max-width:980px;margin:0 auto;padding:0 28px 90px;position:relative;z-index:1}
+
+header{display:flex;align-items:center;gap:22px;padding:26px 0 22px;border-bottom:1px solid var(--gold-line-soft);margin-bottom:48px}
+.head-title{flex:1}
+.wordmark{font-size:34px;font-weight:800;letter-spacing:-.015em;color:#fff;line-height:1.1}
+.wordmark span{color:var(--gold)}
+.tagline{color:var(--gold);font-size:12px;letter-spacing:.32em;text-transform:uppercase;margin-top:6px;font-weight:600}
+.motto{color:var(--muted2);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;margin-top:5px}
+
+.hero{margin-bottom:54px}
+.hero h1{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.15;color:#fff;max-width:760px}
+.hero h1 em{font-style:normal;color:var(--gold-bright)}
+.hero p{color:var(--muted);font-size:17px;max-width:680px;margin-top:18px}
+
+.sec{margin-bottom:58px}
+.kick{color:var(--gold);font-size:11.5px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+.sec h2{font-size:26px;font-weight:800;letter-spacing:-.015em;color:#fff;margin-bottom:14px}
+.sec > p{color:var(--muted);max-width:740px;margin-bottom:14px}
+.sec > p b{color:var(--text);font-weight:600}
+.gold-note{background:rgba(212,162,74,.06);border:1px solid var(--gold-line-soft);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:16px 20px;color:var(--muted);font-size:14px;max-width:740px;margin-top:18px}
+.gold-note b{color:var(--gold-bright)}
+
+.loop{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+.loop .card{background:var(--panel);border:1px solid var(--gold-line-soft);border-radius:var(--radius);padding:24px 22px}
+.loop .num{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.22em;margin-bottom:10px}
+.loop h3{font-size:17px;font-weight:700;color:#fff;margin-bottom:10px}
+.loop p{color:var(--muted);font-size:13.5px}
+.loop ul{margin:12px 0 0 0;list-style:none}
+.loop li{color:var(--muted);font-size:13px;padding:5px 0 5px 18px;position:relative;border-top:1px solid rgba(212,162,74,.08)}
+.loop li::before{content:"—";color:var(--gold-deep);position:absolute;left:0}
+
+.surfaces{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{border:1px solid var(--gold-line);color:var(--gold-bright);font-size:12.5px;font-weight:600;border-radius:999px;padding:6px 14px;background:rgba(212,162,74,.05)}
+
+table{width:100%;border-collapse:collapse;margin-top:24px;background:var(--panel);border-radius:var(--radius);overflow:hidden;font-size:14px}
+table.fb th:first-child{width:26%}
+table.fb th:nth-child(2){width:37%}
+th{background:var(--panel2);color:var(--gold);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;text-align:left;padding:14px 16px;border-bottom:1px solid var(--gold-line)}
+td{padding:14px 16px;border-bottom:1px solid rgba(212,162,74,.08);color:var(--muted);vertical-align:top}
+td b{color:var(--text);font-weight:600}
+tr:last-child td{border-bottom:none}
+.vs td:first-child{color:var(--text);font-weight:600;font-size:13.5px}
+.vs th.nr, .vs td.nr{background:rgba(212,162,74,.07)}
+.vs td.nr{color:var(--gold-bright);font-weight:600}
+.yes{color:var(--green);font-weight:700}
+.no{color:var(--red);font-weight:700}
+.part{color:var(--muted)}
+
+.price-band{background:linear-gradient(135deg, rgba(212,162,74,.10), rgba(212,162,74,.03));border:1px solid var(--gold-line);border-radius:var(--radius);padding:30px 30px;margin-top:8px}
+.price-band h3{color:#fff;font-size:19px;font-weight:800;margin-bottom:10px}
+.price-band p{color:var(--muted);font-size:14.5px;max-width:760px}
+.price-band p b{color:var(--gold-bright)}
+.price-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}
+.price-cols .pc{background:var(--field);border:1px solid var(--gold-line-soft);border-radius:12px;padding:18px 20px}
+.pc .pv{font-size:22px;font-weight:800;color:var(--gold-bright)}
+.pc .pl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);font-weight:700;margin-top:4px}
+.pc p{font-size:13px;color:var(--muted);margin-top:10px}
+
+footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--gold-line-soft);display:flex;justify-content:space-between;align-items:center}
+.of-tag{font-weight:800;color:#fff;font-size:15px}
+.of-tag b{color:var(--gold)}
+footer span{font-size:11px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase}
+
+@media (max-width:760px){
+  .loop{grid-template-columns:1fr}
+  .price-cols{grid-template-columns:1fr}
+  .hero h1{font-size:30px}
+  table{font-size:12.5px}
+  th,td{padding:10px 10px}
+}
+@media print{
+  body{background:#fff;color:#1c1812}
+  body::before{display:none}
+  .wrap{max-width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="head-title">
+    <div class="wordmark">New <span>Reward</span></div>
+    <div class="tagline">The Work Behind the Number</div>
+    <div class="motto">Get Found. Get Trusted. Get Chosen.</div>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>Your next customer just asked AI who to call.<br><em>What did it answer?</em></h1>
+  <p>Buyers don't just Google anymore — they ask ChatGPT, Gemini, and Perplexity, and they trust whatever comes back. Showing up in those answers, and in classic search, is now one connected system. This page explains what we actually do behind your monthly number, and why it works.</p>
+</div>
+
+<div class="sec">
+  <div class="kick">The Landscape</div>
+  <h2>Two battlegrounds. One system.</h2>
+  <p>Classic search still drives demand — rankings, the map pack, reviews. But a growing share of buying decisions now starts as a question to an AI assistant, and those assistants don't show ten options. They recommend <b>one or two</b>. If your business isn't the answer, a competitor is — and you never see the customer you lost.</p>
+  <p>The two battlegrounds feed each other: AI engines learn who to trust largely from the same signals that drive search — your rankings, your reviews, what credible third parties say about you, and how clearly your site answers real questions. That's why we run SEO and AEO/GEO as one program, not two line items.</p>
+  <div class="surfaces">
+    <span class="chip">Google Search</span><span class="chip">Google Map Pack</span><span class="chip">AI Overviews</span><span class="chip">ChatGPT</span><span class="chip">Gemini</span><span class="chip">Perplexity</span><span class="chip">Claude</span><span class="chip">Grok</span>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="kick">Behind the Scenes</div>
+  <h2>The proof loop: diagnose, fix, prove. Every month.</h2>
+  <p>Most agencies hand you a report. Most software hands you a score. We run a closed loop — and every cycle ends with evidence you can inspect, not a promise.</p>
+  <div class="loop">
+    <div class="card">
+      <div class="num">01 — DIAGNOSE</div>
+      <h3>Find where you disappear</h3>
+      <p>We test how you actually appear — and where you vanish — across search and every major AI engine, the way a real customer would ask.</p>
+      <ul>
+        <li>Prompt-level visibility scans across your high-intent buyer searches</li>
+        <li>Citation, competitor, and trust-gap analysis</li>
+        <li>Entity, local, and on-site signal review — ranked by revenue impact</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="num">02 — FIX</div>
+      <h3>Ship the work that moves it</h3>
+      <p>Diagnosis is the easy part. Our team executes the fixes — across content, technical structure, reputation, and your conversion path.</p>
+      <ul>
+        <li>Answer-ready content engineered for how AI reads, cites, and recommends</li>
+        <li>Schema, entity, and trust-signal work AI systems verify against</li>
+        <li>Business profile, reviews, and location signals that local answers depend on</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="num">03 — PROVE</div>
+      <h3>Show what changed</h3>
+      <p>We re-scan the same surfaces after the work ships. You see movement — or you see exactly what's still open and what we're doing about it.</p>
+      <ul>
+        <li>Before/after re-scans on the surfaces buyers actually use</li>
+        <li>Plain-language reporting tied to demand, not vanity charts</li>
+        <li>Senior guidance on what to fix next — and what to skip</li>
+      </ul>
+    </div>
+  </div>
+  <div class="gold-note"><b>Why this is hard to do in-house:</b> each AI engine weighs trust differently, the rules shift constantly, and the work spans five different crafts — analysis, content, technical, reputation, and reporting. We run this loop across clients every day with a dedicated six-person team of senior specialists. For one business to replicate it means hiring or becoming all five — and staying current in a field that changes monthly. The question isn't whether you could learn pieces of it. It's whether that's the best use of the hours that run your business.</div>
+</div>
+
+<div class="sec">
+  <div class="kick">What You Get</div>
+  <h2>Features &amp; benefits</h2>
+  <table class="fb">
+    <tr><th>What we do</th><th>What it is</th><th>What it means for you</th></tr>
+    <tr><td><b>AI visibility scoring</b></td><td>A measured read on how you appear across Google and six AI engines, scanned at the level of real buyer questions.</td><td>You stop guessing. You know exactly where customers can't find you — and what that's costing you.</td></tr>
+    <tr><td><b>Execution built in</b></td><td>Our team ships the fixes: content, technical structure, entities, listings. Not a report you have to act on.</td><td>No backlog, no second vendor, no "great audit, now what?" The score actually moves.</td></tr>
+    <tr><td><b>Answer-ready content</b></td><td>Pages and assets engineered for how AI systems read, verify, and cite businesses.</td><td>You show up <i>in the answer</i>, not just in a list of links — for searches and questions that buy.</td></tr>
+    <tr><td><b>Local trust system</b></td><td>Business profile, review, and location-signal management for the surfaces local answers are built from.</td><td>When someone nearby asks "who's the best…", the answer is you — backed by proof AI can verify.</td></tr>
+    <tr><td><b>Evidence-based reporting</b></td><td>Before/after re-scans and plain-language reports tied to demand and revenue, every cycle.</td><td>You see exactly what your money did. Claims are only made where the data supports them.</td></tr>
+    <tr><td><b>Senior operating team</b></td><td>Six specialists — strategy, AI operations, engineering, platform, and revenue — on one loop.</td><td>Operator attention on your account. No junior account manager learning on your dime.</td></tr>
+    <tr><td><b>Aligned pricing</b></td><td>A fixed monthly fee plus a small share of <i>new, attributable</i> revenue only — never your existing baseline.</td><td>We earn more only when you make more. Our incentive is your growth, not your retainer.</td></tr>
+  </table>
+</div>
+
+<div class="sec">
+  <div class="kick">The Comparison</div>
+  <h2>Us vs. the alternatives</h2>
+  <table class="vs">
+    <tr><th></th><th class="nr">New Reward</th><th>Typical SEO agency</th><th>Audit / software tools</th><th>Do it yourself</th></tr>
+    <tr><td>Classic SEO &amp; local search</td><td class="nr"><span class="yes">✓</span> Core</td><td><span class="yes">✓</span> Core</td><td><span class="part">~ Scoring only</span></td><td><span class="part">~ As time allows</span></td></tr>
+    <tr><td>AI answers (ChatGPT, Gemini, Perplexity, AI Overviews)</td><td class="nr"><span class="yes">✓</span> Core, measured per-engine</td><td><span class="part">~ Rare or bolt-on</span></td><td><span class="part">~ Partial visibility</span></td><td><span class="no">✗</span> No way to see it</td></tr>
+    <tr><td>Who does the work</td><td class="nr">Our team ships the fixes</td><td>Varies — often reports + tickets</td><td><span class="no">✗</span> You do, from a dashboard</td><td>You do, after hours</td></tr>
+    <tr><td>Proof of what changed</td><td class="nr">Before/after re-scans, inspectable evidence</td><td>Ranking reports</td><td>A score that moves… sometimes</td><td>None</td></tr>
+    <tr><td>Reviews, listings &amp; local trust</td><td class="nr"><span class="yes">✓</span> Managed</td><td><span class="part">~ Sometimes</span></td><td><span class="no">✗</span></td><td><span class="part">~ When you remember</span></td></tr>
+    <tr><td>Pricing model</td><td class="nr">Fixed fee + share of <b>new</b> revenue only</td><td>Flat retainer, win or lose</td><td>Subscription, win or lose</td><td>Your nights and weekends</td></tr>
+    <tr><td>Your time required</td><td class="nr">Low — approve and review</td><td>Medium — you manage them</td><td>High — interpret, then execute</td><td>Highest</td></tr>
+    <tr><td>Senior attention</td><td class="nr">6-person senior team</td><td>Junior account managers common</td><td>None</td><td>—</td></tr>
+  </table>
+</div>
+
+<div class="sec">
+  <div class="kick">The Number</div>
+  <h2>How the price is built</h2>
+  <div class="price-band">
+    <h3>Sized to your market. Tied to your growth.</h3>
+    <p>Your quote isn't pulled from a rate card. It's modeled from <b>your market's difficulty</b> — competition, ad costs, demand, footprint — and <b>your visibility gap</b>: how far you are from being the answer, on every surface that matters. Bigger gap, harder market, more work. The model is deliberately conservative: unverified demand gets discounted, and revenue share is billed only on growth we can attribute above your current baseline.</p>
+    <div class="price-cols">
+      <div class="pc">
+        <div class="pv">Fixed monthly fee</div>
+        <div class="pl">Funds the work</div>
+        <p>Covers the operating loop: scans, execution, reporting, and senior attention — scoped to your market and scope.</p>
+      </div>
+      <div class="pc">
+        <div class="pv">2–10% revenue share</div>
+        <div class="pl">Aligns the outcome</div>
+        <p>Applies only to new, attributable revenue above today's baseline — never to the business you already have. It starts only after the ramp, and it's capped.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span class="of-tag">New <b>Reward</b></span>
+  <span>Get Found. Get Trusted. Get Chosen.</span>
+</footer>
+
+</div>
+</body>
+</html>
