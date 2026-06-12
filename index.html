@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Reward — Pricing Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070605;
+  --panel:#100e0b;
+  --panel2:#171410;
+  --field:#0c0a08;
+  --gold:#d4a24a;
+  --gold-bright:#eec77c;
+  --gold-deep:#9a7430;
+  --gold-line:rgba(212,162,74,.28);
+  --gold-line-soft:rgba(212,162,74,.14);
+  --text:#f4efe5;
+  --muted:#a39a8a;
+  --muted2:#6f675a;
+  --green:#7fb88a;
+  --red:#d77a6c;
+  --radius:14px;
+  --font:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 420px at 12% -5%, rgba(212,162,74,.10), transparent 60%),
+    radial-gradient(700px 380px at 95% 8%, rgba(212,162,74,.06), transparent 60%);
+}
+.wrap{max-width:1280px;margin:0 auto;padding:0 28px 80px;position:relative;z-index:1}
+
+/* ============ HEADER ============ */
+header{
+  display:flex;align-items:center;gap:22px;
+  padding:26px 0 22px;
+  border-bottom:1px solid var(--gold-line-soft);
+  margin-bottom:34px;
+}
+.head-title{flex:1}
+.wordmark{font-size:34px;font-weight:800;letter-spacing:-.015em;color:#fff;line-height:1.1}
+.wordmark span{color:var(--gold)}
+.head-title .tagline{
+  color:var(--gold);font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+  margin-top:6px;font-weight:600;
+}
+.motto{color:var(--muted2);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;margin-top:5px}
+.head-actions{display:flex;gap:10px}
+.btn{
+  font-family:var(--font);font-size:13px;font-weight:600;letter-spacing:.06em;
+  padding:11px 22px;border-radius:999px;cursor:pointer;transition:.18s;
+  text-transform:uppercase;
+}
+.btn-gold{
+  background:linear-gradient(135deg,#e9c172,#c08c34);
+  border:none;color:#171204;
+}
+.btn-gold:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-ghost{
+  background:transparent;border:1px solid var(--gold-line);color:var(--gold-bright);
+}
+.btn-ghost:hover{border-color:var(--gold);background:rgba(212,162,74,.08)}
+
+/* ============ LAYOUT ============ */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:34px;align-items:start}
+@media(max-width:1020px){
+  .grid{grid-template-columns:1fr}
+  .outputs{position:static!important}
+  .wordmark{font-size:26px}
+}
+
+/* ============ INPUT SECTIONS ============ */
+.section{
+  background:var(--panel);
+  border:1px solid var(--gold-line-soft);
+  border-radius:var(--radius);
+  padding:26px 26px 22px;
+  margin-bottom:22px;
+  position:relative;
+}
+.section::before{
+  content:"";position:absolute;left:0;top:22px;bottom:22px;width:3px;
+  background:linear-gradient(180deg,var(--gold),transparent);
+  border-radius:3px;
+}
+.sec-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.sec-num{
+  width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--gold-line);color:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;flex-shrink:0;
+}
+.sec-title{
+  font-size:12.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--text);
+}
+.sec-head::after{content:"";flex:1;height:1px;background:var(--gold-line-soft)}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.row2{grid-template-columns:1fr}}
+.fgroup{margin-bottom:16px}
+label.flabel{
+  display:flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:600;color:var(--text);
+  margin-bottom:8px;letter-spacing:.01em;
+}
+.fwrap{position:relative;display:flex;align-items:center}
+.fwrap .prefix{
+  position:absolute;left:14px;color:var(--gold);font-size:13px;font-weight:600;pointer-events:none;
+}
+.fwrap .suffix{
+  position:absolute;right:14px;color:var(--gold-deep);font-size:12px;font-weight:600;pointer-events:none;letter-spacing:.04em;
+}
+input[type=text],input[type=number],input[type=url],select{
+  width:100%;
+  background:var(--field);
+  border:1px solid rgba(212,162,74,.22);
+  border-radius:10px;
+  color:var(--text);
+  font-family:var(--font);
+  font-size:14.5px;
+  padding:12px 14px;
+  outline:none;
+  transition:border-color .15s, box-shadow .15s;
+  appearance:none;-webkit-appearance:none;-moz-appearance:textfield;
+}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input.has-prefix{padding-left:30px}
+input.has-suffix{padding-right:96px}
+input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,162,74,.13)}
+input::placeholder{color:var(--muted2)}
+select{
+  cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23d4a24a' stroke-width='1.6' stroke-linecap='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 14px center;
+  padding-right:38px;
+}
+select option{background:#171410;color:var(--text)}
+
+/* toggle switches */
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--field);border:1px solid rgba(212,162,74,.22);
+  border-radius:10px;padding:13px 16px;margin-bottom:12px;cursor:pointer;transition:.15s;
+}
+.toggle-row:hover{border-color:var(--gold-line)}
+.toggle-row .tlabel{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.slider{
+  position:absolute;inset:0;border-radius:999px;cursor:pointer;
+  background:#2a251d;border:1px solid rgba(212,162,74,.25);transition:.2s;
+}
+.slider::before{
+  content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;
+  border-radius:50%;background:#6f675a;transition:.2s;
+}
+.switch input:checked + .slider{background:linear-gradient(135deg,#e9c172,#c08c34);border-color:transparent}
+.switch input:checked + .slider::before{transform:translateX(20px);background:#171204}
+
+/* tooltip */
+.tip{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  border:1px solid var(--gold-deep);color:var(--gold);
+  font-size:9.5px;font-weight:700;cursor:help;position:relative;
+  background:transparent;font-family:var(--font);line-height:1;padding:0;
+}
+.tip:focus{outline:none;border-color:var(--gold)}
+.tip .tipbox{
+  position:absolute;bottom:140%;left:50%;transform:translateX(-50%) translateY(4px);
+  width:250px;background:#1d1913;border:1px solid rgba(212,162,74,.45);
+  padding:11px 13px;border-radius:9px;
+  font-size:12px;font-weight:400;color:var(--text);line-height:1.5;
+  letter-spacing:0;text-transform:none;text-align:left;
+  opacity:0;pointer-events:none;transition:.16s;z-index:60;
+  box-shadow:0 10px 30px rgba(0,0,0,.65);
+}
+.tip .tipbox::after{
+  content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:rgba(212,162,74,.45);
+}
+.tip:hover .tipbox,.tip:focus .tipbox{opacity:1;transform:translateX(-50%) translateY(0)}
+.tip.tip-left .tipbox{left:auto;right:-10px;transform:translateY(4px)}
+.tip.tip-left .tipbox::after{left:auto;right:14px;transform:none}
+.tip.tip-left:hover .tipbox,.tip.tip-left:focus .tipbox{transform:translateY(0)}
+
+.auto-note{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.5}
+.auto-note b{color:var(--gold);font-weight:600}
+.hintnote{
+  background:rgba(212,162,74,.06);border:1px solid var(--gold-line-soft);
+  border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--muted);
+  margin-top:4px;
+}
+.hintnote b{color:var(--gold-bright);font-weight:600}
+.scope-warn{display:none;margin-top:10px;background:rgba(212,162,74,.08);border:1px solid var(--gold-line-soft);
+  border-left:3px solid var(--gold-bright);border-radius:0 10px 10px 0;padding:11px 14px;
+  font-size:12.5px;color:var(--muted);line-height:1.55}
+.scope-warn.show{display:block}
+.scope-warn b{color:var(--gold-bright);font-weight:600}
+
+/* ============ OUTPUT PANEL ============ */
+.outputs{position:sticky;top:24px}
+.opanel{
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--gold-line);
+  border-radius:18px;
+  padding:30px 28px 24px;
+  position:relative;overflow:hidden;
+}
+.opanel::after{
+  content:"";position:absolute;left:-20%;right:-20%;bottom:-46px;height:120px;
+  background:radial-gradient(60% 100% at 50% 100%, rgba(212,162,74,.16), transparent 70%);
+  pointer-events:none;
+}
+.o-kicker{
+  font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);
+  font-weight:700;margin-bottom:6px;
+}
+.o-price{
+  font-size:54px;font-weight:800;letter-spacing:-.01em;line-height:1.05;
+  color:#ffd64f;
+  text-shadow:0 0 28px rgba(255,200,60,.45), 0 0 6px rgba(255,214,79,.25);
+}
+.o-price .permo{font-size:19px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0}
+.o-sub{color:var(--muted);font-size:12.5px;margin-top:6px}
+
+.o-share{
+  display:flex;align-items:baseline;gap:10px;margin-top:22px;
+  padding-top:20px;border-top:1px solid var(--gold-line-soft);
+}
+.o-share .share-pct{font-size:32px;font-weight:800;color:var(--gold-bright)}
+.o-share .share-desc{font-size:12.5px;color:var(--muted);line-height:1.45}
+
+.o-diff{margin-top:22px;padding-top:20px;border-top:1px solid var(--gold-line-soft)}
+.o-diff-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.o-diff-label{font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.o-diff-val{font-size:24px;font-weight:800;color:var(--text)}
+.o-diff-val span{font-size:13px;color:var(--muted2);font-weight:600}
+.diffbar{height:8px;border-radius:99px;background:#241f17;overflow:hidden}
+.diffbar .fill{
+  height:100%;border-radius:99px;width:0%;
+  background:linear-gradient(90deg,#6b5523,#d4a24a 60%,#f3d894);
+  transition:width .5s cubic-bezier(.2,.8,.2,1);
+}
+.o-diff-word{margin-top:8px;font-size:13px;font-weight:600;color:var(--gold-bright)}
+.o-diff-word small{display:block;color:var(--muted2);font-weight:400;font-size:11.5px;margin-top:2px}
+
+.ocards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+.ocard{
+  background:rgba(212,162,74,.05);border:1px solid var(--gold-line-soft);
+  border-radius:12px;padding:14px 15px;
+}
+.ocard .oc-label{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted2);font-weight:700;margin-bottom:5px}
+.ocard .oc-val{font-size:20px;font-weight:700;color:var(--text)}
+.ocard .oc-val.gold{color:var(--gold-bright)}
+.ocard .oc-note{font-size:10.5px;color:var(--muted2);margin-top:3px}
+.badge{
+  display:inline-block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;margin-top:4px;
+}
+.badge.good{background:rgba(127,184,138,.12);color:var(--green);border:1px solid rgba(127,184,138,.35)}
+.badge.mid{background:rgba(212,162,74,.12);color:var(--gold-bright);border:1px solid var(--gold-line)}
+.badge.bad{background:rgba(215,122,108,.12);color:var(--red);border:1px solid rgba(215,122,108,.35)}
+
+.o-summary{
+  margin-top:22px;background:rgba(212,162,74,.05);
+  border-left:3px solid var(--gold);border-radius:0 12px 12px 0;
+  padding:16px 18px;font-size:13px;color:var(--text);line-height:1.65;
+}
+.o-summary .s-kick{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px}
+
+.o-assume{margin-top:18px;font-size:11.5px;color:var(--muted2);line-height:1.7}
+.o-assume b{color:var(--muted);font-weight:600}
+.o-foot{
+  margin-top:20px;padding-top:16px;border-top:1px solid var(--gold-line-soft);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.o-foot .of-tag{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-deep);font-weight:700}
+
+/* editable negotiation fields */
+.edit-num{display:flex;align-items:baseline;gap:2px}
+.edit-num .cur{font-size:19px;font-weight:700;color:var(--gold-deep)}
+.edit-num input{
+  background:transparent;border:none;border-bottom:1px dashed rgba(212,162,74,.45);
+  color:var(--gold-bright);font-family:var(--font);font-size:30px;font-weight:800;
+  width:120px;padding:0 0 2px;outline:none;border-radius:0;box-shadow:none;
+  transition:border-color .15s,color .15s;
+}
+.edit-num input:focus{border-bottom:1px solid var(--gold);box-shadow:none}
+.edit-num input.too-low{color:var(--red);border-bottom-color:rgba(215,122,108,.7)}
+#o-share-edit{width:66px}
+.neg-note{display:inline-block;margin-top:4px;font-size:11px;color:var(--muted2)}
+.neg-note a{color:var(--gold);text-decoration:none;border-bottom:1px dotted var(--gold-deep);cursor:pointer}
+.neg-warn{display:none;margin-top:10px;background:rgba(215,122,108,.10);border:1px solid rgba(215,122,108,.4);
+  border-left:3px solid var(--red);border-radius:0 10px 10px 0;padding:10px 13px;
+  font-size:12px;color:#e8a99e;line-height:1.5}
+.neg-warn.show{display:block}
+
+/* projection chart + timeline */
+.o-proj{margin-top:22px;padding-top:20px;border-top:1px solid var(--gold-line-soft)}
+.proj-key{display:flex;align-items:center;font-size:10px;color:var(--muted);letter-spacing:.05em}
+.proj-key .kk{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 5px 0 10px}
+.proj-key .k-rev{background:linear-gradient(180deg,#eec77c,#a87c2e)}
+.proj-key .k-cost{background:#241f17;border:1px solid rgba(212,162,74,.45)}
+#o-chart{margin-top:10px}
+#o-chart svg{width:100%;display:block}
+#o-chart text{fill:var(--muted2);font-size:9.5px;font-family:var(--font)}
+.o-timeline{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.65}
+.o-timeline b{color:var(--gold-bright);font-weight:600}
+
+/* gold wave */
+.wave{margin:6px 0 -10px;opacity:.85}
+
+/* ============ PRINT ============ */
+@media print{
+  body{background:#fff;color:#171410}
+  body::before{display:none}
+  .head-actions,.no-print{display:none!important}
+  .wrap{padding:0;max-width:100%}
+  .grid{grid-template-columns:1fr 1fr;gap:20px}
+  .section,.opanel{background:#fff;border-color:#d8c9a8;break-inside:avoid}
+  .sec-title,.flabel,.o-diff-val,.ocard .oc-val,.o-summary{color:#171410}
+  .o-price{-webkit-text-fill-color:#9a7430;color:#9a7430;background:none}
+  input,select,.toggle-row{background:#faf7f0;color:#171410;border-color:#d8c9a8}
+  .outputs{position:static}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="head-title">
+    <div class="wordmark">New <span>Reward</span></div>
+    <div class="tagline">Pricing Calculator</div>
+    <div class="motto">Get Found. Get Trusted. Get Chosen.</div>
+  </div>
+  <div class="head-actions">
+    <button class="btn btn-ghost" onclick="resetAll()">Reset</button>
+  </div>
+</header>
+
+<div class="grid">
+
+<!-- ================= INPUTS ================= -->
+<div class="inputs">
+
+  <!-- 01 TARGET -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">01</div><div class="sec-title">Target Client</div></div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Client name
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The business you are quoting. Appears in the summary and on the printed proposal.</span></button>
+        </label>
+        <div class="fwrap"><input type="text" id="client" placeholder="Target client"></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Website
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The client's current website. Used as the subject of the visibility audit and quote.</span></button>
+        </label>
+        <div class="fwrap"><input type="url" id="website" placeholder="https://example.com"></div>
+      </div>
+    </div>
+    <div class="fgroup" style="margin-bottom:4px">
+      <label class="flabel">Search phrase or city
+        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The money phrase a customer would type to find this business — e.g. "auto repair sandy ut". Anchors the market we size the quote against.</span></button>
+      </label>
+      <div class="fwrap"><input type="text" id="phrase" placeholder="best med spa near me"></div>
+    </div>
+  </div>
+
+  <!-- 02 MARKET -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">02</div><div class="sec-title">Competition Level &amp; Visibility</div></div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Industry model
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The type of business: everyday local service (salon, auto repair), high-ticket local (med spa, legal, roofing), B2B service, or e-commerce/national brand. Each carries different competition levels and customer values.</span></button>
+        </label>
+        <div class="fwrap"><select id="industry">
+          <option value="local">Local service</option>
+          <option value="highticket">High-ticket local</option>
+          <option value="b2b">B2B service</option>
+          <option value="ecom">E-commerce / National</option>
+        </select></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Market footprint
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How wide the client wants to win: one city, several locations, statewide, or national. Wider footprints mean more competitors and more pages, answers, and listings to optimize.</span></button>
+        </label>
+        <div class="fwrap"><select id="footprint">
+          <option value="local">One local market</option>
+          <option value="multi">2–5 markets</option>
+          <option value="metro">Major metro / regional</option>
+          <option value="national">National / non-geo restricted</option>
+        </select></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Estimated phrase volume
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Monthly searches for the target phrase and its close variants. Leave 0 and the calculator estimates it from the industry and footprint.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="volume" class="has-suffix" value="0" min="0"><span class="suffix">searches/mo</span></div>
+        <div class="auto-note" id="note-vol"></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Volume source
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Verified sources (Keyword Planner, Semrush, GSC) count in full; other sources apply a conservative 10–20% adjustment so demand is never overstated.</span></button>
+        </label>
+        <div class="fwrap"><select id="volsource">
+          <option value="none">Not checked yet</option>
+          <option value="kwp">Google Keyword Planner</option>
+          <option value="semrush">Semrush</option>
+          <option value="gsc">GSC</option>
+          <option value="trends">Google Trends</option>
+          <option value="aiprompt">AI prompt test</option>
+          <option value="manual">Manual estimate</option>
+        </select></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Typical search ad cost
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one click costs on Google Ads for this phrase (CPC). High ad prices signal a competitive, high-value market — and show what the client avoids paying once organic visibility takes over.</span></button>
+        </label>
+        <div class="fwrap"><span class="prefix">$</span><input type="number" id="cpc" class="has-prefix" value="9" min="0" step="0.5"></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
+  </div>
+
+  <!-- 03 SCOPE -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">03</div><div class="sec-title">Scope</div></div>
+    <label class="toggle-row" for="scopeSeo">
+      <span class="tlabel">SEO included
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Classic search engine optimization: Google rankings, local map pack, on-page work, content, and authority building so the client gets found.</span></button>
+      </span>
+      <span class="switch"><input type="checkbox" id="scopeSeo" checked><span class="slider"></span></span>
+    </label>
+    <label class="toggle-row" for="scopeGeo" style="margin-bottom:4px">
+      <span class="tlabel">AEO / GEO included
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Answer & generative engine optimization: making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.</span></button>
+      </span>
+      <span class="switch"><input type="checkbox" id="scopeGeo" checked><span class="slider"></span></span>
+    </label>
+    <div class="scope-warn" id="scope-warn"></div>
+  </div>
+
+  <!-- 04 CURRENT VISIBILITY -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">04</div><div class="sec-title">Current Visibility</div></div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Average search rank
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the client currently ranks on Google for their money phrases, on average. Position 1–3 wins clicks; past 10 means page two — effectively invisible.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="rank" class="has-suffix" value="28" min="1" max="100"><span class="suffix">rank</span></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">SEO visibility score
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how visible the client is in traditional Google search today. Lower score = bigger gap = more new customers available to win, and more work to do — it shapes both the revenue projection and the price.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="seoScore" class="has-suffix" value="35" min="0" max="100"><span class="suffix">/100</span></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">AEO/GEO visibility score
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how often AI assistants (ChatGPT, Gemini, Perplexity, AI Overviews) mention or recommend the client today. Most local businesses score under 25 — and the lower the score, the more untapped revenue the model credits to the program.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="geoScore" class="has-suffix" value="22" min="0" max="100"><span class="suffix">/100</span></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
+  </div>
+
+  <!-- 05 CLIENT ECONOMICS -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">05</div><div class="sec-title">Client Economics — Feasibility</div></div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Avg customer value / year
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one customer pays per year (e.g., a $75/mo pest plan = $900/yr). Revenue projections use this yearly number — not lifetime value — so growth is never overstated. Leave blank for an industry benchmark.</span></button>
+        </label>
+        <div class="fwrap"><span class="prefix">$</span><input type="number" id="yearly" class="has-prefix" placeholder="Auto-estimated" min="0"></div>
+        <div class="auto-note" id="note-yr"></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Typical retention
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How many years a customer usually stays. Sets the churn rate in the 12-month projection — shorter retention means accumulated customers fall away faster and the compounding flattens.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="years" class="has-suffix" value="3" min="1" max="20"><span class="suffix">years</span></div>
+        <div class="auto-note" id="note-ltv"></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Current trackable revenue
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Monthly revenue the client can already attribute to their website or search. Sets the baseline the revenue share applies above — and if it's greater than $0, attribution is already proven, which raises the billable attribution factor by 5%.</span></button>
+        </label>
+        <div class="fwrap"><span class="prefix">$</span><input type="number" id="trackrev" class="has-prefix" value="0" min="0"></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Conversion rate
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the people who call, message, or visit, the percentage that become paying customers. Used to turn search demand into projected revenue. Typical: 10–30% for local services.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="convrate" class="has-suffix" value="10" min="1" max="100"><span class="suffix">%</span></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Gross margin
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What the client keeps from each sale after direct costs. Higher margins support a higher revenue share; thin margins push the share toward the 2% floor.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="margin" class="has-suffix" value="50" min="0" max="95"><span class="suffix">%</span></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Customer acquisition budget
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Share of revenue the client is willing to spend to win a new customer. 10–20% is healthy for growth-mode businesses.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="acq" class="has-suffix" value="15" min="0" max="60"><span class="suffix">%</span></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Sales commission
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Commission the client already pays staff or reps on each sale. It stacks with our revenue share, so high commissions lower the share we ask for.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 TRACKING & BILLING -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">06</div><div class="sec-title">Tracking &amp; Billing</div></div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Tracking setup
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How much measurement access we have today: full (analytics + call tracking + CRM), partial, or none yet. Better tracking lets us attribute results confidently and supports a revenue-share deal.</span></button>
+        </label>
+        <div class="fwrap"><select id="tracking">
+          <option value="full">Full access</option>
+          <option value="partial" selected>Partial access</option>
+          <option value="none">No access yet</option>
+        </select></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Data confidence
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How solid the numbers behind this quote are: verified with the client's own data, estimated from research, or unknown. Drives the review window and viability score.</span></button>
+        </label>
+        <div class="fwrap"><select id="confidence">
+          <option value="verified">Verified with client data</option>
+          <option value="estimated" selected>Estimated from research</option>
+          <option value="unknown">Unknown</option>
+        </select></div>
+      </div>
+    </div>
+    <div class="hintnote"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
+  </div>
+
+</div>
+
+<!-- ================= OUTPUTS ================= -->
+<div class="outputs">
+  <div class="opanel">
+    <div class="o-kicker">Projected ROI</div>
+    <div class="o-price"><span id="o-roi">—</span><span class="permo" id="o-roi-unit"></span></div>
+    <div class="o-sub" id="o-roi-sub">Estimated return on the monthly program investment</div>
+
+    <div class="o-share">
+      <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><span class="cur">$</span><input id="o-price-edit" type="number" min="0" step="50" aria-label="Negotiated fixed monthly price"></div>
+      <div class="share-desc"><b style="color:var(--text)">Fixed monthly investment</b> — <span id="o-price-sub">program fee</span><br><span class="neg-note" id="o-price-note"></span></div>
+    </div>
+    <div class="neg-warn" id="o-price-warn"></div>
+
+    <div class="o-share">
+      <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="100" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
+      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> on attributable <b style="color:var(--gold-bright)">new net revenue</b> — growth above today's baseline only. Begins <span id="o-ramp">month 2</span>.<br><span class="neg-note" id="o-share-note"></span></div>
+    </div>
+    <div class="neg-warn" id="o-share-warn"></div>
+
+    <div class="o-diff">
+      <div class="o-diff-top">
+        <span class="o-diff-label">Market difficulty</span>
+        <span class="o-diff-val" id="o-diff">—<span>/10</span></span>
+      </div>
+      <div class="diffbar"><div class="fill" id="o-diffbar"></div></div>
+      <div class="o-diff-word" id="o-diffword">—<small id="o-diffnote">Based on industry, footprint, ad costs, and demand.</small></div>
+    </div>
+
+    <div class="o-proj">
+      <div class="o-diff-top">
+        <span class="o-diff-label">12-Month Projection</span>
+        <span class="proj-key"><i class="kk k-rev"></i>New revenue<i class="kk k-cost"></i>Your cost</span>
+      </div>
+      <div id="o-chart"></div>
+      <div class="o-timeline" id="o-timeline"></div>
+    </div>
+
+    <div class="ocards">
+      <div class="ocard">
+        <div class="oc-label">New customers / month</div>
+        <div class="oc-val gold" id="o-cust">—</div>
+        <div class="oc-note" id="o-cust-note">modeled, once ramped</div>
+      </div>
+      <div class="ocard">
+        <div class="oc-label">New contracts signed / month</div>
+        <div class="oc-val gold" id="o-arrpm">$—</div>
+        <div class="oc-note" id="o-arrpm-note">customers × value per year</div>
+      </div>
+      <div class="ocard">
+        <div class="oc-label">Revenue pace by month 12</div>
+        <div class="oc-val gold" id="o-runrate">$—</div>
+        <div class="oc-note" id="o-runrate-note">higher than today</div>
+      </div>
+      <div class="ocard">
+        <div class="oc-label">Rev share starts</div>
+        <div class="oc-val gold" id="o-rampcard">—</div>
+        <div class="oc-note">fixed fee only until then</div>
+      </div>
+      <div class="ocard" style="grid-column:span 2">
+        <div class="oc-label">Review window</div>
+        <div class="oc-val" id="o-window">— days</div>
+        <div class="oc-note" id="o-window-note">re-quote after tracking data lands</div>
+      </div>
+    </div>
+
+    <div class="o-summary">
+      <div class="s-kick">Plain English</div>
+      <span id="o-summary">Enter the client's basics and the quote builds itself.</span>
+    </div>
+
+    <div class="o-assume" id="o-assume"></div>
+
+    <svg class="wave" viewBox="0 0 400 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M0 30 C 90 2, 170 38, 250 18 S 370 6, 400 22" fill="none" stroke="url(#g1)" stroke-width="1.1" opacity=".9"/>
+      <path d="M0 33 C 95 8, 175 40, 255 22 S 372 10, 400 26" fill="none" stroke="url(#g1)" stroke-width=".7" opacity=".5"/>
+      <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#6b5523"/><stop offset=".5" stop-color="#e9c172"/><stop offset="1" stop-color="#6b5523"/></linearGradient></defs>
+    </svg>
+
+    <button class="btn btn-gold no-print" id="pdfbtn" style="width:100%;margin-top:6px" onclick="downloadPDF()">Download PDF</button>
+
+    <div class="o-foot">
+      <span class="of-tag">New Reward</span>
+      <span style="font-size:10.5px;color:var(--muted2)">Get Found. Get Trusted. Get Chosen.</span>
+    </div>
+  </div>
+</div>
+
+</div><!-- /grid -->
+</div><!-- /wrap -->
+
+<script>
+/* ===================== PRICING MODEL =====================
+   Benchmarks (2026 research):
+   - Local SEO retainers: $1,500–$3,500/mo typical small business
+   - Combined SEO + AEO/GEO mid-market retainers: $2,000–$8,000/mo
+   Floor: $1,500/mo. Rev share: 2–10% of attributable revenue. */
+
+const IND = {
+  local:      {w:1.00, yr:900,  yrs:2, vol:900,  name:'Local service'},
+  highticket: {w:1.45, yr:2500, yrs:3, vol:1200, name:'High-ticket local'},
+  b2b:        {w:1.20, yr:4000, yrs:3, vol:700,  name:'B2B service'},
+  ecom:       {w:1.40, yr:210,  yrs:2, vol:5200, name:'E-commerce / National'}
+};
+const FOOT = {
+  local:    {w:1.00, svc:1.00, reach:1.0, name:'one local market'},
+  multi:    {w:1.25, svc:1.20, reach:2.2, name:'a 2–5 market footprint'},
+  metro:    {w:1.55, svc:1.45, reach:3.5, name:'a major metro / regional market'},
+  national: {w:2.00, svc:1.80, reach:8.0, name:'a national market'}
+};
+/* demand-confidence haircut: unverified volume sources get a conservative discount */
+const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.90, manual:0.85};
+const DIFF_WORDS = [
+  [2,'Light competition','Visibility wins should come quickly here.'],
+  [4,'Moderate','A focused program wins this market at a steady pace.'],
+  [6,'Competitive','Established players hold the rankings — consistent work required.'],
+  [8,'Very competitive','High ad costs and entrenched competitors. Expect a longer ramp.'],
+  [10,'Cutthroat','Top-tier competition. Winning requires sustained, aggressive investment.']
+];
+
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const num = id => { const v = parseFloat(document.getElementById(id).value); return isNaN(v)?null:v; };
+const fmt$ = v => '$'+Math.round(v).toLocaleString('en-US');
+
+function computeQuote(s){
+  const ind = IND[s.industry], foot = FOOT[s.footprint];
+
+  /* ---- effective demand volume ---- */
+  const volIsAuto = !(s.volume>0);
+  const vol = volIsAuto ? Math.round(ind.vol*foot.reach) : s.volume;
+
+  /* ---- market difficulty 1–10 ---- */
+  const indN  = clamp((ind.w-1.0)/1.0, 0, 1);
+  const footN = clamp((foot.w-1.0)/1.0, 0, 1);
+  const cpcN  = clamp((s.cpc||0)/20, 0, 1);
+  const volN  = clamp(Math.log10(vol+1)/4.7, 0, 1);
+  const d01   = 0.30*indN + 0.25*footN + 0.25*cpcN + 0.20*volN;
+  const difficulty = clamp(Math.round(1 + d01*9), 1, 10);
+
+  /* ---- in-scope visibility gap: drives both effort (price) and upside (revenue) ---- */
+  const nScopes = (s.seo?1:0)+(s.geo?1:0);
+  const visAvg = nScopes>0
+      ? ((s.seo?clamp(s.seoScore??35,0,100):0)+(s.geo?clamp(s.geoScore??22,0,100):0))/nScopes : 0;
+  const visGap = nScopes>0 ? 1 - visAvg/100 : 0;
+
+  /* ---- fixed monthly price ---- */
+  let price = null;
+  if(nScopes>0){
+    const scopeBase = 600 + (s.seo?700:0) + (s.geo?500:0);
+    const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
+    const effort = 1 + 0.35*visGap + 0.15*rankN;
+    const diffMult = 1 + (difficulty-1)*0.09;
+    price = scopeBase * effort * diffMult * foot.svc;
+    price = Math.max(1500, Math.round(price/50)*50);
+  }
+
+  /* ---- customer & revenue model (yearly revenue, never LTV, drives projections) ---- */
+  const yrIsAuto = !(s.yearly>0);
+  const yearlyValue = yrIsAuto ? ind.yr : s.yearly;
+  const retainYears = clamp(s.years??ind.yrs, 1, 20);
+  const ltv = yearlyValue*retainYears;            // context only — not used in revenue math
+  // achievable click share decays in very large markets (you can't win 15% of 50k searches)
+  const clickShare = clamp(0.15*Math.pow(1500/Math.max(vol,1), 0.35), 0.03, 0.15);
+  const closeRate = clamp(s.convrate??10, 1, 100)/100;
+  // only the demand a channel isn't already capturing counts as NEW revenue:
+  // a 13/100 channel has 87% of its upside left; a 57/100 channel only 43%.
+  // both channels compound (sum × 0.8 overlap) and never model below the best single
+  const gapSeo = 1 - clamp(s.seoScore??35,0,100)/100;
+  const gapGeo = 1 - clamp(s.geoScore??22,0,100)/100;
+  const chFactor = nScopes===2 ? Math.max(gapSeo, gapGeo, (gapSeo+gapGeo)*0.8)
+                 : s.seo ? gapSeo : s.geo ? gapGeo : 0;
+  const volQ = VOLQ[s.volsource] ?? 1;
+  const newCust = vol*clickShare*closeRate*chFactor*volQ;
+  const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
+  const mrrPC = yearlyValue/12;                   // monthly revenue per customer
+
+  /* ---- revenue share 2–10% ---- */
+  let share = 5;
+  const m = s.margin??50;
+  share += m>=65?2 : m>=50?1 : m>=35?0 : m>=25?-1 : -2;
+  const a = s.acq??15;
+  share += a>=20?1 : a>=12?0.5 : a>=8?0 : -0.5;
+  const c = s.commission??8;
+  share += c>=12?-1 : c>=8?-0.5 : 0;
+  share += s.tracking==='full'?1 : s.tracking==='none'?-2 : 0;
+  share += 0.5;  // new-net-revenue basis: share applies to growth above baseline only
+  share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;
+  share = clamp(Math.round(share*2)/2, 2, 10);
+
+  /* ---- conservative attribution: we bill only on revenue we can prove.
+          existing tracked revenue means attribution is already working (+5%) ---- */
+  let attribFactor = s.confidence==='verified'?0.8 : s.confidence==='estimated'?0.5 : 0.3;
+  if((s.trackrev??0)>0) attribFactor = Math.min(0.85, attribFactor+0.05);
+
+  /* ---- rev-share start month: harder markets and missing tracking extend the
+          fixed-only ramp (2–4 months) ---- */
+  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (s.tracking==='none'?1:0), 2, 4);
+
+  const windowDays = s.confidence==='verified'?60 : 90;
+
+  return {difficulty, price, share, yearlyValue, yrIsAuto, retainYears, ltv,
+          newCust, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ,
+          vol, volIsAuto, clickShare, closeRate, rampMonth, windowDays, nScopes};
+}
+
+/* 12-month series: customers compound, revenue = accumulated customers × monthly value.
+   Billing share applies only to the attribution-discounted slice; capped at 2× fixed. */
+function buildSeries(q, price, share){
+  const months=[]; const mrr=[]; const invoice=[]; let cum=0, capped=false;
+  const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
+  for(let m=1;m<=12;m++){
+    months.push(m);
+    const f = m<q.rampMonth ? 0 : Math.min(1,(m-q.rampMonth+1)/3);
+    cum = cum*(1-churn) + q.newCust*f;
+    const rev = cum*q.mrrPC;
+    mrr.push(rev);
+    if(price!=null){
+      let sc = share/100*(rev*q.attribFactor);
+      if(sc>2*price){ sc=2*price; capped=true; }
+      invoice.push(price+sc);
+    } else invoice.push(null);
+  }
+  const year1Rev = mrr.reduce((a,b)=>a+b,0);
+  const year1Attrib = year1Rev*q.attribFactor;
+  const year1Cost = price!=null ? invoice.reduce((a,b)=>a+b,0) : null;
+  return {months, mrr, invoice, capped,
+          year1Rev, year1Attrib, year1Cost,
+          roi: year1Cost>0 ? year1Attrib/year1Cost : null,
+          exitCust: cum, exitARR: cum*q.yearlyValue, exitMRR: mrr[11], exitInvoice: invoice[11]};
+}
+
+function readState(){
+  return {
+    client: document.getElementById('client').value.trim(),
+    phrase: document.getElementById('phrase').value.trim(),
+    industry: document.getElementById('industry').value,
+    footprint: document.getElementById('footprint').value,
+    volume: num('volume'), volsource: document.getElementById('volsource').value,
+    cpc: num('cpc'),
+    seo: document.getElementById('scopeSeo').checked,
+    geo: document.getElementById('scopeGeo').checked,
+    rank: num('rank'), seoScore: num('seoScore'), geoScore: num('geoScore'),
+    yearly: num('yearly'), years: num('years'),
+    convrate: num('convrate'),
+    margin: num('margin'), acq: num('acq'), commission: num('commission'),
+    trackrev: num('trackrev'),
+    tracking: document.getElementById('tracking').value,
+    confidence: document.getElementById('confidence').value
+  };
+}
+
+const CONF_TEXT = {verified:'Verified', estimated:'Estimated', unknown:'Unknown'};
+const fmtK = v => v>=1000 ? '$'+(v/1000).toFixed(v>=10000?0:1)+'k' : '$'+Math.round(v);
+const fmtBig = v => v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : fmt$(v);
+
+/* negotiation overrides: outputs are editable live; recompute downstream numbers */
+let priceDirty=false, shareDirty=false;
+
+function getNegotiated(q){
+  let price=q.price, share=q.share;
+  if(q.price!=null && priceDirty){
+    const v=parseFloat(document.getElementById('o-price-edit').value);
+    if(v>0) price=Math.round(v);
+  }
+  if(shareDirty){
+    const v=parseFloat(document.getElementById('o-share-edit').value);
+    if(!isNaN(v)) share=clamp(v,0,100);
+  }
+  const series = buildSeries(q, price, share);
+  return {price, share, series, roi: series.roi, shareCapped: series.capped};
+}
+
+function resetNeg(kind){
+  if(kind==='price') priceDirty=false; else shareDirty=false;
+  render(); return false;
+}
+
+function renderChart(q,n){
+  const el=document.getElementById('o-chart');
+  if(n.price==null){ el.innerHTML=''; return; }
+  const {months,mrr,invoice}=n.series;
+  const maxV=Math.max(...mrr,...invoice,1);
+  const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/12;
+  let g='';
+  [0.25,0.5,0.75,1].forEach(f=>{const gy=Y1-f*(Y1-Y0);
+    g+='<line x1="'+X0+'" y1="'+gy+'" x2="'+X1+'" y2="'+gy+'" stroke="rgba(212,162,74,.10)" stroke-dasharray="3 4"/>';});
+  months.forEach((m,i)=>{
+    const cx=X0+i*gw+gw/2;
+    const rh=mrr[i]/maxV*(Y1-Y0), ch=invoice[i]/maxV*(Y1-Y0);
+    g+='<rect x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"><title>Month '+m+' new monthly revenue: '+fmt$(mrr[i])+'</title></rect>';
+    g+='<rect x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"><title>Month '+m+' total cost: '+fmt$(invoice[i])+'</title></rect>';
+    g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>';
+  });
+  g+='<text x="'+(X0-7)+'" y="'+(Y0+4)+'" text-anchor="end">'+fmtK(maxV)+'</text>';
+  g+='<text x="'+(X0-7)+'" y="'+(Y1+3)+'" text-anchor="end">$0</text>';
+  g+='<text x="'+((X0+X1)/2)+'" y="'+(Y1+24)+'" text-anchor="middle" font-size="8.5">month</text>';
+  el.innerHTML='<svg viewBox="0 0 360 142" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eec77c"/><stop offset="1" stop-color="#a87c2e"/></linearGradient></defs>'
+    +g+'</svg>';
+}
+
+function render(){
+  const s = readState();
+  const q = computeQuote(s);
+  const set = (id,v)=>document.getElementById(id).textContent = v;
+
+  const n = getNegotiated(q);
+
+  /* ROI headline — year-1, conservative attribution */
+  set('o-roi', n.roi!=null ? (n.roi>=10?Math.round(n.roi):n.roi.toFixed(1))+'×' : '—');
+  set('o-roi-unit', n.roi!=null ? ' year-1 return' : '');
+  set('o-roi-sub', n.roi!=null
+      ? 'Year 1: '+fmt$(n.series.year1Attrib)+' attributable revenue vs '+fmt$(n.series.year1Cost)
+        +' total cost — and the run-rate keeps compounding after month 12'
+      : 'Select at least one service in Scope to build the quote');
+
+  /* price + share (editable for live negotiation) */
+  const pEdit=document.getElementById('o-price-edit'), shEdit=document.getElementById('o-share-edit');
+  pEdit.disabled = q.price==null;
+  if(!priceDirty) pEdit.value = q.price!=null ? q.price : '';
+  if(!shareDirty) shEdit.value = q.share;
+  set('o-price-sub', q.price!=null
+      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' program fee'
+      : 'select a service in Scope');
+  set('o-ramp', 'month '+q.rampMonth);
+
+  /* negotiation guardrails */
+  const pNote=document.getElementById('o-price-note'), shNote=document.getElementById('o-share-note');
+  const pWarn=document.getElementById('o-price-warn'), shWarn=document.getElementById('o-share-warn');
+  pNote.innerHTML = (priceDirty&&q.price!=null)
+      ? 'negotiated — recommended '+fmt$(q.price)+' &nbsp;·&nbsp; <a onclick="return resetNeg(\'price\')">use recommended</a>' : '';
+  shNote.innerHTML = shareDirty
+      ? 'negotiated — recommended '+q.share+'% &nbsp;·&nbsp; <a onclick="return resetNeg(\'share\')">use recommended</a>' : '';
+  let pLow=false, shLow=false;
+  if(q.price!=null){
+    const floor=Math.max(1500, Math.round(q.price*0.85/50)*50);
+    pLow = n.price<floor;
+    pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Keep at least '+fmt$(floor)+' (recommended '+fmt$(q.price)+').';
+  }
+  pWarn.classList.toggle('show',pLow);
+  const shFloor=Math.max(2, q.share-1.5);
+  shLow = n.share<shFloor;
+  shWarn.innerHTML='&#9888; This revenue share is too low — below the performance floor for this engagement. Keep at least '+shFloor+'% (recommended '+q.share+'%).';
+  shWarn.classList.toggle('show',shLow);
+  pEdit.classList.toggle('too-low',pLow);
+  shEdit.classList.toggle('too-low',shLow);
+
+  /* GEO-only advisory: AI engines lean on search rankings — weak SEO caps GEO results.
+     Threshold varies by segment: local answers come from GBP/map pack/reviews (classic
+     local SEO), so local segments need stronger SEO before GEO-only is defensible;
+     B2B/national citations lean more on off-site authority, so the bar is lower. */
+  const scopeWarn = document.getElementById('scope-warn');
+  const seoSc = clamp(s.seoScore??35,0,100);
+  const localSeg = (s.industry==='local'||s.industry==='highticket') && (s.footprint==='local'||s.footprint==='multi');
+  const natSeg = s.industry==='b2b'||s.industry==='ecom'||s.footprint==='national';
+  const bundleBar = localSeg ? 60 : natSeg ? 40 : 50;
+  if(s.geo && !s.seo && seoSc < bundleBar){
+    scopeWarn.classList.add('show');
+    scopeWarn.innerHTML = '<b>Recommend the full bundle.</b> '
+      +(localSeg
+        ? 'For local businesses, AI answers pull from the map pack, Business Profile, and reviews — classic local SEO. At an SEO score of '+seoSc+'/100, GEO-only has little to stand on here.'
+        : 'AI engines draw heavily on search rankings and site authority — at an SEO score of '+seoSc+'/100, a GEO-only program hits a ceiling. Add SEO so the AI work has a foundation to cite.');
+  } else scopeWarn.classList.remove('show');
+
+  /* difficulty */
+  set('o-diff', q.difficulty);
+  document.getElementById('o-diff').innerHTML = q.difficulty+'<span>/10</span>';
+  document.getElementById('o-diffbar').style.width = (q.difficulty*10)+'%';
+  const dw = DIFF_WORDS.find(d=>q.difficulty<=d[0]);
+  set('o-diffword', dw[1]);
+  document.getElementById('o-diffword').appendChild(Object.assign(document.createElement('small'),{textContent:dw[2]}));
+
+  /* auto-estimate math notes under blank inputs */
+  document.getElementById('note-vol').innerHTML = q.volIsAuto
+      ? 'Auto: '+IND[s.industry].name+' baseline '+IND[s.industry].vol.toLocaleString()
+        +' × '+FOOT[s.footprint].reach+'× reach = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : '';
+  document.getElementById('note-yr').innerHTML = q.yrIsAuto
+      ? 'Auto: '+IND[s.industry].name+' benchmark = <b>'+fmt$(q.yearlyValue)+'/yr</b>' : '';
+  document.getElementById('note-ltv').innerHTML =
+      'Lifetime value: '+fmt$(q.yearlyValue)+' × '+q.retainYears+' yrs = <b>'+fmt$(q.ltv)+'</b> (context only)';
+
+  /* cards */
+  set('o-cust', '~'+Math.round(q.newCust));
+  set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+(q.closeRate*100).toFixed(0)+'% × '
+      +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap'));
+  set('o-arrpm', fmtK(q.arrAddedPM));
+  set('o-arrpm-note', '~'+Math.round(q.newCust)+' customers × '+fmt$(q.yearlyValue)+'/yr annual contracts');
+  set('o-runrate', '+'+fmtK(n.series.exitARR)+'/yr');
+  set('o-runrate-note', '~'+Math.round(n.series.exitCust)+' customers paying — potential, before attribution');
+  set('o-rampcard', 'Month '+q.rampMonth);
+  set('o-window', q.windowDays+' days');
+  set('o-window-note', 'data confidence: '+CONF_TEXT[s.confidence].toLowerCase());
+
+  /* projection chart + timeline */
+  renderChart(q,n);
+  document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
+    '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
+    +(q.rampMonth>2?' <b>Months 2–'+(q.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
+    +' <b>Month '+q.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline.';
+
+  /* summary */
+  const who = s.client || 'This client';
+  const where = s.phrase ? ' for “'+s.phrase+'”' : '';
+  let txt;
+  if(q.price==null){
+    txt = who+' needs at least one service selected — turn on SEO, AEO/GEO, or both to build the quote.';
+  } else {
+    txt = who+' competes in '+FOOT[s.footprint].name+where+' rated '+q.difficulty+'/10 ('+dw[1].toLowerCase()+'). '
+      + 'Once ramped, the model signs ~'+Math.round(q.newCust)+' new customers a month — roughly '+fmtK(q.arrAddedPM)
+      + ' in new annual contracts every month. The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
+      + fmt$(n.price)+'/mo fixed plus a '+n.share+'% share of attributable new net revenue beginning in month '+q.rampMonth+'. '
+      + (s.confidence==='verified'
+          ? 'Inputs are verified with client data — this quote is presentation-ready.'
+          : s.confidence==='estimated'
+          ? 'Figures are estimated from research — verify tracking within the '+q.windowDays+'-day review window.'
+          : 'Key data is unverified — treat as a draft until tracking is in place.');
+  }
+  set('o-summary', txt);
+
+  /* assumptions */
+  const parts = [];
+  parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
+    +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
+    +(q.nScopes===2?'dual-channel upside':'visibility gap')
+    +' = ~'+Math.round(q.newCust)+' customers/mo × '+fmt$(q.yearlyValue)+'/yr');
+  parts.push('<b>Attribution:</b> billed on '+Math.round(q.attribFactor*100)+'% of modeled growth until tracking proves more'
+    +(q.volQ<1?' &nbsp;·&nbsp; <b>Conservative demand model:</b> −'+Math.round((1-q.volQ)*100)+'% applied to modeled demand':''));
+  document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
+
+}
+
+function resetAll(){
+  priceDirty=false; shareDirty=false;
+  document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:10,margin:50,acq:15,commission:8,trackrev:0,yearly:'',years:3};
+  for(const k in d) document.getElementById(k).value = d[k];
+  document.getElementById('industry').value='local';
+  document.getElementById('footprint').value='local';
+  document.getElementById('volsource').value='none';
+  document.getElementById('tracking').value='partial';
+  document.getElementById('confidence').value='estimated';
+  document.getElementById('scopeSeo').checked = true;
+  document.getElementById('scopeGeo').checked = true;
+  render();
+}
+
+/* ---- PDF download: builds a branded one-page proposal (outputs + all inputs) ---- */
+function downloadPDF(){
+  if(window.jspdf && window.jspdf.jsPDF) return buildPDF();
+  const sc=document.createElement('script');
+  sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  sc.onload=buildPDF;
+  sc.onerror=()=>alert('Could not load the PDF library — check the internet connection and try again.');
+  document.head.appendChild(sc);
+}
+
+function selText(id){ return document.getElementById(id).selectedOptions[0].textContent; }
+
+function buildPDF(){
+  const s=readState(), q=computeQuote(s);
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const GOLD=[212,162,74], DGOLD=[154,116,48], DARK=[25,20,12], GRAY=[115,108,96], LBG=[250,246,238], LINE=[224,209,178];
+  const L=14, R=196, W=R-L;
+  const n=getNegotiated(q);
+  const roi=n.roi;
+  const dw=DIFF_WORDS.find(d=>q.difficulty<=d[0]);
+
+  /* header band */
+  doc.setFillColor(10,8,6); doc.rect(0,0,210,40,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(23);
+  doc.setTextColor(255,255,255); doc.text('New ',L,19);
+  doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]); doc.text('Reward', L+doc.getTextWidth('New '),19);
+  doc.setFontSize(7); doc.text('GET FOUND. GET TRUSTED. GET CHOSEN.', L, 27, {charSpace:.9});
+  doc.setFontSize(9.5); doc.text('GROWTH PROGRAM PROPOSAL', R, 17, {align:'right',charSpace:.6});
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(190,182,168);
+  doc.text(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), R, 23, {align:'right'});
+
+  /* prepared for */
+  let y=51;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  doc.text('PREPARED FOR',L,y,{charSpace:.8});
+  y+=6.5;
+  doc.setFontSize(15); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  doc.text(s.client||'Prospective Client',L,y);
+  const meta=[s.website, s.phrase?('Target: "'+s.phrase+'"'):null].filter(Boolean).join('   |   ');
+  if(meta){ y+=5.5; doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.text(meta,L,y); }
+  y+=7; doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5); doc.line(L,y,R,y);
+
+  /* metric boxes */
+  y+=6;
+  const box=(x,w,h,label,val,note,valColor,big,hero)=>{
+    const labC=hero?[94,63,12]:GRAY, noteC=hero?[94,63,12]:GRAY, valC=hero?[26,17,3]:valColor;
+    if(hero){ doc.setFillColor(235,179,68); doc.setDrawColor(198,142,38); }
+    else { doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(LINE[0],LINE[1],LINE[2]); }
+    doc.setLineWidth(.3);
+    doc.roundedRect(x,y,w,h,2,2,'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(labC[0],labC[1],labC[2]);
+    doc.text(label,x+5,y+6.5,{charSpace:.5});
+    doc.setFontSize(big?(hero?19:18):13); doc.setTextColor(valC[0],valC[1],valC[2]);
+    doc.text(String(val),x+5,y+(big?16:14.5));
+    if(note){ doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(noteC[0],noteC[1],noteC[2]);
+      doc.splitTextToSize(note,w-10).slice(0,2).forEach((ln,i)=>doc.text(ln,x+5,y+(big?21.5:19.5)+i*3.3)); }
+  };
+  const h1=28;
+  box(L,59,h1,'YEAR-1 ROI', roi!=null?((roi>=10?Math.round(roi):roi.toFixed(1))+'× return'):'—', roi!=null?('attributable revenue vs total cost, months 1–12'):'select a service', DGOLD, true, true);
+  box(L+63,59,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'))+' program fee'+((priceDirty&&q.price!=null&&n.price!==q.price)?' (negotiated)':''), DARK, true);
+  box(L+126,56,h1,'REVENUE SHARE', n.share+'%', 'of attributable new net revenue, from month '+q.rampMonth+((shareDirty&&n.share!==q.share)?' (negotiated)':''), DARK, true);
+
+  y+=h1+4;
+  const h2=23;
+  box(L,58,h2,'NEW CUSTOMERS', '~'+Math.round(q.newCust)+' /mo', 'modeled monthly signings once ramped', DARK);
+  box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
+  box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — potential, before attribution', DARK);
+
+  /* summary */
+  y+=h2+8;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('PLAIN ENGLISH',L,y,{charSpace:.8});
+  y+=5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  doc.splitTextToSize(document.getElementById('o-summary').textContent,W).slice(0,4).forEach(ln=>{doc.text(ln,L,y); y+=4.4;});
+
+  /* inputs for reference */
+  y+=5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('INPUTS & ASSUMPTIONS — FOR REFERENCE',L,y,{charSpace:.8});
+  y+=2.5; doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3); doc.line(L,y,R,y);
+  y+=6;
+  const rows=[
+    ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'],
+    ['Industry model', selText('industry')],
+    ['Market footprint', selText('footprint')],
+    ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')],
+    ['Volume source', selText('volsource')],
+    ['Typical search ad cost', '$'+(s.cpc??0)+'/click'],
+    ['Average search rank', String(s.rank??'—')],
+    ['SEO visibility score', (s.seoScore??0)+'/100'],
+    ['AEO/GEO visibility score', (s.geoScore??0)+'/100'],
+    ['Customer value / yr', fmt$(q.yearlyValue)+(q.yrIsAuto?' (benchmark)':'')],
+    ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'],
+    ['Conversion rate', (s.convrate??10)+'%'],
+    ['Gross margin', (s.margin??0)+'%'],
+    ['Acquisition budget', (s.acq??0)+'%'],
+    ['Sales commission', (s.commission??0)+'%'],
+    ['Current trackable revenue', fmt$(s.trackrev??0)+'/mo'],
+    ['Tracking setup', selText('tracking')],
+    ['Data confidence', selText('confidence')],
+    ['Revenue basis', 'New net revenue (above baseline)'],
+    ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
+    ['Rev share starts', 'Month '+q.rampMonth+' (fixed fee only until then)'],
+    ['Review window', q.windowDays+' days — re-quote with live data']
+  ];
+  const half=Math.ceil(rows.length/2), rowH=5.6, colW=(W+6)/2;
+  rows.forEach((r2,i)=>{
+    const col=i<half?0:1, idx=col?i-half:i, x=L+col*colW, ry=y+idx*rowH;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+    doc.text(r2[0],x,ry);
+    doc.setFont('helvetica','bold'); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+    doc.text(String(r2[1]),x+colW-9,ry,{align:'right'});
+  });
+  y+=half*rowH+4.5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('THE CUSTOMER MATH',L,y,{charSpace:.8});
+  y+=4.5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
+    +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
+    +'  =  ~'+Math.round(q.newCust)+' new customers/mo';
+  doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  const math2='~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
+    +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
+    +'/yr by month 12 (before attribution).';
+  doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  y+=2.5;
+  doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  doc.text('Month'+(q.rampMonth>2?'s 1–'+(q.rampMonth-1):' 1')+' bill'+(q.rampMonth>2?'':'s')+' the fixed fee only; the share starts month '+q.rampMonth+' on growth above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.',L,y,{maxWidth:W});
+
+  /* fine-print disclosure */
+  doc.setFont('helvetica','italic'); doc.setFontSize(6.3); doc.setTextColor(150,143,130);
+  doc.text('Disclosure: The figures in this proposal are not guarantees of performance. They are viable estimates produced through extensive AI-assisted market research with human review and approval. Actual results depend on market conditions, competition, and execution.', L, Math.max(y+7, 272), {maxWidth:W});
+
+  /* footer band */
+  doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
+  doc.text('NEW REWARD',L,291,{charSpace:1});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
+  doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
+
+  const name=(s.client||'client').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'')||'client';
+  doc.save('NewReward-Proposal-'+name+'.pdf');
+}
+
+/* scope toggles define a different program — clear any negotiated overrides
+   so the recommended price always responds to SEO/GEO on/off */
+['scopeSeo','scopeGeo'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{ priceDirty=false; shareDirty=false; render(); });
+});
+document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
+  el.addEventListener('input', render);
+  el.addEventListener('change', render);
+});
+document.getElementById('o-price-edit').addEventListener('input', ()=>{ priceDirty=true; render(); });
+document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDirty=true; render(); });
+
+/* ---- URL prefill: open the calculator with ?client=...&industry=highticket&volume=1200...
+   and every matching input is filled. Used by researched demo-prep links. ---- */
+(function applyParams(){
+  const p = new URLSearchParams(location.search);
+  if(![...p.keys()].length) return;
+  const fields = ['client','website','phrase','industry','footprint','volume','volsource','cpc',
+                  'rank','seoScore','geoScore','yearly','years','trackrev','convrate','margin',
+                  'acq','commission','tracking','confidence'];
+  fields.forEach(id=>{
+    if(!p.has(id)) return;
+    const el = document.getElementById(id);
+    if(el.tagName==='SELECT' && ![...el.options].some(o=>o.value===p.get(id))) return; // ignore bad values
+    el.value = p.get(id);
+  });
+  if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
+  if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
+})();
+render();
+</script>
+</body>
+</html>
