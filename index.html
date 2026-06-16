@@ -41,6 +41,49 @@ body::before{
     radial-gradient(900px 420px at 12% -5%, rgba(212,162,74,.10), transparent 60%),
     radial-gradient(700px 380px at 95% 8%, rgba(212,162,74,.06), transparent 60%);
 }
+/* ===== ambient animated background (particles + waves, ported from home) ===== */
+.bgfx{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.fxcanvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.bgfx .aurora{position:absolute;inset:-30%;
+  background:
+    radial-gradient(38% 48% at 22% 32%, rgba(212,162,74,.16), transparent 62%),
+    radial-gradient(34% 44% at 80% 22%, rgba(238,199,124,.12), transparent 62%),
+    radial-gradient(46% 54% at 62% 82%, rgba(154,116,48,.12), transparent 62%);
+  filter:blur(18px);will-change:transform;
+  animation:auroraMove 26s ease-in-out infinite alternate}
+.bgfx .wavefx{position:absolute;left:-10%;right:-10%;bottom:6%;height:42%;opacity:.5;
+  background:radial-gradient(120% 60% at 50% 120%, rgba(238,199,124,.10), transparent 60%);
+  will-change:transform;animation:waveSway 18s ease-in-out infinite alternate}
+.bgfx .stars,.bgfx .stars2{position:absolute;inset:-25%;will-change:transform,opacity}
+.bgfx .stars{
+  background-image:
+    radial-gradient(1.6px 1.6px at 20% 30%, rgba(238,199,124,.9), transparent),
+    radial-gradient(1.2px 1.2px at 70% 60%, rgba(238,199,124,.65), transparent),
+    radial-gradient(1.6px 1.6px at 40% 80%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1.2px 1.2px at 85% 25%, rgba(238,199,124,.8), transparent),
+    radial-gradient(1.2px 1.2px at 12% 68%, rgba(238,199,124,.6), transparent),
+    radial-gradient(1.6px 1.6px at 55% 14%, rgba(255,255,255,.45), transparent),
+    radial-gradient(1.2px 1.2px at 92% 78%, rgba(238,199,124,.7), transparent),
+    radial-gradient(1.2px 1.2px at 32% 50%, rgba(238,199,124,.5), transparent);
+  background-size:560px 560px;background-repeat:repeat;
+  animation:starDrift 70s linear infinite, twinkle 7s ease-in-out infinite alternate}
+.bgfx .stars2{
+  background-image:
+    radial-gradient(1px 1px at 15% 45%, rgba(238,199,124,.55), transparent),
+    radial-gradient(1px 1px at 60% 20%, rgba(255,255,255,.4), transparent),
+    radial-gradient(1px 1px at 80% 70%, rgba(238,199,124,.5), transparent),
+    radial-gradient(1px 1px at 35% 85%, rgba(238,199,124,.45), transparent),
+    radial-gradient(1px 1px at 95% 40%, rgba(238,199,124,.4), transparent);
+  background-size:380px 380px;background-repeat:repeat;opacity:.7;
+  animation:starDrift 110s linear infinite reverse, twinkle 9s ease-in-out infinite alternate}
+@keyframes auroraMove{from{transform:translate3d(-3%,-2%,0) scale(1.04)}to{transform:translate3d(4%,3%,0) scale(1.16)}}
+@keyframes waveSway{from{transform:translate3d(-4%,0,0) scaleY(.92)}to{transform:translate3d(5%,0,0) scaleY(1.08)}}
+@keyframes starDrift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-560px,-560px,0)}}
+@keyframes twinkle{from{opacity:.45}to{opacity:.95}}
+@media(prefers-reduced-motion:reduce){
+  .bgfx .aurora,.bgfx .wavefx,.bgfx .stars,.bgfx .stars2{animation:none!important}
+}
+
 .wrap{max-width:1280px;margin:0 auto;padding:0 28px 80px;position:relative;z-index:1}
 
 /* ============ HEADER ============ */
@@ -309,6 +352,50 @@ select option{background:#171410;color:var(--text)}
   font-size:12px;color:#e8a99e;line-height:1.5}
 .neg-warn.show{display:block}
 
+/* ===== 2x ROI guardrail — flagged inputs + warning box ===== */
+input.roi-flag,select.roi-flag{
+  border-color:var(--red)!important;
+  box-shadow:0 0 0 3px rgba(215,122,108,.18)!important;
+  color:#f0b8ad;
+}
+input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
+.flabel .flag-pill{
+  display:none;align-items:center;gap:5px;margin-left:auto;
+  font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--red);background:rgba(215,122,108,.12);
+  border:1px solid rgba(215,122,108,.4);border-radius:999px;padding:2px 8px;
+}
+.flabel.roi-flag-label .flag-pill{display:inline-flex}
+.roi-warn{
+  display:none;margin-top:16px;
+  background:rgba(215,122,108,.10);border:1px solid rgba(215,122,108,.4);
+  border-left:3px solid var(--red);border-radius:0 12px 12px 0;
+  padding:14px 16px;font-size:12.5px;color:#e8a99e;line-height:1.6;
+}
+.roi-warn.show{display:block}
+.roi-warn .rw-kick{
+  font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--red);
+  font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:7px;
+}
+.roi-warn ul{margin:6px 0 0;padding-left:18px}
+.roi-warn li{margin-bottom:6px}
+.roi-warn li b{color:#f3c9c0;font-weight:700}
+.roi-warn .rw-fix{color:#ffd9a0;font-weight:700}
+/* output goes red when the return is below the 2x target */
+.o-price.roi-below{color:var(--red)!important;text-shadow:0 0 26px rgba(215,122,108,.4)}
+.o-price.roi-below .permo{color:var(--red)!important;text-shadow:none}
+.opanel.roi-below{border-color:rgba(215,122,108,.55);box-shadow:0 0 0 1px rgba(215,122,108,.22)}
+.opanel.roi-below .o-kicker{color:var(--red)}
+.roi-warn .rw-foot{margin-top:9px;color:#c99a90;font-size:11.5px;font-style:italic}
+.roi-ok{
+  display:none;margin-top:16px;
+  background:rgba(127,184,138,.08);border:1px solid rgba(127,184,138,.35);
+  border-left:3px solid var(--green);border-radius:0 12px 12px 0;
+  padding:12px 16px;font-size:12.5px;color:#bfe0c6;line-height:1.55;
+}
+.roi-ok.show{display:block}
+.roi-ok b{color:#dff2e2;font-weight:700}
+
 /* projection chart + timeline */
 .o-proj{margin-top:22px;padding-top:20px;border-top:1px solid var(--gold-line-soft)}
 .proj-key{display:flex;align-items:center;font-size:10px;color:var(--muted);letter-spacing:.05em}
@@ -328,6 +415,7 @@ select option{background:#171410;color:var(--text)}
 @media print{
   body{background:#fff;color:#171410}
   body::before{display:none}
+  .bgfx{display:none!important}
   .head-actions,.no-print{display:none!important}
   .wrap{padding:0;max-width:100%}
   .grid{grid-template-columns:1fr 1fr;gap:20px}
@@ -340,6 +428,7 @@ select option{background:#171410;color:var(--text)}
 </style>
 </head>
 <body>
+<div class="bgfx" aria-hidden="true"><span class="aurora"></span><span class="wavefx"></span><span class="stars"></span><span class="stars2"></span><canvas class="fxcanvas" id="fxcanvas"></canvas></div>
 <div class="wrap">
 
 <header>
@@ -377,7 +466,7 @@ select option{background:#171410;color:var(--text)}
     </div>
     <div class="fgroup" style="margin-bottom:4px">
       <label class="flabel">Search phrase or city
-        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The money phrase a customer would type to find this business — e.g. "auto repair sandy ut". Anchors the market we size the quote against.</span></button>
+        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here.</span></button>
       </label>
       <div class="fwrap"><input type="text" id="phrase" placeholder="best med spa near me"></div>
     </div>
@@ -412,15 +501,17 @@ select option{background:#171410;color:var(--text)}
     </div>
     <div class="row2">
       <div class="fgroup">
-        <label class="flabel">Estimated phrase volume
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Monthly searches for the target phrase and its close variants. Leave 0 and the calculator estimates it from the industry and footprint.</span></button>
+        <label class="flabel" id="lbl-volume">Estimated phrase volume
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Total monthly searches for the target phrase plus its close and more-popular variants, combined — not just the one phrase above. Leave 0 and the calculator estimates it from the industry and footprint.</span></button>
+          <span class="flag-pill">▲ demand low</span>
         </label>
         <div class="fwrap"><input type="number" id="volume" class="has-suffix" value="0" min="0"><span class="suffix">searches/mo</span></div>
         <div class="auto-note" id="note-vol"></div>
       </div>
       <div class="fgroup">
-        <label class="flabel">Volume source
+        <label class="flabel" id="lbl-volsource">Volume source
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Verified sources (Keyword Planner, Semrush, GSC) count in full; other sources apply a conservative 10–20% adjustment so demand is never overstated.</span></button>
+          <span class="flag-pill">▲ verify</span>
         </label>
         <div class="fwrap"><select id="volsource">
           <option value="none">Not checked yet</option>
@@ -473,16 +564,18 @@ select option{background:#171410;color:var(--text)}
         <div class="fwrap"><input type="number" id="rank" class="has-suffix" value="28" min="1" max="100"><span class="suffix">rank</span></div>
       </div>
       <div class="fgroup">
-        <label class="flabel">SEO visibility score
+        <label class="flabel" id="lbl-seoScore">SEO visibility score
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how visible the client is in traditional Google search today. Lower score = bigger gap = more new customers available to win, and more work to do — it shapes both the revenue projection and the price.</span></button>
+          <span class="flag-pill">gap too small</span>
         </label>
         <div class="fwrap"><input type="number" id="seoScore" class="has-suffix" value="35" min="0" max="100"><span class="suffix">/100</span></div>
       </div>
     </div>
     <div class="row2">
       <div class="fgroup">
-        <label class="flabel">AEO/GEO visibility score
+        <label class="flabel" id="lbl-geoScore">AEO/GEO visibility score
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how often AI assistants (ChatGPT, Gemini, Perplexity, AI Overviews) mention or recommend the client today. Most local businesses score under 25 — and the lower the score, the more untapped revenue the model credits to the program.</span></button>
+          <span class="flag-pill">gap too small</span>
         </label>
         <div class="fwrap"><input type="number" id="geoScore" class="has-suffix" value="22" min="0" max="100"><span class="suffix">/100</span></div>
       </div>
@@ -520,8 +613,9 @@ select option{background:#171410;color:var(--text)}
     </div>
     <div class="row2">
       <div class="fgroup">
-        <label class="flabel">Conversion rate
+        <label class="flabel" id="lbl-convrate">Conversion rate
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the people who call, message, or visit, the percentage that become paying customers. Used to turn search demand into projected revenue. Typical: 10–30% for local services.</span></button>
+          <span class="flag-pill">▲ raise</span>
         </label>
         <div class="fwrap"><input type="number" id="convrate" class="has-suffix" value="10" min="1" max="100"><span class="suffix">%</span></div>
       </div>
@@ -584,6 +678,9 @@ select option{background:#171410;color:var(--text)}
     <div class="o-kicker">Projected ROI</div>
     <div class="o-price"><span id="o-roi">—</span><span class="permo" id="o-roi-unit"></span></div>
     <div class="o-sub" id="o-roi-sub">Estimated return on the monthly program investment</div>
+
+    <div class="roi-warn" id="o-roi-warn"></div>
+    <div class="roi-ok" id="o-roi-ok"></div>
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><span class="cur">$</span><input id="o-price-edit" type="number" min="0" step="50" aria-label="Negotiated fixed monthly price"></div>
@@ -878,6 +975,126 @@ function renderChart(q,n){
     +g+'</svg>';
 }
 
+/* ===== 2× ROI guardrail =====================================================
+   A program isn't worth selling unless year-1 return clears 2×. Research basis:
+   SEO ROI averages ~0.8× at 6 mo and ~2.6× at 12 mo (e-commerce study, 2022–25),
+   with a $500/mo minimum effective spend and a 5:1 long-run norm — so a 2× YEAR-ONE
+   floor is conservative. When the modeled ROI is under 2×, this flags the demand
+   inputs that build the ROI (search volume / impressions, conversion rate,
+   SEO+GEO visibility gap, volume-source confidence) so the rep knows which lever
+   must be higher before the math works. */
+const ROI_TARGET = 2;
+const ROI_FLAGS = {
+  volume:'lbl-volume', volsource:'lbl-volsource', convrate:'lbl-convrate',
+  seoScore:'lbl-seoScore', geoScore:'lbl-geoScore'
+};
+function clearRoiFlags(){
+  for(const id in ROI_FLAGS){
+    document.getElementById(id).classList.remove('roi-flag');
+    document.getElementById(ROI_FLAGS[id]).classList.remove('roi-flag-label');
+  }
+}
+function flagRoi(id){
+  document.getElementById(id).classList.add('roi-flag');
+  document.getElementById(ROI_FLAGS[id]).classList.add('roi-flag-label');
+}
+function evalRoiGuardrail(s,q,n){
+  const warn=document.getElementById('o-roi-warn'), ok=document.getElementById('o-roi-ok');
+  const priceEl=document.querySelector('.o-price'), opanelEl=document.querySelector('.opanel');
+  const setBelow=(b)=>{ if(priceEl)priceEl.classList.toggle('roi-below',b); if(opanelEl)opanelEl.classList.toggle('roi-below',b); };
+  clearRoiFlags(); setBelow(false);
+  warn.classList.remove('show'); ok.classList.remove('show'); warn.innerHTML=''; ok.innerHTML='';
+  if(q.price==null || n.roi==null) return;
+
+  const roiTxt = n.roi>=10?Math.round(n.roi):n.roi.toFixed(1);
+  if(n.roi>=ROI_TARGET){
+    ok.classList.add('show');
+    ok.innerHTML='&#10003; <b>Clears the 2× target.</b> A '+roiTxt+'× year-1 return means there\'s enough '
+      +'demand, conversion, and visibility gap to move forward with confidence.';
+    return;
+  }
+
+  const items=[];
+
+  /* ---- single-variable solvers: what value of one input alone reaches 2×,
+          holding today's price/share and every other input constant ---- */
+  const roiWith=(patch)=>{
+    const q2=computeQuote(Object.assign({},s,patch));
+    const r=buildSeries(q2,n.price,n.share).roi;
+    return r==null?0:r;
+  };
+  // smallest value in [lo,hi] (ROI rises with the value) that reaches 2×; null if even hi falls short
+  const solveUp=(field,lo,hi)=>{
+    if(roiWith({[field]:hi})<ROI_TARGET) return null;
+    let a=lo,b=hi;
+    for(let i=0;i<46;i++){const m=(a+b)/2; if(roiWith({[field]:m})>=ROI_TARGET) b=m; else a=m;}
+    return b;
+  };
+  // largest equal SEO/GEO score that still reaches 2× (lower score = bigger gap = higher ROI)
+  const solveScore=()=>{
+    if(roiWith({seoScore:0,geoScore:0})<ROI_TARGET) return null;
+    let a=0,b=100;
+    for(let i=0;i<46;i++){const m=(a+b)/2; if(roiWith({seoScore:m,geoScore:m})>=ROI_TARGET) a=m; else b=m;}
+    return a;
+  };
+  const round2=(v)=>{const p=Math.pow(10,Math.max(0,Math.floor(Math.log10(Math.max(v,1)))-1));return Math.round(v/p)*p;};
+  const fix=(html)=>' <span class="rw-fix">'+html+'</span>';
+
+  /* demand-ceiling test: hold today's price/share, max out the other levers
+     (30% conversion, full visibility gap, verified demand) — if it still can't
+     reach 2×, the market simply doesn't have enough search demand. */
+  const best=computeQuote(Object.assign({},s,{convrate:30,seoScore:0,geoScore:0,volsource:'kwp'}));
+  const demandCeiling = !(buildSeries(best,n.price,n.share).roi>=ROI_TARGET);
+
+  /* Estimated phrase volume always feeds the ROI equation — flag it whenever the
+     return is short, not only when it's the single binding constraint. */
+  flagRoi('volume');
+  {
+    const vt=solveUp('volume', q.vol, Math.max(q.vol*60,300000));
+    items.push('<b>Estimated phrase volume — ~'+q.vol.toLocaleString()+' searches/mo.</b> '
+      +'It drives the ROI directly; more demand (a higher-volume phrase, wider footprint, or more keywords) lifts the return.'
+      +(demandCeiling ? ' <b>This is the binding constraint — even best-case conversion and a full gap can\'t reach 2× at today\'s volume.</b>' : '')
+      +(vt!=null ? fix('Target ≈ '+round2(vt).toLocaleString()+' searches/mo for a 2× return.')
+                 : ' At the current conversion and gap, volume alone won\'t reach 2× — raise those too.'));
+  }
+
+  const conv=s.convrate??10;
+  if(conv<30){
+    flagRoi('convrate');
+    const ct=solveUp('convrate', conv, 100);
+    items.push('<b>Conversion rate is '+conv+'%.</b> Local services typically close 10–30% of inbound — '
+      +'push lead response, offers, and landing pages higher.'
+      +(ct!=null ? fix('Target ≈ '+Math.ceil(ct)+'% for a 2× return.')
+                 : ' Conversion alone won\'t reach 2× — combine it with the other flags.'));
+  }
+
+  if(q.chFactor<0.6){
+    flagRoi('seoScore'); flagRoi('geoScore');
+    const sc=solveScore();
+    items.push('<b>Visibility gap is only '+Math.round(q.chFactor*100)+'%.</b> The client is already fairly '
+      +'visible, so little untapped demand is left to win.'
+      +(sc!=null ? fix('A 2× return needs the gap near '+Math.round(100-sc)+'% (visibility at/below ~'+Math.round(sc)+'/100).')
+                 : ' Even a full gap won\'t reach 2× alone — lean on demand and conversion.'));
+  }
+
+  if(q.volQ<1){
+    flagRoi('volsource');
+    const rv=roiWith({volsource:'kwp'});
+    items.push('<b>Confirm the volume source.</b> Check the demand in Keyword Planner, Semrush, or GSC to firm up the estimate.'
+      +fix('Verified, the projection is ≈ '+(rv>=10?Math.round(rv):rv.toFixed(1))+'×'+(rv>=ROI_TARGET?', clearing 2×.':'.')));
+  }
+
+  if(!items.length){
+    items.push('The demand inputs look healthy — fine-tune the program terms to reach a 2× return.');
+  }
+
+  setBelow(true);
+  warn.classList.add('show');
+  warn.innerHTML='<div class="rw-kick">&#9888; Below the 2× target — '+roiTxt+'× projected</div>'
+    +'<ul><li>'+items.join('</li><li>')+'</li></ul>'
+    +'<div class="rw-foot">Raise the inputs flagged in red to strengthen the projected return.</div>';
+}
+
 function render(){
   const s = readState();
   const q = computeQuote(s);
@@ -1005,6 +1222,9 @@ function render(){
   parts.push('<b>Attribution:</b> billed on '+Math.round(q.attribFactor*100)+'% of modeled growth until tracking proves more'
     +(q.volQ<1?' &nbsp;·&nbsp; <b>Conservative demand model:</b> −'+Math.round((1-q.volQ)*100)+'% applied to modeled demand':''));
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
+
+  /* 2× ROI guardrail — flag the demand inputs when the return is too low */
+  evalRoiGuardrail(s,q,n);
 
 }
 
@@ -1201,6 +1421,50 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
 })();
 render();
+</script>
+
+<!-- ambient particle + wave canvas (ported from the New Reward home page) -->
+<script>
+(function(){
+  var c=document.getElementById('fxcanvas'); if(!c) return;
+  var ctx=c.getContext('2d');
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var W,H,DPR,cx,cy,P=[],N=0,wt=0;
+  var COL=['238,199,124','212,162,74','255,214,120','255,236,190'];
+  function np(z){return {x:Math.random()*2-1,y:Math.random()*2-1,z:z,s:Math.random()*0.7+0.5,c:COL[(Math.random()*COL.length)|0]};}
+  function reset(p){p.x=Math.random()*2-1;p.y=Math.random()*2-1;p.z=1;p.s=Math.random()*0.7+0.5;p.c=COL[(Math.random()*COL.length)|0];}
+  function resize(){
+    DPR=Math.min(window.devicePixelRatio||1,2);
+    W=c.clientWidth;H=c.clientHeight;c.width=W*DPR;c.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+    cx=W/2;cy=H/2;N=Math.min(280,Math.round(W*H/6500));
+    P=[];for(var i=0;i<N;i++){P.push(np(Math.random()));}
+  }
+  function waves(){
+    var L=[[.12,.10,.0090,1.0,2.2,.60],[.10,.13,.0065,.75,1.8,.70],[.085,.16,.0110,1.35,1.6,.52],[.07,.09,.0050,.55,1.4,.80],[.06,.14,.0140,1.7,1.3,.44]];
+    for(var i=0;i<L.length;i++){var a=L[i][0],amp=H*L[i][1],len=L[i][2],sp=L[i][3],lw=L[i][4],yy=H*L[i][5];
+      ctx.beginPath();
+      for(var x=0;x<=W;x+=6){var y=yy+Math.sin(x*len+wt*sp)*amp*0.5+Math.sin(x*len*0.5-wt*sp*0.6)*amp*0.32; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+      ctx.strokeStyle='rgba(212,162,74,'+a+')';ctx.lineWidth=lw;ctx.shadowColor='rgba(238,199,124,'+a+')';ctx.shadowBlur=14;ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+  }
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    waves();
+    for(var i=0;i<P.length;i++){var p=P[i];
+      p.z-=0.0055*p.s; if(p.z<=0.02){reset(p);}
+      var k=1/p.z, sx=cx+p.x*cx*k*0.5, sy=cy+p.y*cy*k*0.5;
+      if(sx<-60||sx>W+60||sy<-60||sy>H+60) continue;
+      var r=Math.max(0.4,(1-p.z)*3.6*p.s), a=Math.min(1,(1-p.z)*1.15)*0.9;
+      ctx.beginPath();ctx.arc(sx,sy,r,0,6.2832);
+      ctx.fillStyle='rgba('+p.c+','+a+')';ctx.shadowColor='rgba(238,199,124,'+a+')';ctx.shadowBlur=r*5;ctx.fill();
+    }
+    ctx.shadowBlur=0; wt+=0.013; requestAnimationFrame(frame);
+  }
+  function stat(){ctx.clearRect(0,0,W,H);waves();for(var i=0;i<P.length;i++){var p=P[i];var k=1/p.z;var sx=cx+p.x*cx*k*0.5,sy=cy+p.y*cy*k*0.5;var r=Math.max(0.4,(1-p.z)*3*p.s);ctx.beginPath();ctx.arc(sx,sy,r,0,6.2832);ctx.fillStyle='rgba('+p.c+',0.5)';ctx.fill();}}
+  window.addEventListener('resize',resize,{passive:true});
+  resize(); reduce?stat():frame();
+})();
 </script>
 </body>
 </html>
