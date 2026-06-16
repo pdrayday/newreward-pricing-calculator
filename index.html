@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="noir">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{
+:root,[data-theme="noir"]{
   --bg:#070605;
   --panel:#100e0b;
   --panel2:#171410;
@@ -25,6 +25,62 @@
   --radius:14px;
   --font:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
 }
+/* ===== LIGHT MODE (Ivory) — gold page, black particles/waves, matching NewReward.com ===== */
+[data-theme="ivory"]{
+  --bg:#cda75c;
+  --panel:#d6b36c;
+  --panel2:#c19a40;
+  --field:#d6b36c;
+  --gold:#1a1206;
+  --gold-bright:#3a2a0b;
+  --gold-deep:#2a1f08;
+  --gold-line:rgba(0,0,0,.22);
+  --gold-line-soft:rgba(0,0,0,.12);
+  --text:#161003;
+  --muted:#161003;
+  --muted2:#3a3018;
+  --green:#1f5a2c;
+  --red:#7a2418;
+}
+[data-theme="ivory"] body::before{
+  background:
+    radial-gradient(900px 420px at 12% -5%, rgba(0,0,0,.05), transparent 60%),
+    radial-gradient(700px 380px at 95% 8%, rgba(0,0,0,.03), transparent 60%);
+}
+[data-theme="ivory"] .bgfx{opacity:.92}
+[data-theme="ivory"] .fxcanvas{filter:brightness(0)}
+[data-theme="ivory"] .wordmark{color:#161003}
+[data-theme="ivory"] .btn-gold{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
+[data-theme="ivory"] select{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23161003' stroke-width='1.6' stroke-linecap='round'/></svg>");
+}
+[data-theme="ivory"] select option{background:#d6b36c;color:#161003}
+[data-theme="ivory"] .switch input:checked + .slider{background:linear-gradient(135deg,#241a06,#0c0802)}
+[data-theme="ivory"] .switch input:checked + .slider::before{background:#f0d8a0}
+[data-theme="ivory"] .tip .tipbox{background:#1d1913;color:#f4efe5;border-color:rgba(0,0,0,.35)}
+[data-theme="ivory"] .o-price{color:#161003;text-shadow:none}
+[data-theme="ivory"] #o-chart rect[fill="url(#gg)"]{fill:#7a5a1e}
+/* guardrail + warning boxes readable on the gold page */
+[data-theme="ivory"] .roi-warn{background:rgba(122,36,24,.10);border-color:rgba(122,36,24,.45);color:#5e1c12}
+[data-theme="ivory"] .roi-warn .rw-kick{color:#7a2418}
+[data-theme="ivory"] .roi-warn li b{color:#3a1409}
+[data-theme="ivory"] .roi-warn .rw-fix{color:#6b4a12}
+[data-theme="ivory"] .roi-warn .rw-foot{color:#5e1c12}
+[data-theme="ivory"] .roi-ok{background:rgba(31,90,44,.12);border-color:rgba(31,90,44,.45);color:#1f5a2c}
+[data-theme="ivory"] .roi-ok b{color:#143d1e}
+[data-theme="ivory"] input.roi-flag,[data-theme="ivory"] select.roi-flag{color:#5e1c12}
+[data-theme="ivory"] .neg-warn{background:rgba(122,36,24,.10);border-color:rgba(122,36,24,.4);color:#5e1c12}
+[data-theme="ivory"] .edit-num input.too-low{color:#7a2418}
+
+/* ===== theme switch widget ===== */
+.theme-switch{position:fixed;right:18px;bottom:18px;z-index:80;display:flex;gap:6px;padding:7px;
+  background:var(--panel);border:1px solid var(--gold-line);border-radius:999px;
+  box-shadow:0 14px 34px -16px rgba(0,0,0,.7)}
+.theme-switch button{border:1px solid var(--gold-line-soft);background:transparent;color:var(--muted);
+  font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 13px;border-radius:999px;cursor:pointer;transition:.15s}
+.theme-switch button[aria-pressed="true"]{background:linear-gradient(135deg,#e9c172,#c08c34);color:#171204;border-color:transparent}
+[data-theme="ivory"] .theme-switch button[aria-pressed="true"]{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
@@ -416,7 +472,7 @@ input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
   body{background:#fff;color:#171410}
   body::before{display:none}
   .bgfx{display:none!important}
-  .head-actions,.no-print{display:none!important}
+  .head-actions,.no-print,.theme-switch{display:none!important}
   .wrap{padding:0;max-width:100%}
   .grid{grid-template-columns:1fr 1fr;gap:20px}
   .section,.opanel{background:#fff;border-color:#d8c9a8;break-inside:avoid}
@@ -764,6 +820,26 @@ input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
 
 </div><!-- /grid -->
 </div><!-- /wrap -->
+
+<div class="theme-switch no-print" role="group" aria-label="Preview theme">
+  <button data-theme="noir" aria-pressed="true">Dark</button>
+  <button data-theme="ivory" aria-pressed="false">Light</button>
+</div>
+
+<script>
+/* ===== dark / light (Noir / Ivory) theme toggle — shares preference with the site ===== */
+(function(){
+  var html=document.documentElement;
+  try{var s=localStorage.getItem('nr-theme'); if(s) html.setAttribute('data-theme',s);}catch(e){}
+  function setTheme(t){
+    html.setAttribute('data-theme',t);
+    try{localStorage.setItem('nr-theme',t);}catch(e){}
+    document.querySelectorAll('.theme-switch button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.theme===t));});
+  }
+  document.querySelectorAll('.theme-switch button').forEach(function(b){b.addEventListener('click',function(){setTheme(b.dataset.theme);});});
+  setTheme(html.getAttribute('data-theme')||'noir');
+})();
+</script>
 
 <script>
 /* ===================== PRICING MODEL =====================
