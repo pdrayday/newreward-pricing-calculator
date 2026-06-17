@@ -627,7 +627,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel" id="lbl-volsource">Volume source
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Verified sources (Keyword Planner, Semrush, GSC) count in full; other sources apply a conservative 10–20% adjustment so demand is never overstated.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Measured sources (Keyword Planner, Semrush, GSC) count in full. An AI prompt test is treated as a strong estimate (−5%); Trends/manual get a slightly larger −10–15% adjustment so demand is never overstated.</span></button>
           <span class="flag-pill">▲ verify</span>
         </label>
         <div class="fwrap"><select id="volsource">
@@ -918,7 +918,7 @@ const FOOT = {
   national: {w:2.00, svc:1.80, reach:8.0, name:'a national market'}
 };
 /* demand-confidence haircut: unverified volume sources get a conservative discount */
-const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.90, manual:0.85};
+const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
 const DIFF_WORDS = [
   [2,'Light competition','Visibility wins should come quickly here.'],
   [4,'Moderate','A focused program wins this market at a steady pace.'],
