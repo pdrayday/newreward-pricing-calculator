@@ -236,7 +236,34 @@ header{
 .sec-head::after{content:"";flex:1;height:1px;background:var(--gold-line-soft)}
 
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:640px){.row2{grid-template-columns:1fr}}
+/* ============ MOBILE ============ */
+@media(max-width:640px){
+  .row2{grid-template-columns:1fr}
+  .wrap{padding:0 16px 60px}
+  /* header wraps: title on top, toggle + reset on their own row */
+  header{flex-wrap:wrap;gap:14px;padding:20px 0 16px;margin-bottom:24px}
+  .head-title{flex:1 1 100%}
+  .wordmark{font-size:23px}
+  .head-actions{margin-left:0;flex-wrap:wrap}
+  .section{padding:20px 18px 18px;margin-bottom:16px}
+  .opanel{padding:24px 20px 20px}
+  /* ROI headline sized for small screens */
+  .o-price{font-size:42px}
+  .o-price .permo{font-size:15px}
+  /* one-column output cards */
+  .ocards{grid-template-columns:1fr}
+  .ocard[style*="span 2"]{grid-column:auto!important}
+  /* keep tooltips on-screen */
+  .tip .tipbox{width:min(240px,82vw)}
+  /* comfortable tap targets */
+  input[type=text],input[type=number],input[type=url],select{font-size:16px;padding:13px 14px}
+  .toggle-row{padding:14px 16px}
+}
+@media(max-width:380px){
+  .o-price{font-size:36px}
+  .wordmark{font-size:21px}
+  .sec-title{letter-spacing:.16em}
+}
 .fgroup{margin-bottom:16px}
 label.flabel{
   display:flex;align-items:center;gap:7px;
