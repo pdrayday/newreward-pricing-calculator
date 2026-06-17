@@ -731,10 +731,11 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel" id="lbl-convrate">Conversion rate
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the people who call, message, or visit, the percentage that become paying customers. Used to turn search demand into projected revenue. Typical: 10–30% for local services.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the website visitors search sends you, the percentage who become paying customers (visit-to-customer). Keep it realistic — low single digits for most local businesses (≈3–8%), higher only for strong high-intent niches. It drives the whole projection. Leave blank and we assume a conservative 5%.</span></button>
           <span class="flag-pill">▲ raise</span>
         </label>
-        <div class="fwrap"><input type="number" id="convrate" class="has-suffix" value="10" min="1" max="100"><span class="suffix">%</span></div>
+        <div class="fwrap"><input type="number" id="convrate" class="has-suffix" placeholder="e.g. 5" min="1" max="100"><span class="suffix">%</span></div>
+        <div class="auto-note" id="note-conv"></div>
       </div>
       <div class="fgroup">
         <label class="flabel">Gross margin
@@ -836,14 +837,14 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="oc-note" id="o-cust-note">modeled, once ramped</div>
       </div>
       <div class="ocard">
-        <div class="oc-label">New contracts signed / month</div>
+        <div class="oc-label">New recurring revenue / mo</div>
         <div class="oc-val gold" id="o-arrpm">$—</div>
-        <div class="oc-note" id="o-arrpm-note">customers × value per year</div>
+        <div class="oc-note" id="o-arrpm-note">added each month once ramped</div>
       </div>
       <div class="ocard">
-        <div class="oc-label">Revenue pace by month 12</div>
+        <div class="oc-label">Modeled run-rate by month 12</div>
         <div class="oc-val gold" id="o-runrate">$—</div>
-        <div class="oc-note" id="o-runrate-note">higher than today</div>
+        <div class="oc-note" id="o-runrate-note">potential, not guaranteed</div>
       </div>
       <div class="ocard">
         <div class="oc-label">Rev share starts</div>
@@ -969,7 +970,7 @@ function computeQuote(s){
   const ltv = yearlyValue*retainYears;            // context only — not used in revenue math
   // achievable click share decays in very large markets (you can't win 15% of 50k searches)
   const clickShare = clamp(0.15*Math.pow(1500/Math.max(vol,1), 0.35), 0.03, 0.15);
-  const closeRate = clamp(s.convrate??10, 1, 100)/100;
+  const closeRate = clamp(s.convrate??5, 1, 100)/100;
   // only the demand a channel isn't already capturing counts as NEW revenue:
   // a 13/100 channel has 87% of its upside left; a 57/100 channel only 43%.
   // both channels compound (sum × 0.8 overlap) and never model below the best single
@@ -1190,14 +1191,14 @@ function evalRoiGuardrail(s,q,n){
                  : ' At the current conversion and gap, volume alone won\'t reach 2× — raise those too.'));
   }
 
-  const conv=s.convrate??10;
-  if(conv<30){
+  const conv=s.convrate??5;
+  if(conv<8){
     flagRoi('convrate');
     const ct=solveUp('convrate', conv, 100);
-    items.push('<b>Conversion rate is '+conv+'%.</b> Local services typically close 10–30% of inbound — '
-      +'push lead response, offers, and landing pages higher.'
-      +(ct!=null ? fix('Target ≈ '+Math.ceil(ct)+'% for a 2× return.')
-                 : ' Conversion alone won\'t reach 2× — combine it with the other flags.'));
+    items.push('<b>Conversion rate is '+conv+'%.</b> Visit-to-customer averages ~4% for local services (5–8% is good) — sharpen lead response, offers, and landing pages.'
+      +(ct!=null && ct<=10 ? fix('Target ≈ '+Math.ceil(ct)+'% for a 2× return.')
+        : ct!=null ? fix('Reaching 2× on conversion alone would need ≈'+Math.ceil(ct)+'% — above what\'s realistic; lean on demand or the visibility gap instead.')
+                   : ' Conversion alone won\'t reach 2× — combine it with the other flags.'));
   }
 
   if(q.chFactor<0.6){
@@ -1306,15 +1307,17 @@ function render(){
       ? 'Auto: '+IND[s.industry].name+' benchmark = <b>'+fmt$(q.yearlyValue)+'/yr</b>' : '';
   document.getElementById('note-ltv').innerHTML =
       'Lifetime value: '+fmt$(q.yearlyValue)+' × '+q.retainYears+' yrs = <b>'+fmt$(q.ltv)+'</b> (context only)';
+  document.getElementById('note-conv').innerHTML = (s.convrate>0)
+      ? '' : 'Auto: assuming a conservative <b>5%</b> visit-to-customer — set this client’s real rate';
 
   /* cards */
   set('o-cust', '~'+Math.round(q.newCust));
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+(q.closeRate*100).toFixed(0)+'% × '
       +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap'));
-  set('o-arrpm', fmtK(q.arrAddedPM));
-  set('o-arrpm-note', '~'+Math.round(q.newCust)+' customers × '+fmt$(q.yearlyValue)+'/yr annual contracts');
+  set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
+  set('o-arrpm-note', '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value');
   set('o-runrate', '+'+fmtK(n.series.exitARR)+'/yr');
-  set('o-runrate-note', '~'+Math.round(n.series.exitCust)+' customers paying — potential, before attribution');
+  set('o-runrate-note', '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed');
   set('o-rampcard', 'Month '+q.rampMonth);
   set('o-window', q.windowDays+' days');
   set('o-window-note', 'data confidence: '+CONF_TEXT[s.confidence].toLowerCase());
@@ -1324,7 +1327,8 @@ function render(){
   document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
     '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
     +(q.rampMonth>2?' <b>Months 2–'+(q.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
-    +' <b>Month '+q.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline.';
+    +' <b>Month '+q.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline.'
+    +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Keep conversion realistic (~4–8%).</span>';
 
   /* summary */
   const who = s.client || 'This client';
@@ -1363,7 +1367,7 @@ function render(){
 function resetAll(){
   priceDirty=false; shareDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
-  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:10,margin:50,acq:15,commission:8,trackrev:0,yearly:'',years:3};
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:'',margin:50,acq:15,commission:8,trackrev:0,yearly:'',years:3};
   for(const k in d) document.getElementById(k).value = d[k];
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
@@ -1470,7 +1474,7 @@ function buildPDF(){
     ['AEO/GEO visibility score', (s.geoScore??0)+'/100'],
     ['Customer value / yr', fmt$(q.yearlyValue)+(q.yrIsAuto?' (benchmark)':'')],
     ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'],
-    ['Conversion rate', (s.convrate??10)+'%'],
+    ['Conversion rate', (s.convrate??5)+'%'],
     ['Gross margin', (s.margin??0)+'%'],
     ['Acquisition budget', (s.acq??0)+'%'],
     ['Sales commission', (s.commission??0)+'%'],
