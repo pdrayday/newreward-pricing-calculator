@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
 <title>New Reward — Pricing Calculator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root,[data-theme="noir"]{
+  color-scheme:dark;
   --bg:#070605;
   --panel:#100e0b;
   --panel2:#171410;
@@ -18,15 +20,16 @@
   --gold-line:rgba(212,162,74,.28);
   --gold-line-soft:rgba(212,162,74,.14);
   --text:#f4efe5;
-  --muted:#a39a8a;
-  --muted2:#6f675a;
+  --muted:#f4efe5;
+  --muted2:#f4efe5;
   --green:#7fb88a;
-  --red:#d77a6c;
+  --red:#e8432f;
   --radius:14px;
   --font:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
 }
-/* ===== LIGHT MODE (Ivory) — gold page, black particles/waves, matching NewReward.com ===== */
+/* ===== LIGHT MODE (Ivory) — GOLD page + BLACK particles, matching NewReward.com ===== */
 [data-theme="ivory"]{
+  color-scheme:dark;
   --bg:#cda75c;
   --panel:#d6b36c;
   --panel2:#c19a40;
@@ -38,16 +41,17 @@
   --gold-line-soft:rgba(0,0,0,.12);
   --text:#161003;
   --muted:#161003;
-  --muted2:#3a3018;
+  --muted2:#161003;
   --green:#1f5a2c;
-  --red:#7a2418;
+  --red:#c00b00;
 }
+[data-theme="ivory"] body{background:#cda75c}
 [data-theme="ivory"] body::before{
   background:
     radial-gradient(900px 420px at 12% -5%, rgba(0,0,0,.05), transparent 60%),
     radial-gradient(700px 380px at 95% 8%, rgba(0,0,0,.03), transparent 60%);
 }
-[data-theme="ivory"] .bgfx{opacity:.92}
+[data-theme="ivory"] .bgfx{opacity:.95}
 [data-theme="ivory"] .fxcanvas{filter:brightness(0)}
 [data-theme="ivory"] .wordmark{color:#161003}
 [data-theme="ivory"] .btn-gold{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
@@ -59,26 +63,50 @@
 [data-theme="ivory"] .switch input:checked + .slider::before{background:#f0d8a0}
 [data-theme="ivory"] .tip .tipbox{background:#1d1913;color:#f4efe5;border-color:rgba(0,0,0,.35)}
 [data-theme="ivory"] .o-price{color:#161003;text-shadow:none}
-[data-theme="ivory"] #o-chart rect[fill="url(#gg)"]{fill:#7a5a1e}
-/* guardrail + warning boxes readable on the gold page */
-[data-theme="ivory"] .roi-warn{background:rgba(122,36,24,.10);border-color:rgba(122,36,24,.45);color:#5e1c12}
-[data-theme="ivory"] .roi-warn .rw-kick{color:#7a2418}
-[data-theme="ivory"] .roi-warn li b{color:#3a1409}
-[data-theme="ivory"] .roi-warn .rw-fix{color:#6b4a12}
-[data-theme="ivory"] .roi-warn .rw-foot{color:#5e1c12}
-[data-theme="ivory"] .roi-ok{background:rgba(31,90,44,.12);border-color:rgba(31,90,44,.45);color:#1f5a2c}
-[data-theme="ivory"] .roi-ok b{color:#143d1e}
-[data-theme="ivory"] input.roi-flag,[data-theme="ivory"] select.roi-flag{color:#5e1c12}
-[data-theme="ivory"] .neg-warn{background:rgba(122,36,24,.10);border-color:rgba(122,36,24,.4);color:#5e1c12}
-[data-theme="ivory"] .edit-num input.too-low{color:#7a2418}
+/* chart: solid black revenue bars, white black-outlined cost bars on the gold panel */
+[data-theme="ivory"] #o-chart .bar-rev{fill:#161003!important}
+[data-theme="ivory"] #o-chart .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
+[data-theme="ivory"] .proj-key .k-rev{background:#161003}
+[data-theme="ivory"] .proj-key .k-cost{background:#ffffff;border-color:#161003}
+/* below-target figure + panel outline: strong true red, no glow */
+[data-theme="ivory"] .o-price.roi-below{color:#e8432f;-webkit-text-stroke:0;text-stroke:0;text-shadow:0 0 26px rgba(200,55,42,.45)}
+[data-theme="ivory"] .o-price.roi-below .permo{color:#e8432f}
+[data-theme="ivory"] .opanel.roi-below{border-color:#c00b00;border-width:2px;box-shadow:none}
+[data-theme="ivory"] .opanel.roi-below .o-kicker{color:#e8432f}
+/* guardrail + warning boxes: subtle dark tint on gold, red accents, black text */
+[data-theme="ivory"] .roi-warn{background:rgba(0,0,0,.055);border-color:#c00b00;color:#1a0703}
+[data-theme="ivory"] .roi-warn .rw-kick{color:#c00b00}
+[data-theme="ivory"] .roi-warn li b{color:#1a0703}
+[data-theme="ivory"] .roi-warn .rw-fix{color:#5e4108}
+[data-theme="ivory"] .roi-warn .rw-foot{color:#161003}
+[data-theme="ivory"] .roi-ok{background:rgba(0,0,0,.045);border-color:rgba(31,90,44,.55);color:#143d1e}
+[data-theme="ivory"] .roi-ok b{color:#0f3018}
+[data-theme="ivory"] input.roi-flag,[data-theme="ivory"] select.roi-flag{
+  color:#c00b00;
+  border-color:#c00b00!important;border-width:3px!important;
+  box-shadow:none!important;
+}
+[data-theme="ivory"] .flabel .flag-pill{background:#c00b00;border-color:#c00b00;color:#fff}
+[data-theme="ivory"] .neg-warn{background:rgba(0,0,0,.055);border-color:#c00b00;color:#1a0703}
+[data-theme="ivory"] .edit-num input.too-low{color:#c00b00}
+/* force ALL body text black in light mode — beats any stray light/inherited colors */
+[data-theme="ivory"] .wrap *{color:#161003 !important;-webkit-text-fill-color:#161003 !important}
+/* exceptions that must keep their own color (placed after, so they win) */
+[data-theme="ivory"] .btn-gold,[data-theme="ivory"] .btn-gold *{color:#f0d8a0 !important;-webkit-text-fill-color:#f0d8a0 !important}
+[data-theme="ivory"] .flag-pill{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important}
+[data-theme="ivory"] .tip .tipbox,[data-theme="ivory"] .tip .tipbox *{color:#f4efe5 !important;-webkit-text-fill-color:#f4efe5 !important}
+[data-theme="ivory"] .o-price.roi-below,[data-theme="ivory"] .o-price.roi-below *{color:#e8432f !important;-webkit-text-fill-color:#e8432f !important}
+[data-theme="ivory"] .opanel.roi-below .o-kicker{color:#e8432f !important;-webkit-text-fill-color:#e8432f !important}
+[data-theme="ivory"] .roi-warn .rw-kick{color:#c00b00 !important;-webkit-text-fill-color:#c00b00 !important}
+[data-theme="ivory"] .roi-ok,[data-theme="ivory"] .roi-ok *{color:#143d1e !important;-webkit-text-fill-color:#143d1e !important}
+[data-theme="ivory"] .theme-switch button[aria-pressed="true"]{color:#f0d8a0 !important}
 
 /* ===== theme switch widget ===== */
-.theme-switch{position:fixed;right:18px;bottom:18px;z-index:80;display:flex;gap:6px;padding:7px;
-  background:var(--panel);border:1px solid var(--gold-line);border-radius:999px;
-  box-shadow:0 14px 34px -16px rgba(0,0,0,.7)}
+.theme-switch{display:inline-flex;align-items:center;gap:3px;padding:3px;
+  background:var(--field);border:1px solid var(--gold-line);border-radius:999px}
 .theme-switch button{border:1px solid var(--gold-line-soft);background:transparent;color:var(--muted);
-  font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
-  padding:6px 13px;border-radius:999px;cursor:pointer;transition:.15s}
+  font-family:var(--font);font-size:8.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;cursor:pointer;transition:.15s}
 .theme-switch button[aria-pressed="true"]{background:linear-gradient(135deg,#e9c172,#c08c34);color:#171204;border-color:transparent}
 [data-theme="ivory"] .theme-switch button[aria-pressed="true"]{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -157,7 +185,7 @@ header{
   margin-top:6px;font-weight:600;
 }
 .motto{color:var(--muted2);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;margin-top:5px}
-.head-actions{display:flex;gap:10px}
+.head-actions{display:flex;gap:10px;align-items:center}
 .btn{
   font-family:var(--font);font-size:13px;font-weight:600;letter-spacing:.06em;
   padding:11px 22px;border-radius:999px;cursor:pointer;transition:.18s;
@@ -372,7 +400,7 @@ select option{background:#171410;color:var(--text)}
 }
 .badge.good{background:rgba(127,184,138,.12);color:var(--green);border:1px solid rgba(127,184,138,.35)}
 .badge.mid{background:rgba(212,162,74,.12);color:var(--gold-bright);border:1px solid var(--gold-line)}
-.badge.bad{background:rgba(215,122,108,.12);color:var(--red);border:1px solid rgba(215,122,108,.35)}
+.badge.bad{background:rgba(200,55,42,.12);color:var(--red);border:1px solid rgba(200,55,42,.35)}
 
 .o-summary{
   margin-top:22px;background:rgba(212,162,74,.05);
@@ -399,11 +427,11 @@ select option{background:#171410;color:var(--text)}
   transition:border-color .15s,color .15s;
 }
 .edit-num input:focus{border-bottom:1px solid var(--gold);box-shadow:none}
-.edit-num input.too-low{color:var(--red);border-bottom-color:rgba(215,122,108,.7)}
+.edit-num input.too-low{color:var(--red);border-bottom-color:rgba(200,55,42,.7)}
 #o-share-edit{width:66px}
 .neg-note{display:inline-block;margin-top:4px;font-size:11px;color:var(--muted2)}
 .neg-note a{color:var(--gold);text-decoration:none;border-bottom:1px dotted var(--gold-deep);cursor:pointer}
-.neg-warn{display:none;margin-top:10px;background:rgba(215,122,108,.10);border:1px solid rgba(215,122,108,.4);
+.neg-warn{display:none;margin-top:10px;background:rgba(200,55,42,.10);border:1px solid rgba(200,55,42,.4);
   border-left:3px solid var(--red);border-radius:0 10px 10px 0;padding:10px 13px;
   font-size:12px;color:#e8a99e;line-height:1.5}
 .neg-warn.show{display:block}
@@ -411,20 +439,20 @@ select option{background:#171410;color:var(--text)}
 /* ===== 2x ROI guardrail — flagged inputs + warning box ===== */
 input.roi-flag,select.roi-flag{
   border-color:var(--red)!important;
-  box-shadow:0 0 0 3px rgba(215,122,108,.18)!important;
+  box-shadow:0 0 0 3px rgba(200,55,42,.18)!important;
   color:#f0b8ad;
 }
-input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
+input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 .flabel .flag-pill{
   display:none;align-items:center;gap:5px;margin-left:auto;
   font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--red);background:rgba(215,122,108,.12);
-  border:1px solid rgba(215,122,108,.4);border-radius:999px;padding:2px 8px;
+  color:#fff;background:var(--red);
+  border:1px solid var(--red);border-radius:999px;padding:2px 8px;
 }
 .flabel.roi-flag-label .flag-pill{display:inline-flex}
 .roi-warn{
   display:none;margin-top:16px;
-  background:rgba(215,122,108,.10);border:1px solid rgba(215,122,108,.4);
+  background:rgba(200,55,42,.10);border:1px solid rgba(200,55,42,.4);
   border-left:3px solid var(--red);border-radius:0 12px 12px 0;
   padding:14px 16px;font-size:12.5px;color:#e8a99e;line-height:1.6;
 }
@@ -438,9 +466,9 @@ input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
 .roi-warn li b{color:#f3c9c0;font-weight:700}
 .roi-warn .rw-fix{color:#ffd9a0;font-weight:700}
 /* output goes red when the return is below the 2x target */
-.o-price.roi-below{color:var(--red)!important;text-shadow:0 0 26px rgba(215,122,108,.4)}
+.o-price.roi-below{color:var(--red)!important;text-shadow:0 0 26px rgba(200,55,42,.4)}
 .o-price.roi-below .permo{color:var(--red)!important;text-shadow:none}
-.opanel.roi-below{border-color:rgba(215,122,108,.55);box-shadow:0 0 0 1px rgba(215,122,108,.22)}
+.opanel.roi-below{border-color:rgba(200,55,42,.55);box-shadow:0 0 0 1px rgba(200,55,42,.22)}
 .opanel.roi-below .o-kicker{color:var(--red)}
 .roi-warn .rw-foot{margin-top:9px;color:#c99a90;font-size:11.5px;font-style:italic}
 .roi-ok{
@@ -457,10 +485,12 @@ input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
 .proj-key{display:flex;align-items:center;font-size:10px;color:var(--muted);letter-spacing:.05em}
 .proj-key .kk{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 5px 0 10px}
 .proj-key .k-rev{background:linear-gradient(180deg,#eec77c,#a87c2e)}
-.proj-key .k-cost{background:#241f17;border:1px solid rgba(212,162,74,.45)}
+.proj-key .k-cost{background:#ffffff;border:1px solid #0c0a08}
 #o-chart{margin-top:10px}
 #o-chart svg{width:100%;display:block}
 #o-chart text{fill:var(--muted2);font-size:9.5px;font-family:var(--font)}
+/* cost bars: white fill + bold black outline in BOTH themes so they never blend with revenue */
+#o-chart .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
 .o-timeline{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.65}
 .o-timeline b{color:var(--gold-bright);font-weight:600}
 
@@ -494,6 +524,10 @@ input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
     <div class="motto">Get Found. Get Trusted. Get Chosen.</div>
   </div>
   <div class="head-actions">
+    <div class="theme-switch no-print" role="group" aria-label="Preview theme">
+      <button data-theme="noir" aria-pressed="true">Dark</button>
+      <button data-theme="ivory" aria-pressed="false">Light</button>
+    </div>
     <button class="btn btn-ghost" onclick="resetAll()">Reset</button>
   </div>
 </header>
@@ -821,11 +855,6 @@ input.roi-flag::placeholder{color:rgba(215,122,108,.6)}
 </div><!-- /grid -->
 </div><!-- /wrap -->
 
-<div class="theme-switch no-print" role="group" aria-label="Preview theme">
-  <button data-theme="noir" aria-pressed="true">Dark</button>
-  <button data-theme="ivory" aria-pressed="false">Light</button>
-</div>
-
 <script>
 /* ===== dark / light (Noir / Ivory) theme toggle — shares preference with the site ===== */
 (function(){
@@ -1039,8 +1068,8 @@ function renderChart(q,n){
   months.forEach((m,i)=>{
     const cx=X0+i*gw+gw/2;
     const rh=mrr[i]/maxV*(Y1-Y0), ch=invoice[i]/maxV*(Y1-Y0);
-    g+='<rect x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"><title>Month '+m+' new monthly revenue: '+fmt$(mrr[i])+'</title></rect>';
-    g+='<rect x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"><title>Month '+m+' total cost: '+fmt$(invoice[i])+'</title></rect>';
+    g+='<rect class="bar-rev" x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"><title>Month '+m+' new monthly revenue: '+fmt$(mrr[i])+'</title></rect>';
+    g+='<rect class="bar-cost" x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"><title>Month '+m+' total cost: '+fmt$(invoice[i])+'</title></rect>';
     g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>';
   });
   g+='<text x="'+(X0-7)+'" y="'+(Y0+4)+'" text-anchor="end">'+fmtK(maxV)+'</text>';
