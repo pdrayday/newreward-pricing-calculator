@@ -910,20 +910,22 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 /* Per-industry benchmarks (research-backed, 2025). conv = typical visit→customer %,
    margin = typical gross %, yr = annual customer value, yrs = retention, vol = money-term
    cluster volume. These auto-fill any field left blank so each industry starts realistic. */
+/* cost = relative cost-to-deliver multiplier (research-based: competition is the #1 cost driver) */
 const IND = {
-  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, name:'Local service'},
-  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, name:'High-ticket local'},
-  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, name:'B2B / SaaS'},
-  ecom:       {w:1.35, yr:250,  yrs:2, vol:12000,  conv:2, margin:55, name:'E-commerce / National'}
+  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, cost:1.00, name:'Local service'},
+  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, cost:1.35, name:'High-ticket local'},
+  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.45, name:'B2B / SaaS'},
+  ecom:       {w:1.35, yr:250,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.50, name:'E-commerce / National'}
 };
 const FOOT = {
-  local:    {w:1.00, svc:1.00, reach:1.0, name:'one local market'},
-  multi:    {w:1.25, svc:1.12, reach:2.2, name:'a 2–5 market footprint'},
-  metro:    {w:1.55, svc:1.25, reach:3.5, name:'a major metro / regional market'},
-  national: {w:2.00, svc:1.40, reach:8.0, name:'a national market'}
+  local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
+  multi:    {w:1.25, cost:1.45, reach:2.2, name:'a 2–5 market footprint'},
+  metro:    {w:1.55, cost:1.90, reach:3.5, name:'a major metro / regional market'},
+  national: {w:2.00, cost:2.80, reach:8.0, name:'a national market'}
 };
 /* demand-confidence haircut: unverified volume sources get a conservative discount */
 const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
+const ROI_TARGET = 1.3;  // viability bar: the run-rate (ongoing) ROI a program should clear
 const DIFF_WORDS = [
   [2,'Light competition','Visibility wins should come quickly here.'],
   [4,'Moderate','A focused program wins this market at a steady pace.'],
@@ -981,26 +983,20 @@ function computeQuote(s){
           fixed-only ramp (2–4 months) ---- */
   const rampMonth = clamp(2 + (difficulty>=6?1:0) + (s.tracking==='none'?1:0), 2, 4);
 
-  /* ---- fixed monthly price ----
-     The EFFORT price reflects the work (scope, visibility gap, rank, market difficulty,
-     footprint). It's then held under a DEMAND-AWARE CEILING so a market is never quoted a
-     fee its own modeled revenue can't earn back — this is what keeps low-demand or
-     wide-footprint-but-thin markets from being structurally over-priced. The ceiling
-     tracks GROSS modeled year-1 revenue (not the attribution-discounted figure), so it
-     reflects true market size regardless of how much tracking is in place yet. */
+  /* ---- fixed monthly price = research-based COST TO DELIVER ----
+     This is what the work actually costs to do properly (our floor — worth our time, and
+     it matches real agency rates). It scales with scope (SEO/GEO), industry competition,
+     footprint breadth, and how far behind the client is (visibility gap, rank). It is NOT
+     capped by demand — instead, whether the client can justify this cost is shown honestly
+     via the run-rate ROI and the viability verdict. (2025 benchmarks: local SEO+GEO
+     ~$2–4k, competitive/SaaS ~$4–12k, national ~$8–15k+.) */
   let price = null;
   if(nScopes>0){
-    const scopeBase = 600 + (s.seo?700:0) + (s.geo?500:0);
+    const scopeBase = 600 + (s.seo?900:0) + (s.geo?700:0);
     const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
-    const effort = 1 + 0.35*visGap + 0.15*rankN;
-    const diffMult = 1 + (difficulty-1)*0.09;
-    const effortPrice = scopeBase * effort * diffMult * foot.svc;
-    const churn0 = 1/(retainYears*12);
-    let cum0=0, y1rev0=0;
-    for(let mo=1;mo<=12;mo++){ const f = mo<rampMonth ? 0 : Math.min(1,(mo-rampMonth+1)/3);
-      cum0 = cum0*(1-churn0) + newCust*f; y1rev0 += cum0*mrrPC; }
-    const priceCeil = y1rev0*0.45/12;             // fixed fee kept to ≤ ~45% of gross year-1 revenue
-    price = Math.max(1500, Math.round(Math.min(effortPrice, priceCeil)/50)*50);
+    const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
+    const workFactor = 1 + 0.26*visGap + 0.12*rankN + 0.12*cpcN2;
+    price = Math.max(1500, Math.round(scopeBase * ind.cost * foot.cost * workFactor /50)*50);
   }
 
   /* ---- revenue share 2–10% ---- */
@@ -1030,7 +1026,7 @@ function computeQuote(s){
 }
 
 /* 12-month series: customers compound, revenue = accumulated customers × monthly value.
-   Billing share applies only to the attribution-discounted slice; capped at 2× fixed. */
+   Billing share applies only to the attribution-discounted slice; capped at twice the fixed fee. */
 function buildSeries(q, price, share){
   const months=[]; const mrr=[]; const invoice=[]; let cum=0, capped=false;
   const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
@@ -1049,10 +1045,17 @@ function buildSeries(q, price, share){
   const year1Rev = mrr.reduce((a,b)=>a+b,0);
   const year1Attrib = year1Rev*q.attribFactor;
   const year1Cost = price!=null ? invoice.reduce((a,b)=>a+b,0) : null;
+  const exitMRR = mrr[11];
+  // run-rate (ongoing) ROI: month-12 monthly attributable revenue vs the monthly fee —
+  // what the program returns once it's built, after the year-1 ramp. The "worth it" number.
+  const runRateROI = (price>0) ? (exitMRR*q.attribFactor)/price : null;
+  // highest fee that still clears the target ongoing return (the client-value ceiling)
+  const ceil2x = exitMRR*q.attribFactor/ROI_TARGET;
   return {months, mrr, invoice, capped,
           year1Rev, year1Attrib, year1Cost,
           roi: year1Cost>0 ? year1Attrib/year1Cost : null,
-          exitCust: cum, exitARR: cum*q.yearlyValue, exitMRR: mrr[11], exitInvoice: invoice[11]};
+          runRateROI, ceil2x,
+          exitCust: cum, exitARR: cum*q.yearlyValue, exitMRR, exitInvoice: invoice[11]};
 }
 
 function readState(){
@@ -1093,7 +1096,7 @@ function getNegotiated(q){
     if(!isNaN(v)) share=clamp(v,0,100);
   }
   const series = buildSeries(q, price, share);
-  return {price, share, series, roi: series.roi, shareCapped: series.capped};
+  return {price, share, series, roi: series.roi, runRate: series.runRateROI, shareCapped: series.capped};
 }
 
 function resetNeg(kind){
@@ -1125,15 +1128,12 @@ function renderChart(q,n){
     +g+'</svg>';
 }
 
-/* ===== 2× ROI guardrail =====================================================
-   A program isn't worth selling unless year-1 return clears 2×. Research basis:
-   SEO ROI averages ~0.8× at 6 mo and ~2.6× at 12 mo (e-commerce study, 2022–25),
-   with a $500/mo minimum effective spend and a 5:1 long-run norm — so a 2× YEAR-ONE
-   floor is conservative. When the modeled ROI is under 2×, this flags the demand
-   inputs that build the ROI (search volume / impressions, conversion rate,
-   SEO+GEO visibility gap, volume-source confidence) so the rep knows which lever
-   must be higher before the math works. */
-const ROI_TARGET = 2;
+/* ===== Viability guardrail (target = ROI_TARGET, the ongoing run-rate return) =========
+   A program is "viable" when its run-rate (ongoing) return clears ROI_TARGET — meaning,
+   once built, it's clearly worth the client's spend. Below that, this flags the demand
+   levers (search volume, conversion, SEO+GEO visibility gap, volume-source confidence)
+   and, when our cost-to-deliver exceeds what the market can return, says so honestly and
+   suggests a tighter footprint. */
 const ROI_FLAGS = {
   volume:'lbl-volume', volsource:'lbl-volsource', convrate:'lbl-convrate',
   seoScore:'lbl-seoScore', geoScore:'lbl-geoScore'
@@ -1154,33 +1154,33 @@ function evalRoiGuardrail(s,q,n){
   const setBelow=(b)=>{ if(priceEl)priceEl.classList.toggle('roi-below',b); if(opanelEl)opanelEl.classList.toggle('roi-below',b); };
   clearRoiFlags(); setBelow(false);
   warn.classList.remove('show'); ok.classList.remove('show'); warn.innerHTML=''; ok.innerHTML='';
-  if(q.price==null || n.roi==null) return;
+  if(q.price==null || n.runRate==null) return;
 
-  const roiTxt = n.roi>=10?Math.round(n.roi):n.roi.toFixed(1);
-  if(n.roi>=ROI_TARGET){
+  const rr=n.runRate, rrTxt = rr>=10?Math.round(rr):rr.toFixed(1);
+  const y1Txt = n.roi>=10?Math.round(n.roi):n.roi.toFixed(1);
+  if(rr>=ROI_TARGET){
     ok.classList.add('show');
-    ok.innerHTML='&#10003; <b>Clears the 2× target.</b> A '+roiTxt+'× year-1 return means there\'s enough '
-      +'demand, conversion, and visibility gap to move forward with confidence.';
+    ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo this returns <b>'+rrTxt
+      +'× ongoing</b> once built (year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.';
     return;
   }
 
   const items=[];
 
-  /* ---- single-variable solvers: what value of one input alone reaches 2×,
-          holding today's price/share and every other input constant ---- */
+  /* ---- single-variable solvers now target a 1.3× RUN-RATE (ongoing) return ---- */
   const roiWith=(patch)=>{
     const q2=computeQuote(Object.assign({},s,patch));
-    const r=buildSeries(q2,n.price,n.share).roi;
+    const r=buildSeries(q2,n.price,n.share).runRateROI;
     return r==null?0:r;
   };
-  // smallest value in [lo,hi] (ROI rises with the value) that reaches 2×; null if even hi falls short
+  // smallest value in [lo,hi] (ROI rises with the value) that reaches 1.3×; null if even hi falls short
   const solveUp=(field,lo,hi)=>{
     if(roiWith({[field]:hi})<ROI_TARGET) return null;
     let a=lo,b=hi;
     for(let i=0;i<46;i++){const m=(a+b)/2; if(roiWith({[field]:m})>=ROI_TARGET) b=m; else a=m;}
     return b;
   };
-  // largest equal SEO/GEO score that still reaches 2× (lower score = bigger gap = higher ROI)
+  // largest equal SEO/GEO score that still reaches 1.3× (lower score = bigger gap = higher ROI)
   const solveScore=()=>{
     if(roiWith({seoScore:0,geoScore:0})<ROI_TARGET) return null;
     let a=0,b=100;
@@ -1190,11 +1190,25 @@ function evalRoiGuardrail(s,q,n){
   const round2=(v)=>{const p=Math.pow(10,Math.max(0,Math.floor(Math.log10(Math.max(v,1)))-1));return Math.round(v/p)*p;};
   const fix=(html)=>' <span class="rw-fix">'+html+'</span>';
 
-  /* demand-ceiling test: hold today's price/share, max out the other levers
-     (30% conversion, full visibility gap, verified demand) — if it still can't
-     reach 2×, the market simply doesn't have enough search demand. */
+  /* viability verdict: is our cost-to-deliver above what this market can return at 1.3× ongoing?
+     If so, it's not a fit at this scope — suggest the widest footprint that WOULD be viable. */
+  const ceil2x=n.series.ceil2x;
+  if(ceil2x < n.price){
+    const order=['national','metro','multi','local']; let sug='';
+    for(let i=order.indexOf(s.footprint)+1;i<order.length;i++){
+      const q2=computeQuote(Object.assign({},s,{footprint:order[i]}));
+      const r2=buildSeries(q2,q2.price,q2.share).runRateROI;
+      if(r2>=ROI_TARGET){ sug=' A '+FOOT[order[i]].name+' program (~'+fmt$(q2.price)+'/mo) would be viable at '+(r2>=10?Math.round(r2):r2.toFixed(1))+'× ongoing.'; break; }
+    }
+    items.push('<b>Not viable at this scope.</b> Delivering '+(q.nScopes===2?'SEO + GEO':(s.seo?'SEO':'GEO'))
+      +' properly for '+FOOT[s.footprint].name+' costs ~'+fmt$(n.price)+'/mo, but this market only supports ~'
+      +fmt$(ceil2x)+'/mo for a 1.3× ongoing return.'
+      +(sug||' Recommend a tighter footprint, a narrower scope, or building demand first.'));
+  }
+
+  /* even at best-case other levers, can volume alone get there? */
   const best=computeQuote(Object.assign({},s,{convrate:30,seoScore:0,geoScore:0,volsource:'kwp'}));
-  const demandCeiling = !(buildSeries(best,n.price,n.share).roi>=ROI_TARGET);
+  const demandCeiling = !(buildSeries(best,n.price,n.share).runRateROI>=ROI_TARGET);
 
   /* Estimated phrase volume always feeds the ROI equation — flag it whenever the
      return is short, not only when it's the single binding constraint. */
@@ -1203,9 +1217,9 @@ function evalRoiGuardrail(s,q,n){
     const vt=solveUp('volume', q.vol, Math.max(q.vol*60,300000));
     items.push('<b>Estimated phrase volume — ~'+q.vol.toLocaleString()+' searches/mo.</b> '
       +'It drives the ROI directly; more demand (a higher-volume phrase, wider footprint, or more keywords) lifts the return.'
-      +(demandCeiling ? ' <b>This is the binding constraint — even best-case conversion and a full gap can\'t reach 2× at today\'s volume.</b>' : '')
-      +(vt!=null ? fix('Target ≈ '+round2(vt).toLocaleString()+' searches/mo for a 2× return.')
-                 : ' At the current conversion and gap, volume alone won\'t reach 2× — raise those too.'));
+      +(demandCeiling ? ' <b>This is the binding constraint — even best-case conversion and a full gap can\'t reach 1.3× at today\'s volume.</b>' : '')
+      +(vt!=null ? fix('Target ≈ '+round2(vt).toLocaleString()+' searches/mo for a 1.3× return.')
+                 : ' At the current conversion and gap, volume alone won\'t reach 1.3× — raise those too.'));
   }
 
   const conv=s.convrate??IND[s.industry].conv;
@@ -1213,9 +1227,9 @@ function evalRoiGuardrail(s,q,n){
     flagRoi('convrate');
     const ct=solveUp('convrate', conv, 100);
     items.push('<b>Conversion rate is '+conv+'%.</b> Visit-to-customer averages ~4% for local services (5–8% is good) — sharpen lead response, offers, and landing pages.'
-      +(ct!=null && ct<=10 ? fix('Target ≈ '+Math.ceil(ct)+'% for a 2× return.')
-        : ct!=null ? fix('Reaching 2× on conversion alone would need ≈'+Math.ceil(ct)+'% — above what\'s realistic; lean on demand or the visibility gap instead.')
-                   : ' Conversion alone won\'t reach 2× — combine it with the other flags.'));
+      +(ct!=null && ct<=10 ? fix('Target ≈ '+Math.ceil(ct)+'% for a 1.3× return.')
+        : ct!=null ? fix('Reaching 1.3× on conversion alone would need ≈'+Math.ceil(ct)+'% — above what\'s realistic; lean on demand or the visibility gap instead.')
+                   : ' Conversion alone won\'t reach 1.3× — combine it with the other flags.'));
   }
 
   if(q.chFactor<0.6){
@@ -1223,26 +1237,26 @@ function evalRoiGuardrail(s,q,n){
     const sc=solveScore();
     items.push('<b>Visibility gap is only '+Math.round(q.chFactor*100)+'%.</b> The client is already fairly '
       +'visible, so little untapped demand is left to win.'
-      +(sc!=null ? fix('A 2× return needs the gap near '+Math.round(100-sc)+'% (visibility at/below ~'+Math.round(sc)+'/100).')
-                 : ' Even a full gap won\'t reach 2× alone — lean on demand and conversion.'));
+      +(sc!=null ? fix('A 1.3× return needs the gap near '+Math.round(100-sc)+'% (visibility at/below ~'+Math.round(sc)+'/100).')
+                 : ' Even a full gap won\'t reach 1.3× alone — lean on demand and conversion.'));
   }
 
   if(q.volQ<1){
     flagRoi('volsource');
     const rv=roiWith({volsource:'kwp'});
     items.push('<b>Confirm the volume source.</b> Check the demand in Keyword Planner, Semrush, or GSC to firm up the estimate.'
-      +fix('Verified, the projection is ≈ '+(rv>=10?Math.round(rv):rv.toFixed(1))+'×'+(rv>=ROI_TARGET?', clearing 2×.':'.')));
+      +fix('Verified, the projection is ≈ '+(rv>=10?Math.round(rv):rv.toFixed(1))+'×'+(rv>=ROI_TARGET?', clearing 1.3×.':'.')));
   }
 
   if(!items.length){
-    items.push('The demand inputs look healthy — fine-tune the program terms to reach a 2× return.');
+    items.push('The demand inputs look healthy — the gap is on price/terms. Adjust the fee or scope.');
   }
 
   setBelow(true);
   warn.classList.add('show');
-  warn.innerHTML='<div class="rw-kick">&#9888; Below the 2× target — '+roiTxt+'× projected</div>'
+  warn.innerHTML='<div class="rw-kick">&#9888; Below a 1.3× ongoing return — '+rrTxt+'× at '+fmt$(n.price)+'/mo</div>'
     +'<ul><li>'+items.join('</li><li>')+'</li></ul>'
-    +'<div class="rw-foot">Raise the inputs flagged in red to strengthen the projected return.</div>';
+    +'<div class="rw-foot">For the program to be worth the client\'s investment, the ongoing (run-rate) return should clear 1.3×. Raise the red inputs, tighten the footprint, or verify demand.</div>';
 }
 
 function render(){
@@ -1253,11 +1267,15 @@ function render(){
   const n = getNegotiated(q);
 
   /* ROI headline — year-1, conservative attribution */
-  set('o-roi', n.roi!=null ? (n.roi>=10?Math.round(n.roi):n.roi.toFixed(1))+'×' : '—');
-  set('o-roi-unit', n.roi!=null ? ' year-1 return' : '');
-  set('o-roi-sub', n.roi!=null
-      ? 'Year 1: '+fmt$(n.series.year1Attrib)+' attributable revenue vs '+fmt$(n.series.year1Cost)
-        +' total cost — and the run-rate keeps compounding after month 12'
+  /* Headline = run-rate (ongoing) ROI — what the program returns once built. Year-1 (the
+     ramp/investment year) is shown as context underneath, since SEO/GEO compounds over 12–24 mo. */
+  const rr = n.runRate, y1 = n.roi;
+  const rrTxt = rr!=null ? (rr>=10?Math.round(rr):rr.toFixed(1))+'×' : '—';
+  set('o-roi', rrTxt);
+  set('o-roi-unit', rr!=null ? ' ongoing return' : '');
+  set('o-roi-sub', rr!=null
+      ? 'Run-rate by month 12 (≈'+fmt$(n.series.exitMRR)+'/mo attributable vs '+fmt$(n.price)+'/mo fee). '
+        +'Year 1 is the ramp at '+(y1>=10?Math.round(y1):y1.toFixed(1))+'× while the program builds, then it compounds.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
@@ -1380,7 +1398,7 @@ function render(){
     +(q.volQ<1?' &nbsp;·&nbsp; <b>Conservative demand model:</b> −'+Math.round((1-q.volQ)*100)+'% applied to modeled demand':''));
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
-  /* 2× ROI guardrail — flag the demand inputs when the return is too low */
+  /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
   evalRoiGuardrail(s,q,n);
 
 }
