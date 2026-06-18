@@ -595,12 +595,12 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Industry model
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The type of business: everyday local service (salon, auto repair), high-ticket local (med spa, legal, roofing), B2B service, or e-commerce/national brand. Each carries different competition levels and customer values.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The type of business: everyday local service (salon, auto repair), high-ticket local (med spa, legal, roofing), B2B/SaaS (software, B2B services), or e-commerce/national brand. Picking one auto-fills realistic typical values (customer value, retention, conversion, margin) for any field you leave blank.</span></button>
         </label>
         <div class="fwrap"><select id="industry">
           <option value="local">Local service</option>
           <option value="highticket">High-ticket local</option>
-          <option value="b2b">B2B service</option>
+          <option value="b2b">B2B / SaaS</option>
           <option value="ecom">E-commerce / National</option>
         </select></div>
       </div>
@@ -713,9 +713,10 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Typical retention
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How many years a customer usually stays. Sets the churn rate in the 12-month projection — shorter retention means accumulated customers fall away faster and the compounding flattens.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How many years a customer usually stays. Sets churn in the 12-month projection — shorter retention flattens the compounding. Leave blank to use the industry typical (local/high-ticket ~3 yrs, B2B/SaaS ~4, e-commerce ~2).</span></button>
         </label>
-        <div class="fwrap"><input type="number" id="years" class="has-suffix" value="3" min="1" max="20"><span class="suffix">years</span></div>
+        <div class="fwrap"><input type="number" id="years" class="has-suffix" placeholder="auto" min="1" max="20"><span class="suffix">years</span></div>
+        <div class="auto-note" id="note-yrs"></div>
         <div class="auto-note" id="note-ltv"></div>
       </div>
     </div>
@@ -731,7 +732,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel" id="lbl-convrate">Conversion rate
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the website visitors search sends you, the percentage who become paying customers (visit-to-customer). Keep it realistic — low single digits for most local businesses (≈3–8%), higher only for strong high-intent niches. It drives the whole projection. Leave blank and we assume a conservative 5%.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the website visitors search sends you, the percentage who become paying customers (visit-to-customer). Keep it realistic — low single digits for most local businesses (≈3–8%), higher only for strong high-intent niches. It drives the whole projection. Leave blank to use the industry typical (local ~5%, high-ticket ~4%, B2B/SaaS ~2%, e-commerce ~2%).</span></button>
           <span class="flag-pill">▲ raise</span>
         </label>
         <div class="fwrap"><input type="number" id="convrate" class="has-suffix" placeholder="e.g. 5" min="1" max="100"><span class="suffix">%</span></div>
@@ -739,9 +740,10 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Gross margin
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What the client keeps from each sale after direct costs. Higher margins support a higher revenue share; thin margins push the share toward the 2% floor.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What the client keeps from each sale after direct costs. Higher margins support a higher revenue share. Leave blank for the industry typical (local ~50%, high-ticket ~65%, B2B/SaaS ~78%, e-commerce ~55%).</span></button>
         </label>
-        <div class="fwrap"><input type="number" id="margin" class="has-suffix" value="50" min="0" max="95"><span class="suffix">%</span></div>
+        <div class="fwrap"><input type="number" id="margin" class="has-suffix" placeholder="auto" min="0" max="95"><span class="suffix">%</span></div>
+        <div class="auto-note" id="note-margin"></div>
       </div>
     </div>
     <div class="row2">
@@ -905,17 +907,20 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
    - Combined SEO + AEO/GEO mid-market retainers: $2,000–$8,000/mo
    Floor: $1,500/mo. Rev share: 2–10% of attributable revenue. */
 
+/* Per-industry benchmarks (research-backed, 2025). conv = typical visit→customer %,
+   margin = typical gross %, yr = annual customer value, yrs = retention, vol = money-term
+   cluster volume. These auto-fill any field left blank so each industry starts realistic. */
 const IND = {
-  local:      {w:1.00, yr:900,  yrs:2, vol:900,  name:'Local service'},
-  highticket: {w:1.45, yr:2500, yrs:3, vol:1200, name:'High-ticket local'},
-  b2b:        {w:1.20, yr:4000, yrs:3, vol:700,  name:'B2B service'},
-  ecom:       {w:1.40, yr:210,  yrs:2, vol:5200, name:'E-commerce / National'}
+  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, name:'Local service'},
+  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, name:'High-ticket local'},
+  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, name:'B2B / SaaS'},
+  ecom:       {w:1.35, yr:250,  yrs:2, vol:12000,  conv:2, margin:55, name:'E-commerce / National'}
 };
 const FOOT = {
   local:    {w:1.00, svc:1.00, reach:1.0, name:'one local market'},
-  multi:    {w:1.25, svc:1.20, reach:2.2, name:'a 2–5 market footprint'},
-  metro:    {w:1.55, svc:1.45, reach:3.5, name:'a major metro / regional market'},
-  national: {w:2.00, svc:1.80, reach:8.0, name:'a national market'}
+  multi:    {w:1.25, svc:1.12, reach:2.2, name:'a 2–5 market footprint'},
+  metro:    {w:1.55, svc:1.25, reach:3.5, name:'a major metro / regional market'},
+  national: {w:2.00, svc:1.40, reach:8.0, name:'a national market'}
 };
 /* demand-confidence haircut: unverified volume sources get a conservative discount */
 const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
@@ -952,17 +957,6 @@ function computeQuote(s){
       ? ((s.seo?clamp(s.seoScore??35,0,100):0)+(s.geo?clamp(s.geoScore??22,0,100):0))/nScopes : 0;
   const visGap = nScopes>0 ? 1 - visAvg/100 : 0;
 
-  /* ---- fixed monthly price ---- */
-  let price = null;
-  if(nScopes>0){
-    const scopeBase = 600 + (s.seo?700:0) + (s.geo?500:0);
-    const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
-    const effort = 1 + 0.35*visGap + 0.15*rankN;
-    const diffMult = 1 + (difficulty-1)*0.09;
-    price = scopeBase * effort * diffMult * foot.svc;
-    price = Math.max(1500, Math.round(price/50)*50);
-  }
-
   /* ---- customer & revenue model (yearly revenue, never LTV, drives projections) ---- */
   const yrIsAuto = !(s.yearly>0);
   const yearlyValue = yrIsAuto ? ind.yr : s.yearly;
@@ -970,7 +964,7 @@ function computeQuote(s){
   const ltv = yearlyValue*retainYears;            // context only — not used in revenue math
   // achievable click share decays in very large markets (you can't win 15% of 50k searches)
   const clickShare = clamp(0.15*Math.pow(1500/Math.max(vol,1), 0.35), 0.03, 0.15);
-  const closeRate = clamp(s.convrate??5, 1, 100)/100;
+  const closeRate = clamp(s.convrate??ind.conv, 1, 100)/100;
   // only the demand a channel isn't already capturing counts as NEW revenue:
   // a 13/100 channel has 87% of its upside left; a 57/100 channel only 43%.
   // both channels compound (sum × 0.8 overlap) and never model below the best single
@@ -983,9 +977,35 @@ function computeQuote(s){
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
 
+  /* ---- rev-share start month: harder markets and missing tracking extend the
+          fixed-only ramp (2–4 months) ---- */
+  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (s.tracking==='none'?1:0), 2, 4);
+
+  /* ---- fixed monthly price ----
+     The EFFORT price reflects the work (scope, visibility gap, rank, market difficulty,
+     footprint). It's then held under a DEMAND-AWARE CEILING so a market is never quoted a
+     fee its own modeled revenue can't earn back — this is what keeps low-demand or
+     wide-footprint-but-thin markets from being structurally over-priced. The ceiling
+     tracks GROSS modeled year-1 revenue (not the attribution-discounted figure), so it
+     reflects true market size regardless of how much tracking is in place yet. */
+  let price = null;
+  if(nScopes>0){
+    const scopeBase = 600 + (s.seo?700:0) + (s.geo?500:0);
+    const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
+    const effort = 1 + 0.35*visGap + 0.15*rankN;
+    const diffMult = 1 + (difficulty-1)*0.09;
+    const effortPrice = scopeBase * effort * diffMult * foot.svc;
+    const churn0 = 1/(retainYears*12);
+    let cum0=0, y1rev0=0;
+    for(let mo=1;mo<=12;mo++){ const f = mo<rampMonth ? 0 : Math.min(1,(mo-rampMonth+1)/3);
+      cum0 = cum0*(1-churn0) + newCust*f; y1rev0 += cum0*mrrPC; }
+    const priceCeil = y1rev0*0.45/12;             // fixed fee kept to ≤ ~45% of gross year-1 revenue
+    price = Math.max(1500, Math.round(Math.min(effortPrice, priceCeil)/50)*50);
+  }
+
   /* ---- revenue share 2–10% ---- */
   let share = 5;
-  const m = s.margin??50;
+  const m = s.margin??ind.margin;
   share += m>=65?2 : m>=50?1 : m>=35?0 : m>=25?-1 : -2;
   const a = s.acq??15;
   share += a>=20?1 : a>=12?0.5 : a>=8?0 : -0.5;
@@ -996,14 +1016,11 @@ function computeQuote(s){
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;
   share = clamp(Math.round(share*2)/2, 2, 10);
 
-  /* ---- conservative attribution: we bill only on revenue we can prove.
-          existing tracked revenue means attribution is already working (+5%) ---- */
-  let attribFactor = s.confidence==='verified'?0.8 : s.confidence==='estimated'?0.5 : 0.3;
-  if((s.trackrev??0)>0) attribFactor = Math.min(0.85, attribFactor+0.05);
-
-  /* ---- rev-share start month: harder markets and missing tracking extend the
-          fixed-only ramp (2–4 months) ---- */
-  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (s.tracking==='none'?1:0), 2, 4);
+  /* ---- conservative attribution: we credit/bill only on revenue we can stand behind.
+          softened from prior 0.3/0.5/0.8 — the demand model is already conservative, so the
+          extra discount no longer needs to be punitive. Existing tracked revenue +5%. ---- */
+  let attribFactor = s.confidence==='verified'?0.85 : s.confidence==='estimated'?0.60 : 0.40;
+  if((s.trackrev??0)>0) attribFactor = Math.min(0.90, attribFactor+0.05);
 
   const windowDays = s.confidence==='verified'?60 : 90;
 
@@ -1191,7 +1208,7 @@ function evalRoiGuardrail(s,q,n){
                  : ' At the current conversion and gap, volume alone won\'t reach 2× — raise those too.'));
   }
 
-  const conv=s.convrate??5;
+  const conv=s.convrate??IND[s.industry].conv;
   if(conv<8){
     flagRoi('convrate');
     const ct=solveUp('convrate', conv, 100);
@@ -1308,7 +1325,11 @@ function render(){
   document.getElementById('note-ltv').innerHTML =
       'Lifetime value: '+fmt$(q.yearlyValue)+' × '+q.retainYears+' yrs = <b>'+fmt$(q.ltv)+'</b> (context only)';
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
-      ? '' : 'Auto: assuming a conservative <b>5%</b> visit-to-customer — set this client’s real rate';
+      ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
+  document.getElementById('note-yrs').innerHTML = (s.years>0)
+      ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].yrs+' yrs</b>';
+  document.getElementById('note-margin').innerHTML = (s.margin>0)
+      ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].margin+'%</b>';
 
   /* cards */
   set('o-cust', '~'+Math.round(q.newCust));
@@ -1367,7 +1388,7 @@ function render(){
 function resetAll(){
   priceDirty=false; shareDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
-  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:'',margin:50,acq:15,commission:8,trackrev:0,yearly:'',years:3};
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:'',margin:'',acq:15,commission:8,trackrev:0,yearly:'',years:''};
   for(const k in d) document.getElementById(k).value = d[k];
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
@@ -1474,8 +1495,8 @@ function buildPDF(){
     ['AEO/GEO visibility score', (s.geoScore??0)+'/100'],
     ['Customer value / yr', fmt$(q.yearlyValue)+(q.yrIsAuto?' (benchmark)':'')],
     ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'],
-    ['Conversion rate', (s.convrate??5)+'%'],
-    ['Gross margin', (s.margin??0)+'%'],
+    ['Conversion rate', (s.convrate??IND[s.industry].conv)+'%'+(s.convrate>0?'':' (typical)')],
+    ['Gross margin', (s.margin??IND[s.industry].margin)+'%'+(s.margin>0?'':' (typical)')],
     ['Acquisition budget', (s.acq??0)+'%'],
     ['Sales commission', (s.commission??0)+'%'],
     ['Current trackable revenue', fmt$(s.trackrev??0)+'/mo'],
