@@ -1446,9 +1446,20 @@ function researchWithAI(){
     +'Valid select values:\n'
     +'- industry: local (everyday local service) | highticket (med spa, legal, roofing, dental) | b2b (B2B services / SaaS) | ecom (e-commerce / national brand)\n'
     +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national';
-  const done=()=>{ note.innerHTML='&#9989; <b style="color:var(--gold-bright)">Prompt copied & AI opened.</b> Paste it into the chat, then click the link it returns to auto-fill every field.'; };
-  try{ navigator.clipboard.writeText(prompt).then(()=>{ window.open('https://claude.ai/new','_blank'); done(); })
-       .catch(()=>{ window.open('https://claude.ai/new','_blank'); window.prompt('Copy this research prompt, paste it into the AI:', prompt); done(); }); }
+  const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
+  const openChat=()=>{
+    if(isMobile){
+      /* Open the Claude app (already signed in) rather than forcing a Safari login; fall back to the web only if the app isn't installed. */
+      const fb=setTimeout(()=>{ window.location.href='https://claude.ai/new'; },1500);
+      document.addEventListener('visibilitychange',function h(){ if(document.hidden){ clearTimeout(fb); document.removeEventListener('visibilitychange',h); } });
+      window.location.href='claude://code/new?q='+encodeURIComponent(prompt);
+    } else { window.open('https://claude.ai/new','_blank'); }
+  };
+  const done=()=>{ note.innerHTML = isMobile
+    ? '&#9989; <b style="color:var(--gold-bright)">Prompt copied — opening the Claude app.</b> If the chat box is empty, paste &amp; send. Then tap the link it returns to auto-fill every field.'
+    : '&#9989; <b style="color:var(--gold-bright)">Prompt copied & AI opened.</b> Paste it into the chat, then click the link it returns to auto-fill every field.'; };
+  try{ navigator.clipboard.writeText(prompt).then(()=>{ openChat(); done(); })
+       .catch(()=>{ openChat(); if(!isMobile) window.prompt('Copy this research prompt, paste it into the AI:', prompt); done(); }); }
   catch(e){ window.prompt('Copy this research prompt, paste it into the AI:', prompt); }
 }
 
