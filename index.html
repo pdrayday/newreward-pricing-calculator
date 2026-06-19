@@ -352,6 +352,11 @@ select option{background:#171410;color:var(--text)}
 .tip.tip-left:hover .tipbox,.tip.tip-left:focus .tipbox{transform:translateY(0)}
 
 .auto-note{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.5}
+.research-btn{margin-top:9px;display:inline-flex;align-items:center;gap:7px;font-family:var(--font);
+  font-size:11.5px;font-weight:600;letter-spacing:.02em;cursor:pointer;
+  background:rgba(212,162,74,.08);color:var(--gold-bright);
+  border:1px solid var(--gold-line);border-radius:8px;padding:7px 12px;transition:.15s}
+.research-btn:hover{background:rgba(212,162,74,.16);border-color:var(--gold)}
 .auto-note b{color:var(--gold);font-weight:600}
 .hintnote{
   background:rgba(212,162,74,.06);border:1px solid var(--gold-line-soft);
@@ -463,6 +468,12 @@ select option{background:#171410;color:var(--text)}
   font-size:12px;color:#e8a99e;line-height:1.5}
 .neg-warn.show{display:block}
 
+/* market-rate confirmation — tells the rep the fee is within the typical range, with NO
+   range numbers shown (so the client never sees how low the price could go). */
+.o-market{margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.5}
+.o-market .in-range{color:var(--green);font-weight:700}
+[data-theme="ivory"] .o-market .in-range{color:#1f5a2c}
+
 /* ===== 2x ROI guardrail — flagged inputs + warning box ===== */
 input.roi-flag,select.roi-flag{
   border-color:var(--red)!important;
@@ -529,7 +540,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   body{background:#fff;color:#171410}
   body::before{display:none}
   .bgfx{display:none!important}
-  .head-actions,.no-print,.theme-switch{display:none!important}
+  .head-actions,.no-print,.theme-switch,.o-market,.research-btn{display:none!important}
   .wrap{padding:0;max-width:100%}
   .grid{grid-template-columns:1fr 1fr;gap:20px}
   .section,.opanel{background:#fff;border-color:#d8c9a8;break-inside:avoid}
@@ -579,6 +590,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">The client's current website. Used as the subject of the visibility audit and quote.</span></button>
         </label>
         <div class="fwrap"><input type="url" id="website" placeholder="https://example.com"></div>
+        <button class="research-btn no-print" type="button" onclick="researchWithAI()" title="Generate an AI research prompt for this site and open it — paste, then click the link it returns to auto-fill every input.">&#128269; Auto-research inputs from website</button>
+        <div class="auto-note" id="note-research"></div>
       </div>
     </div>
     <div class="fgroup" style="margin-bottom:4px">
@@ -644,7 +657,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Typical search ad cost
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one click costs on Google Ads for this phrase (CPC). High ad prices signal a competitive, high-value market — and show what the client avoids paying once organic visibility takes over.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one click costs on Google Ads for this phrase (CPC). High ad prices signal a competitive, high-value market — and show what the client avoids paying once organic visibility takes over. Typical: $2–6 for everyday local, $8–25+ for legal, medical, finance, and SaaS terms.</span></button>
         </label>
         <div class="fwrap"><span class="prefix">$</span><input type="number" id="cpc" class="has-prefix" value="9" min="0" step="0.5"></div>
       </div>
@@ -755,7 +768,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Sales commission
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Commission the client already pays staff or reps on each sale. It stacks with our revenue share, so high commissions lower the share we ask for.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Commission the client already pays staff or reps on each sale. It stacks with our revenue share, so high commissions lower the share we ask for. Typical: 5–15% (local trades lower, B2B/SaaS and high-ticket higher).</span></button>
         </label>
         <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
       </div>
@@ -807,6 +820,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <div class="share-desc"><b style="color:var(--text)">Fixed monthly investment</b> — <span id="o-price-sub">program fee</span><br><span class="neg-note" id="o-price-note"></span></div>
     </div>
     <div class="neg-warn" id="o-price-warn"></div>
+    <div class="o-market" id="o-market"></div>
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="100" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
@@ -1288,6 +1302,16 @@ function render(){
       : 'select a service in Scope');
   set('o-ramp', 'month '+q.rampMonth);
 
+  /* market-rate confirmation — no numbers, so the client never sees negotiation room */
+  const mEl=document.getElementById('o-market');
+  if(q.price!=null){
+    const lo=q.price*0.75, hi=q.price*1.40;
+    mEl.innerHTML = (n.price>=lo && n.price<=hi)
+      ? '<span class="in-range">&#10003; Within the typical market rate</span> for a '+IND[s.industry].name.toLowerCase()+' targeting '+FOOT[s.footprint].name+'.'
+      : (n.price<lo ? 'Below the typical market rate for this scope.'
+                    : 'Above the typical market rate for this scope.');
+  } else mEl.innerHTML='';
+
   /* negotiation guardrails */
   const pNote=document.getElementById('o-price-note'), shNote=document.getElementById('o-share-note');
   const pWarn=document.getElementById('o-price-warn'), shWarn=document.getElementById('o-share-warn');
@@ -1401,6 +1425,31 @@ function render(){
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
   evalRoiGuardrail(s,q,n);
 
+}
+
+/* Auto-research: builds a grounded research prompt for the client's site, copies it, and opens
+   an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
+   loads every input. A static page can't run live web research itself, so this hands the work to
+   an AI with web access — far more accurate than a generic "guess a price" prompt. */
+function researchWithAI(){
+  const url=document.getElementById('website').value.trim();
+  const note=document.getElementById('note-research');
+  if(!url){ note.innerHTML='<b style="color:var(--gold-bright)">Enter the client’s website above first.</b>'; return; }
+  const base=location.origin+location.pathname;
+  const prompt='Research this business for a NewReward SEO/GEO pricing quote.\n\n'
+    +'Business website: '+url+'\n\n'
+    +'Use web search to determine: industry type, the geographic footprint they serve, their money-keyword search volume (sum the relevant cluster, not one phrase), typical annual customer value, customer retention, current Google/AI-search visibility, and competitiveness. Use realistic 2025 benchmarks for anything not directly measurable. For a niche business that sells nationally, use a FOCUSED footprint (multi or metro), not national.\n\n'
+    +'Then give me BOTH of the following:\n\n'
+    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission, Tracking setup, Data confidence. Add one short line under the table explaining the key assumptions.\n\n'
+    +'(2) A prefilled calculator link, on its own line, in this exact format (drop any field you are unsure of — blanks auto-fill from the industry preset):\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT&tracking=partial&confidence=estimated\n\n'
+    +'Valid select values:\n'
+    +'- industry: local (everyday local service) | highticket (med spa, legal, roofing, dental) | b2b (B2B services / SaaS) | ecom (e-commerce / national brand)\n'
+    +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national';
+  const done=()=>{ note.innerHTML='&#9989; <b style="color:var(--gold-bright)">Prompt copied & AI opened.</b> Paste it into the chat, then click the link it returns to auto-fill every field.'; };
+  try{ navigator.clipboard.writeText(prompt).then(()=>{ window.open('https://claude.ai/new','_blank'); done(); })
+       .catch(()=>{ window.open('https://claude.ai/new','_blank'); window.prompt('Copy this research prompt, paste it into the AI:', prompt); done(); }); }
+  catch(e){ window.prompt('Copy this research prompt, paste it into the AI:', prompt); }
 }
 
 function resetAll(){
