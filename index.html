@@ -55,9 +55,9 @@
 [data-theme="ivory"] .fxcanvas{filter:brightness(0)}
 [data-theme="ivory"] .wordmark{color:#161003}
 [data-theme="ivory"] .btn-gold{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
-/* light mode: clearly black input outlines */
-[data-theme="ivory"] input[type=text],[data-theme="ivory"] input[type=number],[data-theme="ivory"] input[type=url],[data-theme="ivory"] select{border:1.5px solid #161003}
-[data-theme="ivory"] input:focus,[data-theme="ivory"] select:focus{border-color:#161003;box-shadow:0 0 0 3px rgba(0,0,0,.18)}
+/* light mode: clearly black outlines on the entry fields only (not the editable price / rev-share output boxes) */
+[data-theme="ivory"] .inputs input[type=text],[data-theme="ivory"] .inputs input[type=number],[data-theme="ivory"] .inputs input[type=url],[data-theme="ivory"] .inputs select{border:1.5px solid #161003}
+[data-theme="ivory"] .inputs input:focus,[data-theme="ivory"] .inputs select:focus{border-color:#161003;box-shadow:0 0 0 3px rgba(0,0,0,.18)}
 [data-theme="ivory"] .toggle-row{border:1.5px solid #161003}
 [data-theme="ivory"] select{
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23161003' stroke-width='1.6' stroke-linecap='round'/></svg>");
@@ -393,12 +393,11 @@ select option{background:#171410;color:var(--text)}
   font-weight:700;margin-bottom:6px;
 }
 .o-price{
-  font-size:46px;font-weight:800;letter-spacing:-.01em;line-height:1.08;
+  font-size:54px;font-weight:800;letter-spacing:-.01em;line-height:1.05;
   color:#ffd64f;
   text-shadow:0 0 28px rgba(255,200,60,.45), 0 0 6px rgba(255,214,79,.25);
 }
-.o-price #o-roi{white-space:nowrap}
-.o-price .permo{font-size:18px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0}
+.o-price .permo{font-size:19px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0}
 .o-sub{color:var(--muted);font-size:12.5px;margin-top:6px}
 
 .o-share{
@@ -927,10 +926,9 @@ const FOOT = {
 /* demand-confidence haircut: unverified volume sources get a conservative discount */
 const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
 const ROI_TARGET = 1.3;  // viability bar: the run-rate (ongoing) ROI a program should clear
-/* conservative–optimistic band applied to the modeled run-rate for the headline range.
-   Low = we capture only part of the demand; high = we rank across the full keyword cluster. */
-const ROI_LO = 0.60, ROI_HI = 1.30;
-const roiRangeTxt = rr => { const fx=v=>(v>=10?Math.round(v):v.toFixed(1)); return fx(rr*ROI_LO)+'×–'+fx(rr*ROI_HI)+'×'; };
+/* conservative factor applied to the modeled run-rate for the headline ROI: the number shown
+   assumes we capture only part of the modeled demand, so it's the floor of the likely outcome. */
+const ROI_LO = 0.60;
 const DIFF_WORDS = [
   [2,'Light competition','Visibility wins should come quickly here.'],
   [4,'Moderate','A focused program wins this market at a steady pace.'],
@@ -1158,12 +1156,13 @@ function evalRoiGuardrail(s,q,n){
   warn.classList.remove('show'); ok.classList.remove('show'); warn.innerHTML=''; ok.innerHTML='';
   if(q.price==null || n.runRate==null) return;
 
-  const rr=n.runRate, rrTxt = rr>=10?Math.round(rr):rr.toFixed(1);
-  const y1Txt = n.roi>=10?Math.round(n.roi):n.roi.toFixed(1);
+  const fx=v=>(v>=10?Math.round(v):v.toFixed(1));
+  const rr=n.runRate, rrTxt = fx(rr);
+  const y1Txt = fx(n.roi);
   if(rr>=ROI_TARGET){
     ok.classList.add('show');
-    ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the modeled return is <b>'+rrTxt
-      +'× ongoing</b> once built (conservative–optimistic range '+roiRangeTxt(rr)+'; year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.';
+    ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the conservative ongoing return is <b>'+fx(rr*ROI_LO)
+      +'×</b> (modeled '+rrTxt+'×; year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.';
     return;
   }
 
@@ -1273,12 +1272,14 @@ function render(){
      ramp/investment year) is shown as context underneath, since SEO/GEO compounds over 12–24 mo. */
   const rr = n.runRate, y1 = n.roi;
   const fx = v => (v>=10?Math.round(v):v.toFixed(1));
-  /* headline = conservative–optimistic range around the modeled run-rate (mid drives viability) */
-  set('o-roi', rr!=null ? roiRangeTxt(rr) : '—');
-  set('o-roi-unit', rr!=null ? ' ongoing return' : '');
-  set('o-roi-sub', rr!=null
-      ? 'Conservative-to-optimistic range once the program is built (modeled ≈'+fmt$(n.series.exitMRR)+'/mo attributable vs '+fmt$(n.price)+'/mo fee). '
-        +'The low end assumes we capture only part of the demand; the high end assumes we rank across the full keyword cluster. Year 1 ramps near '+fx(y1)+'× while it builds, then compounds.'
+  /* headline = the CONSERVATIVE run-rate (ongoing) ROI — the low end of the band, so the
+     number shown is what the program returns even if we capture only part of the demand. */
+  const rrCons = rr!=null ? rr*ROI_LO : null;
+  set('o-roi', rrCons!=null ? fx(rrCons)+'×' : '—');
+  set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
+  set('o-roi-sub', rrCons!=null
+      ? 'Conservative run-rate once built — assumes we capture only part of the modeled demand (≈'+fmt$(n.series.exitMRR)+'/mo modeled attributable vs '+fmt$(n.price)+'/mo fee). '
+        +'Year 1 is the ramp at '+fx(y1)+'× while the program builds, then it compounds.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
