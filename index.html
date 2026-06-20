@@ -770,24 +770,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
   </div>
 
-  <!-- 06 DATA CONFIDENCE -->
-  <div class="section">
-    <div class="sec-head"><div class="sec-num">06</div><div class="sec-title">Data confidence</div></div>
-    <div class="row2">
-      <div class="fgroup">
-        <label class="flabel">Data confidence
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How solid the numbers behind this quote are: verified with the client's own data, estimated from research, or unknown. Drives the review window, attribution factor, the rev-share start month, and the viability score.</span></button>
-        </label>
-        <div class="fwrap"><select id="confidence">
-          <option value="verified">Verified with client data</option>
-          <option value="estimated" selected>Estimated from research</option>
-          <option value="unknown">Unknown</option>
-        </select></div>
-      </div>
-      <div class="fgroup"></div>
-    </div>
-    <div class="hintnote"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
-  </div>
+  <div class="hintnote" style="margin-top:14px"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
 
 </div>
 
@@ -1074,7 +1057,7 @@ function readState(){
     yearly: num('yearly'), years: num('years'),
     convrate: num('convrate'),
     margin: num('margin'), acq: num('acq'), commission: num('commission'),
-    confidence: document.getElementById('confidence').value
+    confidence: 'estimated'   /* research-based default (Data confidence input removed) */
   };
 }
 
@@ -1373,7 +1356,7 @@ function render(){
   set('o-runrate-note', '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed');
   set('o-rampcard', 'Month '+q.rampMonth);
   set('o-window', q.windowDays+' days');
-  set('o-window-note', 'data confidence: '+CONF_TEXT[s.confidence].toLowerCase());
+  set('o-window-note', 're-quote once live data lands');
 
   /* projection chart + timeline */
   renderChart(q,n);
@@ -1394,11 +1377,7 @@ function render(){
       + 'Once ramped, the model signs ~'+Math.round(q.newCust)+' new customers a month — roughly '+fmtK(q.arrAddedPM)
       + ' in new annual contracts every month. The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
       + fmt$(n.price)+'/mo fixed plus a '+n.share+'% share of attributable new net revenue beginning in month '+q.rampMonth+'. '
-      + (s.confidence==='verified'
-          ? 'Inputs are verified with client data — this quote is presentation-ready.'
-          : s.confidence==='estimated'
-          ? 'Figures are estimated from research — verify tracking within the '+q.windowDays+'-day review window.'
-          : 'Key data is unverified — treat as a draft until tracking is in place.');
+      + 'Figures are estimated from research — confirm with live data within the '+q.windowDays+'-day review window.';
   }
   set('o-summary', txt);
 
@@ -1430,9 +1409,9 @@ function researchWithAI(){
     +'Business website: '+url+'\n\n'
     +'Use web search to determine: industry type, the geographic footprint they serve, their money-keyword search volume (sum the relevant cluster, not one phrase), typical annual customer value, customer retention, current Google/AI-search visibility, and competitiveness. Use realistic 2025 benchmarks for anything not directly measurable. For a niche business that sells nationally, use a FOCUSED footprint (multi or metro), not national.\n\n'
     +'Then give me BOTH of the following:\n\n'
-    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission, Tracking setup, Data confidence. Add one short line under the table explaining the key assumptions.\n\n'
+    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission. Add one short line under the table explaining the key assumptions.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this exact format (drop any field you are unsure of — blanks auto-fill from the industry preset):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT&confidence=estimated\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT\n\n'
     +'Valid select values:\n'
     +'- industry: local (everyday local service) | highticket (med spa, legal, roofing, dental) | b2b (B2B services / SaaS) | ecom (e-commerce / national brand)\n'
     +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national';
@@ -1461,7 +1440,6 @@ function resetAll(){
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
   document.getElementById('volsource').value='none';
-  document.getElementById('confidence').value='estimated';
   document.getElementById('scopeSeo').checked = true;
   document.getElementById('scopeGeo').checked = true;
   render();
@@ -1566,7 +1544,7 @@ function buildPDF(){
     ['Gross margin', (s.margin??IND[s.industry].margin)+'%'+(s.margin>0?'':' (typical)')],
     ['Acquisition budget', (s.acq??0)+'%'],
     ['Sales commission', (s.commission??0)+'%'],
-    ['Data confidence', selText('confidence')],
+    ['Data basis', 'Estimated from research'],
     ['Revenue basis', 'New net revenue (above baseline)'],
     ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
     ['Rev share starts', 'Month '+q.rampMonth+' (fixed fee only until then)'],
@@ -1632,7 +1610,7 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
   if(![...p.keys()].length) return;
   const fields = ['client','website','phrase','industry','footprint','volume','volsource','cpc',
                   'rank','seoScore','geoScore','yearly','years','convrate','margin',
-                  'acq','commission','confidence'];
+                  'acq','commission'];
   fields.forEach(id=>{
     if(!p.has(id)) return;
     const el = document.getElementById(id);
