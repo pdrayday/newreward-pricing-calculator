@@ -55,6 +55,10 @@
 [data-theme="ivory"] .fxcanvas{filter:brightness(0)}
 [data-theme="ivory"] .wordmark{color:#161003}
 [data-theme="ivory"] .btn-gold{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
+/* light mode: clearly black input outlines */
+[data-theme="ivory"] input[type=text],[data-theme="ivory"] input[type=number],[data-theme="ivory"] input[type=url],[data-theme="ivory"] select{border:1.5px solid #161003}
+[data-theme="ivory"] input:focus,[data-theme="ivory"] select:focus{border-color:#161003;box-shadow:0 0 0 3px rgba(0,0,0,.18)}
+[data-theme="ivory"] .toggle-row{border:1.5px solid #161003}
 [data-theme="ivory"] select{
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23161003' stroke-width='1.6' stroke-linecap='round'/></svg>");
 }
@@ -389,11 +393,12 @@ select option{background:#171410;color:var(--text)}
   font-weight:700;margin-bottom:6px;
 }
 .o-price{
-  font-size:54px;font-weight:800;letter-spacing:-.01em;line-height:1.05;
+  font-size:46px;font-weight:800;letter-spacing:-.01em;line-height:1.08;
   color:#ffd64f;
   text-shadow:0 0 28px rgba(255,200,60,.45), 0 0 6px rgba(255,214,79,.25);
 }
-.o-price .permo{font-size:19px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0}
+.o-price #o-roi{white-space:nowrap}
+.o-price .permo{font-size:18px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0}
 .o-sub{color:var(--muted);font-size:12.5px;margin-top:6px}
 
 .o-share{
@@ -735,15 +740,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="row2">
       <div class="fgroup">
-        <label class="flabel">Current trackable revenue
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Monthly revenue the client can already attribute to their website or search. Sets the baseline the revenue share applies above — and if it's greater than $0, attribution is already proven, which raises the billable attribution factor by 5%.</span></button>
-        </label>
-        <div class="fwrap"><span class="prefix">$</span><input type="number" id="trackrev" class="has-prefix" value="0" min="0"></div>
-      </div>
-      <div class="fgroup"></div>
-    </div>
-    <div class="row2">
-      <div class="fgroup">
         <label class="flabel" id="lbl-convrate">Conversion rate
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the website visitors search sends you, the percentage who become paying customers (visit-to-customer). Keep it realistic — low single digits for most local businesses (≈3–8%), higher only for strong high-intent niches. It drives the whole projection. Leave blank to use the industry typical (local ~5%, high-ticket ~4%, B2B/SaaS ~2%, e-commerce ~2%).</span></button>
           <span class="flag-pill">▲ raise</span>
@@ -775,23 +771,13 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
   </div>
 
-  <!-- 06 TRACKING & BILLING -->
+  <!-- 06 DATA CONFIDENCE -->
   <div class="section">
-    <div class="sec-head"><div class="sec-num">06</div><div class="sec-title">Tracking &amp; Billing</div></div>
+    <div class="sec-head"><div class="sec-num">06</div><div class="sec-title">Data confidence</div></div>
     <div class="row2">
       <div class="fgroup">
-        <label class="flabel">Tracking setup
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How much measurement access we have today: full (analytics + call tracking + CRM), partial, or none yet. Better tracking lets us attribute results confidently and supports a revenue-share deal.</span></button>
-        </label>
-        <div class="fwrap"><select id="tracking">
-          <option value="full">Full access</option>
-          <option value="partial" selected>Partial access</option>
-          <option value="none">No access yet</option>
-        </select></div>
-      </div>
-      <div class="fgroup">
         <label class="flabel">Data confidence
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How solid the numbers behind this quote are: verified with the client's own data, estimated from research, or unknown. Drives the review window and viability score.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How solid the numbers behind this quote are: verified with the client's own data, estimated from research, or unknown. Drives the review window, attribution factor, the rev-share start month, and the viability score.</span></button>
         </label>
         <div class="fwrap"><select id="confidence">
           <option value="verified">Verified with client data</option>
@@ -799,6 +785,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <option value="unknown">Unknown</option>
         </select></div>
       </div>
+      <div class="fgroup"></div>
     </div>
     <div class="hintnote"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
   </div>
@@ -940,6 +927,10 @@ const FOOT = {
 /* demand-confidence haircut: unverified volume sources get a conservative discount */
 const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
 const ROI_TARGET = 1.3;  // viability bar: the run-rate (ongoing) ROI a program should clear
+/* conservative–optimistic band applied to the modeled run-rate for the headline range.
+   Low = we capture only part of the demand; high = we rank across the full keyword cluster. */
+const ROI_LO = 0.60, ROI_HI = 1.30;
+const roiRangeTxt = rr => { const fx=v=>(v>=10?Math.round(v):v.toFixed(1)); return fx(rr*ROI_LO)+'×–'+fx(rr*ROI_HI)+'×'; };
 const DIFF_WORDS = [
   [2,'Light competition','Visibility wins should come quickly here.'],
   [4,'Moderate','A focused program wins this market at a steady pace.'],
@@ -993,9 +984,9 @@ function computeQuote(s){
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
 
-  /* ---- rev-share start month: harder markets and missing tracking extend the
+  /* ---- rev-share start month: harder markets and low-confidence data extend the
           fixed-only ramp (2–4 months) ---- */
-  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (s.tracking==='none'?1:0), 2, 4);
+  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (s.confidence==='unknown'?1:0), 2, 4);
 
   /* ---- fixed monthly price = research-based COST TO DELIVER ----
      This is what the work actually costs to do properly (our floor — worth our time, and
@@ -1021,16 +1012,15 @@ function computeQuote(s){
   share += a>=20?1 : a>=12?0.5 : a>=8?0 : -0.5;
   const c = s.commission??8;
   share += c>=12?-1 : c>=8?-0.5 : 0;
-  share += s.tracking==='full'?1 : s.tracking==='none'?-2 : 0;
+  share += s.confidence==='verified'?1 : s.confidence==='unknown'?-2 : 0;
   share += 0.5;  // new-net-revenue basis: share applies to growth above baseline only
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;
   share = clamp(Math.round(share*2)/2, 2, 10);
 
   /* ---- conservative attribution: we credit/bill only on revenue we can stand behind.
           softened from prior 0.3/0.5/0.8 — the demand model is already conservative, so the
-          extra discount no longer needs to be punitive. Existing tracked revenue +5%. ---- */
+          extra discount no longer needs to be punitive. ---- */
   let attribFactor = s.confidence==='verified'?0.85 : s.confidence==='estimated'?0.60 : 0.40;
-  if((s.trackrev??0)>0) attribFactor = Math.min(0.90, attribFactor+0.05);
 
   const windowDays = s.confidence==='verified'?60 : 90;
 
@@ -1086,8 +1076,6 @@ function readState(){
     yearly: num('yearly'), years: num('years'),
     convrate: num('convrate'),
     margin: num('margin'), acq: num('acq'), commission: num('commission'),
-    trackrev: num('trackrev'),
-    tracking: document.getElementById('tracking').value,
     confidence: document.getElementById('confidence').value
   };
 }
@@ -1174,8 +1162,8 @@ function evalRoiGuardrail(s,q,n){
   const y1Txt = n.roi>=10?Math.round(n.roi):n.roi.toFixed(1);
   if(rr>=ROI_TARGET){
     ok.classList.add('show');
-    ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo this returns <b>'+rrTxt
-      +'× ongoing</b> once built (year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.';
+    ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the modeled return is <b>'+rrTxt
+      +'× ongoing</b> once built (conservative–optimistic range '+roiRangeTxt(rr)+'; year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.';
     return;
   }
 
@@ -1284,12 +1272,13 @@ function render(){
   /* Headline = run-rate (ongoing) ROI — what the program returns once built. Year-1 (the
      ramp/investment year) is shown as context underneath, since SEO/GEO compounds over 12–24 mo. */
   const rr = n.runRate, y1 = n.roi;
-  const rrTxt = rr!=null ? (rr>=10?Math.round(rr):rr.toFixed(1))+'×' : '—';
-  set('o-roi', rrTxt);
+  const fx = v => (v>=10?Math.round(v):v.toFixed(1));
+  /* headline = conservative–optimistic range around the modeled run-rate (mid drives viability) */
+  set('o-roi', rr!=null ? roiRangeTxt(rr) : '—');
   set('o-roi-unit', rr!=null ? ' ongoing return' : '');
   set('o-roi-sub', rr!=null
-      ? 'Run-rate by month 12 (≈'+fmt$(n.series.exitMRR)+'/mo attributable vs '+fmt$(n.price)+'/mo fee). '
-        +'Year 1 is the ramp at '+(y1>=10?Math.round(y1):y1.toFixed(1))+'× while the program builds, then it compounds.'
+      ? 'Conservative-to-optimistic range once the program is built (modeled ≈'+fmt$(n.series.exitMRR)+'/mo attributable vs '+fmt$(n.price)+'/mo fee). '
+        +'The low end assumes we capture only part of the demand; the high end assumes we rank across the full keyword cluster. Year 1 ramps near '+fx(y1)+'× while it builds, then compounds.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
@@ -1305,7 +1294,7 @@ function render(){
   /* market-rate confirmation — no numbers, so the client never sees negotiation room */
   const mEl=document.getElementById('o-market');
   if(q.price!=null){
-    const lo=q.price*0.75, hi=q.price*1.40;
+    const lo=q.price*0.90, hi=q.price*1.25;
     mEl.innerHTML = (n.price>=lo && n.price<=hi)
       ? '<span class="in-range">&#10003; Within the typical market rate</span> for a '+IND[s.industry].name.toLowerCase()+' targeting '+FOOT[s.footprint].name+'.'
       : (n.price<lo ? 'Below the typical market rate for this scope.'
@@ -1442,7 +1431,7 @@ function researchWithAI(){
     +'Then give me BOTH of the following:\n\n'
     +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission, Tracking setup, Data confidence. Add one short line under the table explaining the key assumptions.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this exact format (drop any field you are unsure of — blanks auto-fill from the industry preset):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT&tracking=partial&confidence=estimated\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT&confidence=estimated\n\n'
     +'Valid select values:\n'
     +'- industry: local (everyday local service) | highticket (med spa, legal, roofing, dental) | b2b (B2B services / SaaS) | ecom (e-commerce / national brand)\n'
     +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national';
@@ -1466,12 +1455,11 @@ function researchWithAI(){
 function resetAll(){
   priceDirty=false; shareDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
-  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:'',margin:'',acq:15,commission:8,trackrev:0,yearly:'',years:''};
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:'',margin:'',acq:15,commission:8,yearly:'',years:''};
   for(const k in d) document.getElementById(k).value = d[k];
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
   document.getElementById('volsource').value='none';
-  document.getElementById('tracking').value='partial';
   document.getElementById('confidence').value='estimated';
   document.getElementById('scopeSeo').checked = true;
   document.getElementById('scopeGeo').checked = true;
@@ -1577,8 +1565,6 @@ function buildPDF(){
     ['Gross margin', (s.margin??IND[s.industry].margin)+'%'+(s.margin>0?'':' (typical)')],
     ['Acquisition budget', (s.acq??0)+'%'],
     ['Sales commission', (s.commission??0)+'%'],
-    ['Current trackable revenue', fmt$(s.trackrev??0)+'/mo'],
-    ['Tracking setup', selText('tracking')],
     ['Data confidence', selText('confidence')],
     ['Revenue basis', 'New net revenue (above baseline)'],
     ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
@@ -1644,11 +1630,12 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
   const p = new URLSearchParams(location.search);
   if(![...p.keys()].length) return;
   const fields = ['client','website','phrase','industry','footprint','volume','volsource','cpc',
-                  'rank','seoScore','geoScore','yearly','years','trackrev','convrate','margin',
-                  'acq','commission','tracking','confidence'];
+                  'rank','seoScore','geoScore','yearly','years','convrate','margin',
+                  'acq','commission','confidence'];
   fields.forEach(id=>{
     if(!p.has(id)) return;
     const el = document.getElementById(id);
+    if(!el) return; // field no longer exists (e.g. legacy tracking params) — ignore
     if(el.tagName==='SELECT' && ![...el.options].some(o=>o.value===p.get(id))) return; // ignore bad values
     el.value = p.get(id);
   });
