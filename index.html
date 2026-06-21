@@ -476,7 +476,19 @@ select option{background:#171410;color:var(--text)}
    range numbers shown (so the client never sees how low the price could go). */
 .o-market{margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.5}
 .o-market .in-range{color:var(--green);font-weight:700}
+.o-market .over{color:var(--red);font-weight:700}
 [data-theme="ivory"] .o-market .in-range{color:#1f5a2c}
+
+/* engagement intensity grade (derived from the SEO/GEO visibility scores) */
+.o-intensity{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.55}
+.o-intensity .ig-head{font-weight:700;color:var(--text);font-size:12px}
+.o-intensity .ig-row{display:flex;justify-content:space-between;align-items:center;margin-top:5px;
+  padding:5px 9px;background:rgba(212,162,74,.06);border:1px solid var(--gold-line-soft);border-radius:8px}
+.o-intensity .ig-grade{font-weight:700;letter-spacing:.02em}
+.o-intensity .ig-Light{color:var(--green)}
+.o-intensity .ig-Standard{color:var(--gold-bright)}
+.o-intensity .ig-Intensive{color:var(--red)}
+.o-intensity .ig-note{margin-top:6px;color:var(--muted2);font-size:11px}
 
 /* ===== 2x ROI guardrail — flagged inputs + warning box ===== */
 input.roi-flag,select.roi-flag{
@@ -579,15 +591,15 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <!-- ================= INPUTS ================= -->
 <div class="inputs">
 
-  <!-- 01 TARGET -->
+  <!-- 01 COMPANY & TARGET -->
   <div class="section">
-    <div class="sec-head"><div class="sec-num">01</div><div class="sec-title">Target Client</div></div>
+    <div class="sec-head"><div class="sec-num">01</div><div class="sec-title">Company &amp; Target</div></div>
     <div class="row2">
       <div class="fgroup">
-        <label class="flabel">Client name
+        <label class="flabel">Company name
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">The business you are quoting. Appears in the summary and on the printed proposal.</span></button>
         </label>
-        <div class="fwrap"><input type="text" id="client" placeholder="Target client"></div>
+        <div class="fwrap"><input type="text" id="client" placeholder="Company name"></div>
       </div>
       <div class="fgroup">
         <label class="flabel">Website
@@ -600,15 +612,29 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="fgroup" style="margin-bottom:4px">
       <label class="flabel">Search phrase or city
-        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here.</span></button>
+        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" in Search Demand below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here.</span></button>
       </label>
       <div class="fwrap"><input type="text" id="phrase" placeholder="best med spa near me"></div>
     </div>
   </div>
 
-  <!-- 02 MARKET -->
+  <!-- 02 SERVICE SCOPE & MARKET (the cost-to-deliver levers) -->
   <div class="section">
-    <div class="sec-head"><div class="sec-num">02</div><div class="sec-title">Competition Level &amp; Visibility</div></div>
+    <div class="sec-head"><div class="sec-num">02</div><div class="sec-title">Service Scope &amp; Market</div></div>
+    <div class="hintnote" style="margin-top:0"><b>These set the recommended price.</b> What you deliver (SEO / GEO), the industry, the market footprint, how many locations or service lines, and how strong the competitors are — together they drive the cost to deliver.</div>
+    <label class="toggle-row" for="scopeSeo">
+      <span class="tlabel">SEO included
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Classic search engine optimization: Google rankings, local map pack, on-page work, content, and authority building so the client gets found.</span></button>
+      </span>
+      <span class="switch"><input type="checkbox" id="scopeSeo" checked><span class="slider"></span></span>
+    </label>
+    <label class="toggle-row" for="scopeGeo" style="margin-bottom:4px">
+      <span class="tlabel">AEO / GEO included
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Answer & generative engine optimization: making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.</span></button>
+      </span>
+      <span class="switch"><input type="checkbox" id="scopeGeo" checked><span class="slider"></span></span>
+    </label>
+    <div class="scope-warn" id="scope-warn"></div>
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Industry model
@@ -633,6 +659,62 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         </select></div>
       </div>
     </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Locations or service lines
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how many physical locations or distinct service lines the program must cover (e.g. a 5-office dental group, or a law firm doing injury + family + criminal). Each is its own set of pages, listings, and content to optimize, so more units raise the cost to deliver — with economies of scale, so it's not strictly linear. Leave at 1 for a single-location, single-service business.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="units" class="has-suffix" value="1" min="1" max="25"><span class="suffix">units</span></div>
+        <div class="auto-note" id="note-units"></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Competitor strength
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how entrenched the businesses already ranking are — their domain authority and backlink strength. Your client's side of this gap is the SEO/GEO visibility scores in Current Visibility below; this is the other side. Stronger incumbents take more links and content to overtake, so this raises market difficulty, the cost to deliver, and the ramp time.</span></button>
+        </label>
+        <div class="fwrap"><select id="compstr">
+          <option value="weak">Weak — few / low-authority</option>
+          <option value="moderate" selected>Moderate — established local</option>
+          <option value="strong">Strong — entrenched leaders</option>
+          <option value="dominant">Dominant — national brands</option>
+        </select></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 CURRENT VISIBILITY -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">03</div><div class="sec-title">Current Visibility</div></div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Average search rank
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the client currently ranks on Google for their money phrases, on average. Position 1–3 wins clicks; past 10 means page two — effectively invisible.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="rank" class="has-suffix" value="28" min="1" max="100"><span class="suffix">rank</span></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel" id="lbl-seoScore">SEO visibility score
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how visible the client is in traditional Google search today. Lower score = bigger gap = more new customers available to win, and more work to do — it shapes both the revenue projection and the price (via engagement intensity).</span></button>
+          <span class="flag-pill">gap too small</span>
+        </label>
+        <div class="fwrap"><input type="number" id="seoScore" class="has-suffix" value="35" min="0" max="100"><span class="suffix">/100</span></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel" id="lbl-geoScore">AEO/GEO visibility score
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how often AI assistants (ChatGPT, Gemini, Perplexity, AI Overviews) mention or recommend the client today. Most local businesses score under 25 — and the lower the score, the more untapped revenue the model credits to the program.</span></button>
+          <span class="flag-pill">gap too small</span>
+        </label>
+        <div class="fwrap"><input type="number" id="geoScore" class="has-suffix" value="22" min="0" max="100"><span class="suffix">/100</span></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
+    <div class="hintnote"><b>These scores also grade the engagement intensity.</b> The lower the visibility, the more catch-up build work required — so each channel is auto-graded Light, Standard, or Intensive, which raises the cost to deliver and lengthens the ramp. The grade shows in the results panel.</div>
+  </div>
+
+  <!-- 04 SEARCH DEMAND -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">04</div><div class="sec-title">Search Demand &amp; Market Value</div></div>
     <div class="row2">
       <div class="fgroup">
         <label class="flabel" id="lbl-volume">Estimated phrase volume
@@ -664,54 +746,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one click costs on Google Ads for this phrase (CPC). High ad prices signal a competitive, high-value market — and show what the client avoids paying once organic visibility takes over. Typical: $2–6 for everyday local, $8–25+ for legal, medical, finance, and SaaS terms.</span></button>
         </label>
         <div class="fwrap"><span class="prefix">$</span><input type="number" id="cpc" class="has-prefix" value="9" min="0" step="0.5"></div>
-      </div>
-      <div class="fgroup"></div>
-    </div>
-  </div>
-
-  <!-- 03 SCOPE -->
-  <div class="section">
-    <div class="sec-head"><div class="sec-num">03</div><div class="sec-title">Scope</div></div>
-    <label class="toggle-row" for="scopeSeo">
-      <span class="tlabel">SEO included
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Classic search engine optimization: Google rankings, local map pack, on-page work, content, and authority building so the client gets found.</span></button>
-      </span>
-      <span class="switch"><input type="checkbox" id="scopeSeo" checked><span class="slider"></span></span>
-    </label>
-    <label class="toggle-row" for="scopeGeo" style="margin-bottom:4px">
-      <span class="tlabel">AEO / GEO included
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Answer & generative engine optimization: making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.</span></button>
-      </span>
-      <span class="switch"><input type="checkbox" id="scopeGeo" checked><span class="slider"></span></span>
-    </label>
-    <div class="scope-warn" id="scope-warn"></div>
-  </div>
-
-  <!-- 04 CURRENT VISIBILITY -->
-  <div class="section">
-    <div class="sec-head"><div class="sec-num">04</div><div class="sec-title">Current Visibility</div></div>
-    <div class="row2">
-      <div class="fgroup">
-        <label class="flabel">Average search rank
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the client currently ranks on Google for their money phrases, on average. Position 1–3 wins clicks; past 10 means page two — effectively invisible.</span></button>
-        </label>
-        <div class="fwrap"><input type="number" id="rank" class="has-suffix" value="28" min="1" max="100"><span class="suffix">rank</span></div>
-      </div>
-      <div class="fgroup">
-        <label class="flabel" id="lbl-seoScore">SEO visibility score
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how visible the client is in traditional Google search today. Lower score = bigger gap = more new customers available to win, and more work to do — it shapes both the revenue projection and the price.</span></button>
-          <span class="flag-pill">gap too small</span>
-        </label>
-        <div class="fwrap"><input type="number" id="seoScore" class="has-suffix" value="35" min="0" max="100"><span class="suffix">/100</span></div>
-      </div>
-    </div>
-    <div class="row2">
-      <div class="fgroup">
-        <label class="flabel" id="lbl-geoScore">AEO/GEO visibility score
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how often AI assistants (ChatGPT, Gemini, Perplexity, AI Overviews) mention or recommend the client today. Most local businesses score under 25 — and the lower the score, the more untapped revenue the model credits to the program.</span></button>
-          <span class="flag-pill">gap too small</span>
-        </label>
-        <div class="fwrap"><input type="number" id="geoScore" class="has-suffix" value="22" min="0" max="100"><span class="suffix">/100</span></div>
       </div>
       <div class="fgroup"></div>
     </div>
@@ -768,6 +802,15 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
       </div>
     </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Monthly marketing budget
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> what the client currently spends on marketing each month. This is an affordability check only — it shows the recommended fee as a share of their budget and flags if we'd exceed it. It does <b>not</b> change the price, which stays an honest cost-to-deliver figure (we don't price to their budget). Leave blank to skip the check.</span></button>
+        </label>
+        <div class="fwrap"><span class="prefix">$</span><input type="number" id="mktbudget" class="has-prefix" placeholder="optional" min="0"></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
   </div>
 
   <div class="hintnote" style="margin-top:14px"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
@@ -790,6 +833,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="neg-warn" id="o-price-warn"></div>
     <div class="o-market" id="o-market"></div>
+    <div class="o-market" id="o-budget"></div>
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="100" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
@@ -803,8 +847,10 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <span class="o-diff-val" id="o-diff">—<span>/10</span></span>
       </div>
       <div class="diffbar"><div class="fill" id="o-diffbar"></div></div>
-      <div class="o-diff-word" id="o-diffword">—<small id="o-diffnote">Based on industry, footprint, ad costs, and demand.</small></div>
+      <div class="o-diff-word" id="o-diffword">—<small id="o-diffnote">Based on industry, footprint, competitor strength, ad costs, and demand.</small></div>
     </div>
+
+    <div class="o-intensity" id="o-intensity"></div>
 
     <div class="o-proj">
       <div class="o-diff-top">
@@ -906,6 +952,23 @@ const FOOT = {
   metro:    {w:1.55, cost:1.90, reach:3.5, name:'a major metro / regional market'},
   national: {w:2.00, cost:2.80, reach:8.0, name:'a national market'}
 };
+/* competitor entrenchment / domain-authority gap: how strong the incumbents already are.
+   The client's own side of the gap is captured by the SEO/GEO visibility scores; this is the
+   other side. Feeds market difficulty, the cost to deliver (more authority to overcome = more
+   links/content), and the ramp. */
+const COMP = {
+  weak:     {w:0.00, name:'Weak — few or low-authority competitors'},
+  moderate: {w:0.35, name:'Moderate — established local competitors'},
+  strong:   {w:0.68, name:'Strong — entrenched market leaders'},
+  dominant: {w:1.00, name:'Dominant — national brands / very high authority'}
+};
+/* engagement intensity grade, derived from a channel's current visibility score (0–100):
+   the lower the score, the more catch-up build work, so the more intensive the engagement. */
+function intensityGrade(score){
+  const gap = clamp(1 - clamp(score,0,100)/100, 0, 1);
+  const label = gap>=0.67 ? 'Intensive' : gap>=0.34 ? 'Standard' : 'Light';
+  return {gap, label};
+}
 /* demand-confidence haircut: unverified volume sources get a conservative discount */
 const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
 const ROI_TARGET = 1.3;  // viability bar: the run-rate (ongoing) ROI a program should clear
@@ -926,17 +989,21 @@ const fmt$ = v => '$'+Math.round(v).toLocaleString('en-US');
 
 function computeQuote(s){
   const ind = IND[s.industry], foot = FOOT[s.footprint];
+  const comp = COMP[s.compstr] ?? COMP.moderate;
+  const compN = comp.w;                                   // 0..1 competitor entrenchment / DA gap
+  const units = clamp(Math.round(s.units??1), 1, 25);     // # locations or service lines
+  const unitsCost = 1 + 0.45*(Math.pow(units,0.75) - 1);  // more surface area, with economies of scale
 
   /* ---- effective demand volume ---- */
   const volIsAuto = !(s.volume>0);
   const vol = volIsAuto ? Math.round(ind.vol*foot.reach) : s.volume;
 
-  /* ---- market difficulty 1–10 ---- */
+  /* ---- market difficulty 1–10 (now includes competitor entrenchment) ---- */
   const indN  = clamp((ind.w-1.0)/1.0, 0, 1);
   const footN = clamp((foot.w-1.0)/1.0, 0, 1);
   const cpcN  = clamp((s.cpc||0)/20, 0, 1);
   const volN  = clamp(Math.log10(vol+1)/4.7, 0, 1);
-  const d01   = 0.30*indN + 0.25*footN + 0.25*cpcN + 0.20*volN;
+  const d01   = 0.24*indN + 0.18*footN + 0.20*cpcN + 0.13*volN + 0.25*compN;
   const difficulty = clamp(Math.round(1 + d01*9), 1, 10);
 
   /* ---- in-scope visibility gap: drives both effort (price) and upside (revenue) ---- */
@@ -944,6 +1011,14 @@ function computeQuote(s){
   const visAvg = nScopes>0
       ? ((s.seo?clamp(s.seoScore??35,0,100):0)+(s.geo?clamp(s.geoScore??22,0,100):0))/nScopes : 0;
   const visGap = nScopes>0 ? 1 - visAvg/100 : 0;
+
+  /* ---- engagement intensity: graded per in-scope channel from its visibility score.
+          Lower score → more catch-up build work → a more intensive (costlier, longer) engagement. */
+  const seoIntensity = s.seo ? intensityGrade(s.seoScore??35) : null;
+  const geoIntensity = s.geo ? intensityGrade(s.geoScore??22) : null;
+  const intensityGap = visGap;                            // overall = avg of in-scope channel gaps
+  const intensityLabel = nScopes>0 ? intensityGrade(visAvg).label : '—';
+  const intensityCost = 1 + 0.30*intensityGap;            // catch-up work raises the cost to deliver
 
   /* ---- customer & revenue model (yearly revenue, never LTV, drives projections) ---- */
   const yrIsAuto = !(s.yearly>0);
@@ -965,9 +1040,10 @@ function computeQuote(s){
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
 
-  /* ---- rev-share start month: harder markets and low-confidence data extend the
-          fixed-only ramp (2–4 months) ---- */
-  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (s.confidence==='unknown'?1:0), 2, 4);
+  /* ---- rev-share start month + ramp length: harder markets and more intensive (low-visibility)
+          engagements push back when rev share starts and lengthen the climb to full output ---- */
+  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (intensityGap>=0.6?1:0), 2, 4);
+  const rampSpan  = clamp(2 + Math.round(intensityGap*2), 2, 4);   // months from start to full output
 
   /* ---- fixed monthly price = research-based COST TO DELIVER ----
      This is what the work actually costs to do properly (our floor — worth our time, and
@@ -981,8 +1057,8 @@ function computeQuote(s){
     const scopeBase = 600 + (s.seo?900:0) + (s.geo?700:0);
     const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
-    const workFactor = 1 + 0.26*visGap + 0.12*rankN + 0.12*cpcN2;
-    price = Math.max(1500, Math.round(scopeBase * ind.cost * foot.cost * workFactor /50)*50);
+    const workFactor = 1 + 0.12*rankN + 0.12*cpcN2 + 0.18*compN;  // visibility gap now flows via intensityCost
+    price = Math.max(1500, Math.round(scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor /50)*50);
   }
 
   /* ---- revenue share 2–10% ---- */
@@ -1007,7 +1083,10 @@ function computeQuote(s){
 
   return {difficulty, price, share, yearlyValue, yrIsAuto, retainYears, ltv,
           newCust, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ,
-          vol, volIsAuto, clickShare, closeRate, rampMonth, windowDays, nScopes};
+          vol, volIsAuto, clickShare, closeRate, rampMonth, rampSpan, windowDays, nScopes,
+          comp, compN, units, unitsCost, intensityCost,
+          seoIntensity, geoIntensity, intensityGap, intensityLabel,
+          mktbudget: s.mktbudget};
 }
 
 /* 12-month series: customers compound, revenue = accumulated customers × monthly value.
@@ -1017,7 +1096,7 @@ function buildSeries(q, price, share){
   const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
   for(let m=1;m<=12;m++){
     months.push(m);
-    const f = m<q.rampMonth ? 0 : Math.min(1,(m-q.rampMonth+1)/3);
+    const f = m<q.rampMonth ? 0 : Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3));
     cum = cum*(1-churn) + q.newCust*f;
     const rev = cum*q.mrrPC;
     mrr.push(rev);
@@ -1054,9 +1133,12 @@ function readState(){
     seo: document.getElementById('scopeSeo').checked,
     geo: document.getElementById('scopeGeo').checked,
     rank: num('rank'), seoScore: num('seoScore'), geoScore: num('geoScore'),
+    compstr: document.getElementById('compstr').value,
+    units: num('units'),
     yearly: num('yearly'), years: num('years'),
     convrate: num('convrate'),
     margin: num('margin'), acq: num('acq'), commission: num('commission'),
+    mktbudget: num('mktbudget'),
     confidence: 'estimated'   /* research-based default (Data confidence input removed) */
   };
 }
@@ -1285,6 +1367,25 @@ function render(){
                     : 'Above the typical market rate for this scope.');
   } else mEl.innerHTML='';
 
+  /* marketing-budget affordability check — annotation only, never changes the price */
+  const bEl=document.getElementById('o-budget');
+  const budget=s.mktbudget;
+  if(q.price!=null && budget>0){
+    const pct=Math.round(n.price/budget*100);
+    bEl.innerHTML = (n.price<=budget)
+      ? 'The recommended fee is <b>≈'+pct+'%</b> of their <b>'+fmt$(budget)+'/mo</b> marketing budget — affordable within current spend.'
+      : '<span class="over">&#9888; '+fmt$(n.price)+'/mo is above their '+fmt$(budget)+'/mo marketing budget ('+pct+'%).</span> Consider a lighter scope, fewer locations, or a tighter footprint — the price itself stays at cost-to-deliver.';
+  } else bEl.innerHTML='';
+
+  /* engagement intensity — graded from the SEO/GEO visibility scores */
+  const igEl=document.getElementById('o-intensity');
+  if(q.price!=null && q.nScopes>0){
+    const row=(name,ig)=> ig ? '<div class="ig-row"><span>'+name+' visibility '+Math.round((1-ig.gap)*100)+'/100</span><span class="ig-grade ig-'+ig.label+'">'+ig.label+'</span></div>' : '';
+    igEl.innerHTML = '<div class="ig-head">Engagement intensity</div>'
+      + row('SEO', q.seoIntensity) + row('GEO', q.geoIntensity)
+      + '<div class="ig-note">Graded from current visibility — lower scores mean more build work, which raises the cost to deliver and pushes full output to month '+(q.rampMonth+q.rampSpan-1)+'.</div>';
+  } else igEl.innerHTML='';
+
   /* negotiation guardrails */
   const pNote=document.getElementById('o-price-note'), shNote=document.getElementById('o-share-note');
   const pWarn=document.getElementById('o-price-warn'), shWarn=document.getElementById('o-share-warn');
@@ -1407,14 +1508,17 @@ function researchWithAI(){
   const base=location.origin+location.pathname;
   const prompt='Research this business for a NewReward SEO/GEO pricing quote.\n\n'
     +'Business website: '+url+'\n\n'
-    +'Use web search to determine: industry type, the geographic footprint they serve, their money-keyword search volume (sum the relevant cluster, not one phrase), typical annual customer value, customer retention, current Google/AI-search visibility, and competitiveness. Use realistic 2025 benchmarks for anything not directly measurable. For a niche business that sells nationally, use a FOCUSED footprint (multi or metro), not national.\n\n'
+    +'Use web search to determine: industry type, the geographic footprint they serve, how many locations or distinct service lines they run, their money-keyword search volume (sum the relevant cluster, not one phrase), typical annual customer value, customer retention, current Google/AI-search visibility, how entrenched the competitors ranking ahead of them are, their likely monthly marketing budget, and overall competitiveness. Use realistic 2025 benchmarks for anything not directly measurable. For a niche business that sells nationally, use a FOCUSED footprint (multi or metro), not national.\n\n'
     +'Then give me BOTH of the following:\n\n'
-    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission. Add one short line under the table explaining the key assumptions.\n\n'
+    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission, Monthly marketing budget. Add one short line under the table explaining the key assumptions.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this exact format (drop any field you are unsure of — blanks auto-fill from the industry preset):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT&mktbudget=MONTHLY_USD\n\n'
     +'Valid select values:\n'
     +'- industry: local (everyday local service) | highticket (med spa, legal, roofing, dental) | b2b (B2B services / SaaS) | ecom (e-commerce / national brand)\n'
-    +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national';
+    +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national\n'
+    +'- compstr: weak | moderate | strong | dominant   (how entrenched the incumbents are)\n'
+    +'- units: integer ≥ 1 (number of locations or distinct service lines)\n'
+    +'- mktbudget: their estimated monthly marketing spend in USD (affordability check only)';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     if(isMobile){
@@ -1435,10 +1539,11 @@ function researchWithAI(){
 function resetAll(){
   priceDirty=false; shareDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
-  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,convrate:'',margin:'',acq:15,commission:8,yearly:'',years:''};
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,mktbudget:'',convrate:'',margin:'',acq:15,commission:8,yearly:'',years:''};
   for(const k in d) document.getElementById(k).value = d[k];
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
+  document.getElementById('compstr').value='moderate';
   document.getElementById('volsource').value='none';
   document.getElementById('scopeSeo').checked = true;
   document.getElementById('scopeGeo').checked = true;
@@ -1532,6 +1637,8 @@ function buildPDF(){
     ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'],
     ['Industry model', selText('industry')],
     ['Market footprint', selText('footprint')],
+    ['Competitor strength', selText('compstr')],
+    ['Locations / service lines', String(q.units)],
     ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')],
     ['Volume source', selText('volsource')],
     ['Typical search ad cost', '$'+(s.cpc??0)+'/click'],
@@ -1544,6 +1651,10 @@ function buildPDF(){
     ['Gross margin', (s.margin??IND[s.industry].margin)+'%'+(s.margin>0?'':' (typical)')],
     ['Acquisition budget', (s.acq??0)+'%'],
     ['Sales commission', (s.commission??0)+'%'],
+    ['Marketing budget', s.mktbudget>0?fmt$(s.mktbudget)+'/mo':'—'],
+    ['Engagement intensity', q.intensityLabel
+        + (q.seoIntensity?'  · SEO '+q.seoIntensity.label:'')
+        + (q.geoIntensity?'  · GEO '+q.geoIntensity.label:'')],
     ['Data basis', 'Estimated from research'],
     ['Revenue basis', 'New net revenue (above baseline)'],
     ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
@@ -1608,9 +1719,9 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
 (function applyParams(){
   const p = new URLSearchParams(location.search);
   if(![...p.keys()].length) return;
-  const fields = ['client','website','phrase','industry','footprint','volume','volsource','cpc',
+  const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc',
                   'rank','seoScore','geoScore','yearly','years','convrate','margin',
-                  'acq','commission'];
+                  'acq','commission','mktbudget'];
   fields.forEach(id=>{
     if(!p.has(id)) return;
     const el = document.getElementById(id);
