@@ -937,9 +937,9 @@ const IND = {
 };
 const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
-  multi:    {w:1.25, cost:1.45, reach:2.2, name:'a 2–5 market footprint'},
-  metro:    {w:1.55, cost:1.90, reach:3.5, name:'a major metro / regional market'},
-  national: {w:2.00, cost:2.80, reach:8.0, name:'a national market'}
+  multi:    {w:1.25, cost:1.35, reach:2.2, name:'a 2–5 market footprint'},
+  metro:    {w:1.55, cost:1.65, reach:3.5, name:'a major metro / regional market'},
+  national: {w:2.00, cost:2.20, reach:8.0, name:'a national market'}
 };
 /* competitor entrenchment / domain-authority gap: how strong the incumbents already are.
    The client's own side of the gap is captured by the SEO/GEO visibility scores; this is the
@@ -981,7 +981,7 @@ function computeQuote(s){
   const comp = COMP[s.compstr] ?? COMP.moderate;
   const compN = comp.w;                                   // 0..1 competitor entrenchment / DA gap
   const units = clamp(Math.round(s.units??1), 1, 25);     // # locations or service lines
-  const unitsCost = 1 + 0.45*(Math.pow(units,0.75) - 1);  // more surface area, with economies of scale
+  const unitsCost = 1 + 0.35*(Math.pow(units,0.70) - 1);  // more surface area, with economies of scale
 
   /* ---- effective demand volume ---- */
   const volIsAuto = !(s.volume>0);
@@ -1007,7 +1007,7 @@ function computeQuote(s){
   const geoIntensity = s.geo ? intensityGrade(s.geoScore??22) : null;
   const intensityGap = visGap;                            // overall = avg of in-scope channel gaps
   const intensityLabel = nScopes>0 ? intensityGrade(visAvg).label : '—';
-  const intensityCost = 1 + 0.30*intensityGap;            // catch-up work raises the cost to deliver
+  const intensityCost = 1 + 0.18*intensityGap;            // catch-up work raises the cost to deliver
 
   /* ---- customer & revenue model (yearly revenue, never LTV, drives projections) ---- */
   const yrIsAuto = !(s.yearly>0);
@@ -1043,10 +1043,10 @@ function computeQuote(s){
      ~$2–4k, competitive/SaaS ~$4–12k, national ~$8–15k+.) */
   let price = null;
   if(nScopes>0){
-    const scopeBase = 600 + (s.seo?900:0) + (s.geo?700:0);
+    const scopeBase = 500 + (s.seo?800:0) + (s.geo?600:0);
     const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
-    const workFactor = 1 + 0.12*rankN + 0.12*cpcN2 + 0.18*compN;  // visibility gap now flows via intensityCost
+    const workFactor = 1 + 0.10*rankN + 0.10*cpcN2 + 0.14*compN;  // visibility gap now flows via intensityCost
     price = Math.max(1500, Math.round(scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor /50)*50);
   }
 
@@ -1483,18 +1483,25 @@ function researchWithAI(){
   const note=document.getElementById('note-research');
   if(!url){ note.innerHTML='<b style="color:var(--gold-bright)">Enter the client’s website above first.</b>'; return; }
   const base=location.origin+location.pathname;
-  const prompt='Research this business for a NewReward SEO/GEO pricing quote.\n\n'
+  const prompt='You are pricing a NewReward SEO/GEO program. Research the business below and return calculator inputs.\n\n'
     +'Business website: '+url+'\n\n'
-    +'Use web search to determine: industry type, the geographic footprint they serve, how many locations or distinct service lines they run, their money-keyword search volume (sum the relevant cluster, not one phrase), typical annual customer value, customer retention, current Google/AI-search visibility, how entrenched the competitors ranking ahead of them are, and overall competitiveness. Use realistic 2025 benchmarks for anything not directly measurable. For a niche business that sells nationally, use a FOCUSED footprint (multi or metro), not national.\n\n'
+    +'BE DETERMINISTIC AND CONSERVATIVE. The same business must produce the same values every time — whether this runs on the web or in the Claude app, today or next week. When unsure, choose the more conservative (lower) option, and LEAVE numeric fields BLANK so the calculator uses its vetted industry benchmark instead of a guess. Do not invent precise numbers.\n\n'
+    +'Classification rules — follow exactly:\n'
+    +'- industry: "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
+    +'- footprint: a business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
+    +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
+    +'- compstr: default "moderate". Use "weak" only if the niche/town is clearly uncompetitive; "strong" or "dominant" only with clear evidence that national brands or very high-authority sites dominate the top results.\n'
+    +'- seoScore (0–100) and geoScore (0–100): how visible they are TODAY. Most local businesses are SEO 25–40 and GEO 5–20; only score higher with clear evidence of strong rankings or AI mentions.\n'
+    +'- rank: their rough average Google position for money phrases (1–100). cpc: typical Google Ads cost-per-click ($2–6 everyday local, $8–25 medical/legal/SaaS).\n'
+    +'- LEAVE BLANK (do not guess): Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission — blanks use the industry benchmark, which is what keeps results identical across runs. Fill one only if you have a specific measured figure.\n\n'
     +'Then give me BOTH of the following:\n\n'
-    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission. Add one short line under the table explaining the key assumptions.\n\n'
-    +'(2) A prefilled calculator link, on its own line, in this exact format (drop any field you are unsure of — blanks auto-fill from the industry preset):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT\n\n'
+    +'(1) A two-column markdown table titled "Calculator Inputs" (columns "Input" and "Value") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), SEO included, AEO/GEO included. Write "blank (benchmark)" for any field intentionally left blank. Add one short line under the table explaining the key assumptions.\n\n'
+    +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100\n\n'
     +'Valid select values:\n'
-    +'- industry: local (everyday local service) | highticket (med spa, legal, roofing, dental) | b2b (B2B services / SaaS) | ecom (e-commerce / national brand)\n'
-    +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national\n'
-    +'- compstr: weak | moderate | strong | dominant   (how entrenched the incumbents are)\n'
-    +'- units: integer ≥ 1 (number of locations or distinct service lines)';
+    +'- industry: local | highticket | b2b | ecom\n'
+    +'- footprint: local | multi | metro | national\n'
+    +'- compstr: weak | moderate | strong | dominant';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     if(isMobile){
