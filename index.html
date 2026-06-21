@@ -476,7 +476,6 @@ select option{background:#171410;color:var(--text)}
    range numbers shown (so the client never sees how low the price could go). */
 .o-market{margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.5}
 .o-market .in-range{color:var(--green);font-weight:700}
-.o-market .over{color:var(--red);font-weight:700}
 [data-theme="ivory"] .o-market .in-range{color:#1f5a2c}
 
 /* engagement intensity grade (derived from the SEO/GEO visibility scores) */
@@ -802,15 +801,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
       </div>
     </div>
-    <div class="row2">
-      <div class="fgroup">
-        <label class="flabel">Monthly marketing budget
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> what the client currently spends on marketing each month. This is an affordability check only — it shows the recommended fee as a share of their budget and flags if we'd exceed it. It does <b>not</b> change the price, which stays an honest cost-to-deliver figure (we don't price to their budget). Leave blank to skip the check.</span></button>
-        </label>
-        <div class="fwrap"><span class="prefix">$</span><input type="number" id="mktbudget" class="has-prefix" placeholder="optional" min="0"></div>
-      </div>
-      <div class="fgroup"></div>
-    </div>
   </div>
 
   <div class="hintnote" style="margin-top:14px"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
@@ -833,7 +823,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="neg-warn" id="o-price-warn"></div>
     <div class="o-market" id="o-market"></div>
-    <div class="o-market" id="o-budget"></div>
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="100" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
@@ -1085,8 +1074,7 @@ function computeQuote(s){
           newCust, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ,
           vol, volIsAuto, clickShare, closeRate, rampMonth, rampSpan, windowDays, nScopes,
           comp, compN, units, unitsCost, intensityCost,
-          seoIntensity, geoIntensity, intensityGap, intensityLabel,
-          mktbudget: s.mktbudget};
+          seoIntensity, geoIntensity, intensityGap, intensityLabel};
 }
 
 /* 12-month series: customers compound, revenue = accumulated customers × monthly value.
@@ -1138,7 +1126,6 @@ function readState(){
     yearly: num('yearly'), years: num('years'),
     convrate: num('convrate'),
     margin: num('margin'), acq: num('acq'), commission: num('commission'),
-    mktbudget: num('mktbudget'),
     confidence: 'estimated'   /* research-based default (Data confidence input removed) */
   };
 }
@@ -1367,16 +1354,6 @@ function render(){
                     : 'Above the typical market rate for this scope.');
   } else mEl.innerHTML='';
 
-  /* marketing-budget affordability check — annotation only, never changes the price */
-  const bEl=document.getElementById('o-budget');
-  const budget=s.mktbudget;
-  if(q.price!=null && budget>0){
-    const pct=Math.round(n.price/budget*100);
-    bEl.innerHTML = (n.price<=budget)
-      ? 'The recommended fee is <b>≈'+pct+'%</b> of their <b>'+fmt$(budget)+'/mo</b> marketing budget — affordable within current spend.'
-      : '<span class="over">&#9888; '+fmt$(n.price)+'/mo is above their '+fmt$(budget)+'/mo marketing budget ('+pct+'%).</span> Consider a lighter scope, fewer locations, or a tighter footprint — the price itself stays at cost-to-deliver.';
-  } else bEl.innerHTML='';
-
   /* engagement intensity — graded from the SEO/GEO visibility scores */
   const igEl=document.getElementById('o-intensity');
   if(q.price!=null && q.nScopes>0){
@@ -1508,17 +1485,16 @@ function researchWithAI(){
   const base=location.origin+location.pathname;
   const prompt='Research this business for a NewReward SEO/GEO pricing quote.\n\n'
     +'Business website: '+url+'\n\n'
-    +'Use web search to determine: industry type, the geographic footprint they serve, how many locations or distinct service lines they run, their money-keyword search volume (sum the relevant cluster, not one phrase), typical annual customer value, customer retention, current Google/AI-search visibility, how entrenched the competitors ranking ahead of them are, their likely monthly marketing budget, and overall competitiveness. Use realistic 2025 benchmarks for anything not directly measurable. For a niche business that sells nationally, use a FOCUSED footprint (multi or metro), not national.\n\n'
+    +'Use web search to determine: industry type, the geographic footprint they serve, how many locations or distinct service lines they run, their money-keyword search volume (sum the relevant cluster, not one phrase), typical annual customer value, customer retention, current Google/AI-search visibility, how entrenched the competitors ranking ahead of them are, and overall competitiveness. Use realistic 2025 benchmarks for anything not directly measurable. For a niche business that sells nationally, use a FOCUSED footprint (multi or metro), not national.\n\n'
     +'Then give me BOTH of the following:\n\n'
-    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission, Monthly marketing budget. Add one short line under the table explaining the key assumptions.\n\n'
+    +'(1) A two-column markdown table titled "Calculator Inputs" with columns "Input" and "Value", one row for each of these fields: Client, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Estimated phrase volume, Volume source, Typical search ad cost (CPC), SEO included, AEO/GEO included, Average search rank, SEO visibility score, AEO/GEO visibility score, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Customer acquisition budget, Sales commission. Add one short line under the table explaining the key assumptions.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this exact format (drop any field you are unsure of — blanks auto-fill from the industry preset):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT&mktbudget=MONTHLY_USD\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&volume=NUM&volsource=aiprompt&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&yearly=ANNUAL_VALUE_USD&years=RETENTION_YRS&convrate=PCT&margin=PCT&acq=PCT&commission=PCT\n\n'
     +'Valid select values:\n'
     +'- industry: local (everyday local service) | highticket (med spa, legal, roofing, dental) | b2b (B2B services / SaaS) | ecom (e-commerce / national brand)\n'
     +'- footprint: local (one market) | multi (2–5 markets) | metro (major metro/regional) | national\n'
     +'- compstr: weak | moderate | strong | dominant   (how entrenched the incumbents are)\n'
-    +'- units: integer ≥ 1 (number of locations or distinct service lines)\n'
-    +'- mktbudget: their estimated monthly marketing spend in USD (affordability check only)';
+    +'- units: integer ≥ 1 (number of locations or distinct service lines)';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     if(isMobile){
@@ -1539,7 +1515,7 @@ function researchWithAI(){
 function resetAll(){
   priceDirty=false; shareDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
-  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,mktbudget:'',convrate:'',margin:'',acq:15,commission:8,yearly:'',years:''};
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,convrate:'',margin:'',acq:15,commission:8,yearly:'',years:''};
   for(const k in d) document.getElementById(k).value = d[k];
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
@@ -1651,7 +1627,6 @@ function buildPDF(){
     ['Gross margin', (s.margin??IND[s.industry].margin)+'%'+(s.margin>0?'':' (typical)')],
     ['Acquisition budget', (s.acq??0)+'%'],
     ['Sales commission', (s.commission??0)+'%'],
-    ['Marketing budget', s.mktbudget>0?fmt$(s.mktbudget)+'/mo':'—'],
     ['Engagement intensity', q.intensityLabel
         + (q.seoIntensity?'  · SEO '+q.seoIntensity.label:'')
         + (q.geoIntensity?'  · GEO '+q.geoIntensity.label:'')],
@@ -1721,7 +1696,7 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
   if(![...p.keys()].length) return;
   const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc',
                   'rank','seoScore','geoScore','yearly','years','convrate','margin',
-                  'acq','commission','mktbudget'];
+                  'acq','commission'];
   fields.forEach(id=>{
     if(!p.has(id)) return;
     const el = document.getElementById(id);
