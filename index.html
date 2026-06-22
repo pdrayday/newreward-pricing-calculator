@@ -1372,7 +1372,7 @@ function render(){
       ? 'negotiated — recommended '+q.share+'% &nbsp;·&nbsp; <a onclick="return resetNeg(\'share\')">use recommended</a>' : '';
   let pLow=false, shLow=false;
   if(q.price!=null){
-    const floor=Math.max(1500, Math.round(q.price*0.85/50)*50);
+    const floor=Math.max(1200, Math.round(q.price*0.85/50)*50);
     pLow = n.price<floor;
     pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Keep at least '+fmt$(floor)+' (recommended '+fmt$(q.price)+').';
   }
