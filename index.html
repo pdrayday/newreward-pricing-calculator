@@ -1043,11 +1043,11 @@ function computeQuote(s){
      ~$2–4k, competitive/SaaS ~$4–12k, national ~$8–15k+.) */
   let price = null;
   if(nScopes>0){
-    const scopeBase = 500 + (s.seo?800:0) + (s.geo?600:0);
+    const scopeBase = 400 + (s.seo?700:0) + (s.geo?500:0);
     const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
     const workFactor = 1 + 0.10*rankN + 0.10*cpcN2 + 0.14*compN;  // visibility gap now flows via intensityCost
-    price = Math.max(1500, Math.round(scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor /50)*50);
+    price = Math.max(1200, Math.round(scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor /50)*50);
   }
 
   /* ---- revenue share 2–10% ---- */
