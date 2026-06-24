@@ -648,7 +648,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Market footprint
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How wide the client wants to win: one city, several locations, statewide, or national. Wider footprints mean more competitors and more pages, answers, and listings to optimize.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How wide the client wants to win. Wider footprints mean more competitors and more pages, answers, and listings to optimize.<br><br><b>How to pick it (match the client's real service area):</b><br>• <b>local</b> — one city or a single physical location.<br>• <b>multi</b> — 2–5 cities or locations.<br>• <b>metro</b> — a whole major metro or region (e.g. all of greater Phoenix).<br>• <b>national</b> — sells nationwide with no geographic limit (most SaaS and online stores).<br>When unsure, choose the smaller footprint.</span></button>
         </label>
         <div class="fwrap"><select id="footprint">
           <option value="local">One local market</option>
@@ -661,14 +661,14 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Locations or service lines
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how many physical locations or distinct service lines the program must cover (e.g. a 5-office dental group, or a law firm doing injury + family + criminal). Each is its own set of pages, listings, and content to optimize, so more units raise the cost to deliver — with economies of scale, so it's not strictly linear. Leave at 1 for a single-location, single-service business.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how many physical locations or distinct service lines the program must cover. Each is its own set of pages, listings, and content to optimize, so more units raise the cost to deliver — with economies of scale, so it's not strictly linear.<br><br><b>How to count it:</b><br>• Local business → number of physical locations (a 5-office dental group = 5; one location = 1).<br>• Law/medical/multi-service → number of distinct service lines that each need their own content (e.g. injury + family + criminal = 3).<br>• <b>B2B / SaaS</b> → number of separate products or solution lines that each need their own pages (one core product = 1).<br>• <b>E-commerce / national</b> → number of major product categories you'd build out separately (one core category = 1).<br>When in doubt, leave it at 1.</span></button>
         </label>
         <div class="fwrap"><input type="number" id="units" class="has-suffix" value="1" min="1" max="25"><span class="suffix">units</span></div>
         <div class="auto-note" id="note-units"></div>
       </div>
       <div class="fgroup">
         <label class="flabel">Competitor strength
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how entrenched the businesses already ranking are — their domain authority and backlink strength. Your client's side of this gap is the SEO/GEO visibility scores in Current Visibility below; this is the other side. Stronger incumbents take more links and content to overtake, so this raises market difficulty, the cost to deliver, and the ramp time.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how entrenched the businesses already ranking are — their domain authority and backlink strength. Stronger incumbents take more links and content to overtake, so this raises market difficulty, the cost to deliver, and the ramp time.<br><br><b>How to gauge it (no tools needed):</b> Google the client's main money phrase and look at who ranks on page one:<br>• <b>weak</b> — mostly small, dated, or very few real websites.<br>• <b>moderate</b> — a mix of established local competitors with real sites.<br>• <b>strong</b> — well-known regional players and big directories (Yelp, Angi, WebMD).<br>• <b>dominant</b> — national brands or household names own the top results (Amazon, major chains).<br>When unsure, choose moderate.</span></button>
         </label>
         <div class="fwrap"><select id="compstr">
           <option value="weak">Weak — few / low-authority</option>
@@ -796,7 +796,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Sales commission
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Commission the client already pays staff or reps on each sale. It stacks with our revenue share, so high commissions lower the share we ask for. Typical: 5–15% (local trades lower, B2B/SaaS and high-ticket higher).</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Commission the client already pays staff or reps on each sale, entered as a percent of the sale's <b>gross (top-line) revenue</b> — the standard basis for sales commissions, not net profit. It stacks with our revenue share, so high commissions lower the share we ask for. Typical: 5–15% (local trades lower, B2B/SaaS and high-ticket higher).</span></button>
         </label>
         <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
       </div>
