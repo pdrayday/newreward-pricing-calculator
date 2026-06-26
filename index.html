@@ -933,7 +933,7 @@ const IND = {
   local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, cost:1.00, name:'Local service'},
   highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, cost:1.35, name:'High-ticket local'},
   b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.45, name:'B2B / SaaS'},
-  ecom:       {w:1.35, yr:700,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.50, name:'E-commerce / National'}
+  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.50, name:'E-commerce / National'}
 };
 const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
@@ -1592,9 +1592,15 @@ function buildPDF(){
       doc.splitTextToSize(note,w-10).slice(0,2).forEach((ln,i)=>doc.text(ln,x+5,y+(big?21.5:19.5)+i*3.3)); }
   };
   const h1=28;
-  box(L,59,h1,'YEAR-1 ROI', roi!=null?((roi>=10?Math.round(roi):roi.toFixed(1))+'× return'):'—', roi!=null?('attributable revenue vs total cost, months 1–12'):'select a service', DGOLD, true, true);
-  box(L+63,59,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'))+' program fee'+((priceDirty&&q.price!=null&&n.price!==q.price)?' (negotiated)':''), DARK, true);
-  box(L+126,56,h1,'REVENUE SHARE', n.share+'%', 'of attributable new net revenue, from month '+q.rampMonth+((shareDirty&&n.share!==q.share)?' (negotiated)':''), DARK, true);
+  const fxr=v=>(v>=10?Math.round(v):v.toFixed(1));
+  const ongTxt = n.runRate!=null ? fxr(n.runRate*ROI_LO)+'×' : '—';
+  const y1Txt  = roi!=null ? fxr(roi)+'×' : '—';
+  const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
+  /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
+  box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'once built — return after the year-1 ramp':'select a service', DGOLD, true, true);
+  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
+  box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', scopeTxt+' fee'+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
+  box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'attributable new net revenue, from month '+q.rampMonth+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
 
   y+=h1+4;
   const h2=23;
