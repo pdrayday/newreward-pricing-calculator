@@ -1392,7 +1392,7 @@ function render(){
   const seoSc = clamp(s.seoScore??35,0,100);
   const localSeg = (s.industry==='local'||s.industry==='highticket') && (s.footprint==='local'||s.footprint==='multi');
   const natSeg = s.industry==='b2b'||s.industry==='ecom'||s.footprint==='national';
-  const bundleBar = localSeg ? 60 : natSeg ? 40 : 50;
+  const bundleBar = localSeg ? 75 : natSeg ? 40 : 50;
   if(s.geo && !s.seo && seoSc < bundleBar){
     scopeWarn.classList.add('show');
     scopeWarn.innerHTML = '<b>Recommend the full bundle.</b> '
