@@ -489,6 +489,13 @@ select option{background:#171410;color:var(--text)}
 .o-intensity .ig-Intensive{color:var(--red)}
 .o-intensity .ig-note{margin-top:6px;color:var(--muted2);font-size:11px}
 
+/* organic vs paid: equivalent Google Ads spend for the captured traffic */
+.o-adsave{margin-top:14px;display:none;background:rgba(212,162,74,.07);border:1px solid var(--gold-line-soft);
+  border-radius:10px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.55}
+.o-adsave.show{display:block}
+.o-adsave b{color:var(--gold-bright)}
+.o-adsave .ad-big{color:var(--text);font-weight:800;font-size:13.5px}
+
 /* ===== 2x ROI guardrail — flagged inputs + warning box ===== */
 input.roi-flag,select.roi-flag{
   border-color:var(--red)!important;
@@ -772,6 +779,21 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="row2">
       <div class="fgroup">
+        <label class="flabel">Average order value
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>For e-commerce and any per-order business.</b> What a customer spends per order. With "Purchases / year", it builds the annual customer value above automatically (and overrides it). <b>Subscription?</b> Put the monthly plan price here and 12 in purchases/year (a $75/mo plan × 12 = $900/yr). Leave blank to use the annual value or industry benchmark.</span></button>
+        </label>
+        <div class="fwrap"><span class="prefix">$</span><input type="number" id="aov" class="has-prefix" placeholder="optional" min="0"></div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Purchases / year
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How many times a customer buys per year: 1 for a one-time purchase, 12 for a monthly subscription, etc. Only used when "Average order value" is filled — together they set the annual customer value.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="freq" class="has-suffix" placeholder="optional" min="0" step="0.5"><span class="suffix">/yr</span></div>
+        <div class="auto-note" id="note-aov"></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
         <label class="flabel" id="lbl-convrate">Conversion rate
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the website visitors search sends you, the percentage who become paying customers (visit-to-customer). Keep it realistic — low single digits for most local businesses (≈3–8%), higher only for strong high-intent niches. It drives the whole projection. Leave blank to use the industry typical (local ~5%, high-ticket ~4%, B2B/SaaS ~2%, e-commerce ~2%).</span></button>
           <span class="flag-pill">▲ raise</span>
@@ -877,6 +899,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="oc-note" id="o-window-note">re-quote after tracking data lands</div>
       </div>
     </div>
+
+    <div class="o-adsave" id="o-adsave"></div>
 
     <div class="o-summary">
       <div class="s-kick">Plain English</div>
@@ -1009,9 +1033,12 @@ function computeQuote(s){
   const intensityLabel = nScopes>0 ? intensityGrade(visAvg).label : '—';
   const intensityCost = 1 + 0.18*intensityGap;            // catch-up work raises the cost to deliver
 
-  /* ---- customer & revenue model (yearly revenue, never LTV, drives projections) ---- */
-  const yrIsAuto = !(s.yearly>0);
-  const yearlyValue = yrIsAuto ? ind.yr : s.yearly;
+  /* ---- customer & revenue model (yearly revenue, never LTV, drives projections) ----
+     value priority: order economics (AOV × purchases/yr — a $/mo subscription is just ×12)
+     > explicit annual value > industry benchmark. */
+  const aovYear = (s.aov>0 && s.freq>0) ? s.aov*s.freq : null;
+  const yrIsAuto = !(aovYear>0 || s.yearly>0);
+  const yearlyValue = aovYear>0 ? aovYear : (s.yearly>0 ? s.yearly : ind.yr);
   const retainYears = clamp(s.years??ind.yrs, 1, 20);
   const ltv = yearlyValue*retainYears;            // context only — not used in revenue math
   // achievable click share decays in very large markets (you can't win 15% of 50k searches)
@@ -1028,6 +1055,9 @@ function computeQuote(s){
   const newCust = vol*clickShare*closeRate*chFactor*volQ;
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
+  // organic-vs-paid: the captured visits/mo once ramped, and what that traffic would cost in Google Ads
+  const clicksPM  = vol*clickShare*chFactor*volQ;
+  const adValuePM = clicksPM*(s.cpc||0);
 
   /* ---- rev-share start month + ramp length: harder markets and more intensive (low-visibility)
           engagements push back when rev share starts and lengthen the climb to full output ---- */
@@ -1070,9 +1100,9 @@ function computeQuote(s){
 
   const windowDays = s.confidence==='verified'?60 : 90;
 
-  return {difficulty, price, share, yearlyValue, yrIsAuto, retainYears, ltv,
+  return {difficulty, price, share, yearlyValue, yrIsAuto, aovYear, retainYears, ltv,
           newCust, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ,
-          vol, volIsAuto, clickShare, closeRate, rampMonth, rampSpan, windowDays, nScopes,
+          vol, volIsAuto, clickShare, closeRate, clicksPM, adValuePM, rampMonth, rampSpan, windowDays, nScopes,
           comp, compN, units, unitsCost, intensityCost,
           seoIntensity, geoIntensity, intensityGap, intensityLabel};
 }
@@ -1124,6 +1154,7 @@ function readState(){
     compstr: document.getElementById('compstr').value,
     units: num('units'),
     yearly: num('yearly'), years: num('years'),
+    aov: num('aov'), freq: num('freq'),
     convrate: num('convrate'),
     margin: num('margin'), acq: num('acq'), commission: num('commission'),
     confidence: 'estimated'   /* research-based default (Data confidence input removed) */
@@ -1413,10 +1444,20 @@ function render(){
   document.getElementById('note-vol').innerHTML = q.volIsAuto
       ? 'Auto: '+IND[s.industry].name+' baseline '+IND[s.industry].vol.toLocaleString()
         +' × '+FOOT[s.footprint].reach+'× reach = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : '';
-  document.getElementById('note-yr').innerHTML = q.yrIsAuto
-      ? 'Auto: '+IND[s.industry].name+' benchmark = <b>'+fmt$(q.yearlyValue)+'/yr</b>' : '';
+  document.getElementById('note-yr').innerHTML = q.aovYear>0
+      ? 'From order value: <b>'+fmt$(q.yearlyValue)+'/yr</b> (used instead of the field above)'
+      : (q.yrIsAuto ? 'Auto: '+IND[s.industry].name+' benchmark = <b>'+fmt$(q.yearlyValue)+'/yr</b>' : '');
+  document.getElementById('note-aov').innerHTML = q.aovYear>0
+      ? fmt$(s.aov)+' × '+s.freq+'/yr = <b>'+fmt$(q.aovYear)+'/yr</b>' : '';
   document.getElementById('note-ltv').innerHTML =
       'Lifetime value: '+fmt$(q.yearlyValue)+' × '+q.retainYears+' yrs = <b>'+fmt$(q.ltv)+'</b> (context only)';
+
+  /* organic vs paid: what the captured traffic would cost in Google Ads */
+  const adEl=document.getElementById('o-adsave');
+  if(q.price!=null && q.clicksPM>0 && (s.cpc||0)>0){
+    adEl.classList.add('show');
+    adEl.innerHTML='<span class="ad-big">≈'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo</span> captured by month 12 — about <b>'+fmt$(q.adValuePM)+'/mo</b> you’d otherwise pay Google Ads for the same traffic, versus the '+fmt$(n.price)+'/mo program fee.';
+  } else adEl.classList.remove('show');
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
   document.getElementById('note-yrs').innerHTML = (s.years>0)
@@ -1493,11 +1534,12 @@ function researchWithAI(){
     +'- compstr: default "moderate". Use "weak" only if the niche/town is clearly uncompetitive; "strong" or "dominant" only with clear evidence that national brands or very high-authority sites dominate the top results.\n'
     +'- seoScore (0–100) and geoScore (0–100): how visible they are TODAY. Most local businesses are SEO 25–40 and GEO 5–20; only score higher with clear evidence of strong rankings or AI mentions.\n'
     +'- rank: their rough average Google position for money phrases (1–100). cpc: typical Google Ads cost-per-click ($2–6 everyday local, $8–25 medical/legal/SaaS).\n'
+    +'- For E-COMMERCE only, you MAY set aov (typical order value, read from their product/pricing pages) and freq (orders per year; use 12 for a clear monthly subscription) — these build the customer value. If not clearly determinable, leave both blank.\n'
     +'- LEAVE BLANK (do not guess): Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission — blanks use the industry benchmark, which is what keeps results identical across runs. Fill one only if you have a specific measured figure.\n\n'
     +'Then give me BOTH of the following:\n\n'
     +'(1) A two-column markdown table titled "Calculator Inputs" (columns "Input" and "Value") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), SEO included, AEO/GEO included. Write "blank (benchmark)" for any field intentionally left blank. Add one short line under the table explaining the key assumptions.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | b2b | ecom\n'
     +'- footprint: local | multi | metro | national\n'
@@ -1522,7 +1564,7 @@ function researchWithAI(){
 function resetAll(){
   priceDirty=false; shareDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
-  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,convrate:'',margin:'',acq:15,commission:8,yearly:'',years:''};
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,convrate:'',margin:'',acq:15,commission:8,yearly:'',years:'',aov:'',freq:''};
   for(const k in d) document.getElementById(k).value = d[k];
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
@@ -1634,7 +1676,7 @@ function buildPDF(){
     ['Average search rank', String(s.rank??'—')],
     ['SEO visibility score', (s.seoScore??0)+'/100'],
     ['AEO/GEO visibility score', (s.geoScore??0)+'/100'],
-    ['Customer value / yr', fmt$(q.yearlyValue)+(q.yrIsAuto?' (benchmark)':'')],
+    ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))],
     ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'],
     ['Conversion rate', (s.convrate??IND[s.industry].conv)+'%'+(s.convrate>0?'':' (typical)')],
     ['Gross margin', (s.margin??IND[s.industry].margin)+'%'+(s.margin>0?'':' (typical)')],
@@ -1671,6 +1713,12 @@ function buildPDF(){
     +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
     +'/yr by month 12 (before attribution).';
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  if(q.clicksPM>0 && (s.cpc||0)>0){
+    const math3='Organic vs. paid: ~'+Math.round(q.clicksPM).toLocaleString()+' visits/mo captured by month 12 ≈ '+fmtK(q.adValuePM)+'/mo in equivalent Google Ads spend — versus the '+fmt$(n.price)+'/mo fee.';
+    doc.setFont('helvetica','bold'); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    doc.splitTextToSize(math3,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+    doc.setFont('helvetica','normal'); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  }
   y+=2.5;
   doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('Month'+(q.rampMonth>2?'s 1–'+(q.rampMonth-1):' 1')+' bill'+(q.rampMonth>2?'':'s')+' the fixed fee only; the share starts month '+q.rampMonth+' on growth above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.',L,y,{maxWidth:W});
@@ -1708,7 +1756,7 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
   const p = new URLSearchParams(location.search);
   if(![...p.keys()].length) return;
   const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc',
-                  'rank','seoScore','geoScore','yearly','years','convrate','margin',
+                  'rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin',
                   'acq','commission'];
   fields.forEach(id=>{
     if(!p.has(id)) return;
