@@ -695,7 +695,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Pricing model
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>How the deal is structured.</b><br>• <b>Balanced</b> — the standard quote: a higher fixed monthly fee plus a modest 2–10% revenue share.<br>• <b>Performance-weighted</b> — cuts the fixed fee ~30% (and floors it lower) and trades it for a bigger, <b>uncapped</b> revenue share (up to ~18%). Lower up-front risk for the client and a higher headline ROI; your upside rides on results, with no ceiling. Both sides win bigger when the program performs.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>How the deal is structured.</b><br>• <b>Balanced</b> — the standard quote: a higher fixed monthly fee plus a modest 2–10% revenue share.<br>• <b>Performance-weighted</b> — cuts the fixed fee ~30% (and floors it lower) and leans on the revenue share, pushing it toward the <b>10% rate cap</b>. The rate caps at 10%, but the <b>dollar amount is uncapped</b> — it scales with the new revenue it earns. Lower up-front risk for the client and a higher headline ROI; your upside rides on results.</span></button>
         </label>
         <div class="fwrap"><select id="pmodel">
           <option value="balanced" selected>Balanced — higher fixed, modest share</option>
@@ -866,7 +866,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="o-market" id="o-market"></div>
 
     <div class="o-share">
-      <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="100" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
+      <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
       <div class="share-desc"><b style="color:var(--text)">Revenue share</b> on attributable <b style="color:var(--gold-bright)">new net revenue</b> — growth above today's baseline only. Begins <span id="o-ramp">month 2</span>.<br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
@@ -1118,8 +1118,8 @@ function computeQuote(s){
   share += 0.5;  // new-net-revenue basis: share applies to growth above baseline only
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;
   share = (s.pmodel==='performance')
-    ? clamp(Math.round(share*1.7*2)/2, 4, 18)   // performance: higher, uncapped share
-    : clamp(Math.round(share*2)/2, 2, 10);
+    ? clamp(Math.round(share*1.7*2)/2, 4, 10)   // performance leans on share, but rate is still capped at 10%
+    : clamp(Math.round(share*2)/2, 2, 10);      // dollars are uncapped (10% of growing revenue); the RATE caps at 10%
 
   /* ---- conservative attribution: we credit/bill only on revenue we can stand behind.
           softened from prior 0.3/0.5/0.8 — the demand model is already conservative, so the
@@ -1205,7 +1205,7 @@ function getNegotiated(q){
   }
   if(shareDirty){
     const v=parseFloat(document.getElementById('o-share-edit').value);
-    if(!isNaN(v)) share=clamp(v,0,100);
+    if(!isNaN(v)) share=clamp(v,0,10);   // rev-share RATE capped at 10% (dollars uncapped)
   }
   const series = buildSeries(q, price, share);
   return {price, share, series, roi: series.roi, runRate: series.runRateROI};
