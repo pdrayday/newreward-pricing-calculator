@@ -496,6 +496,13 @@ select option{background:#171410;color:var(--text)}
 .o-adsave b{color:var(--gold-bright)}
 .o-adsave .ad-big{color:var(--text);font-weight:800;font-size:13.5px}
 
+/* internal: agency total take (fixed + uncapped rev share) — rep-facing, hidden from the PDF */
+.o-take{margin-top:12px;font-size:11.5px;color:var(--muted);line-height:1.5;
+  border-left:3px solid var(--gold-line);padding:7px 11px;background:rgba(212,162,74,.05);border-radius:0 8px 8px 0}
+.o-take b{color:var(--gold-bright)}
+.o-take .perf-tag{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--gold);border:1px solid var(--gold-line);border-radius:999px;padding:1px 7px}
+
 /* ===== 2x ROI guardrail — flagged inputs + warning box ===== */
 input.roi-flag,select.roi-flag{
   border-color:var(--red)!important;
@@ -685,6 +692,18 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         </select></div>
       </div>
     </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel">Pricing model
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>How the deal is structured.</b><br>• <b>Balanced</b> — the standard quote: a higher fixed monthly fee plus a modest 2–10% revenue share.<br>• <b>Performance-weighted</b> — cuts the fixed fee ~30% (and floors it lower) and trades it for a bigger, <b>uncapped</b> revenue share (up to ~18%). Lower up-front risk for the client and a higher headline ROI; your upside rides on results, with no ceiling. Both sides win bigger when the program performs.</span></button>
+        </label>
+        <div class="fwrap"><select id="pmodel">
+          <option value="balanced" selected>Balanced — higher fixed, modest share</option>
+          <option value="performance">Performance — lower fixed, bigger uncapped share</option>
+        </select></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
   </div>
 
   <!-- 03 CURRENT VISIBILITY -->
@@ -851,6 +870,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <div class="share-desc"><b style="color:var(--text)">Revenue share</b> on attributable <b style="color:var(--gold-bright)">new net revenue</b> — growth above today's baseline only. Begins <span id="o-ramp">month 2</span>.<br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
+
+    <div class="o-take no-print" id="o-take"></div>
 
     <div class="o-diff">
       <div class="o-diff-top">
@@ -1077,7 +1098,12 @@ function computeQuote(s){
     const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
     const workFactor = 1 + 0.10*rankN + 0.10*cpcN2 + 0.14*compN;  // visibility gap now flows via intensityCost
-    price = Math.max(1200, Math.round(scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor /50)*50);
+    const rawCost = scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor;
+    // Performance model trades fixed fee for a bigger uncapped revenue share, so the fixed is cut
+    // ~30% and floored lower (the rev share carries the agency's upside).
+    price = (s.pmodel==='performance')
+      ? Math.max(900,  Math.round(rawCost*0.70/50)*50)
+      : Math.max(1200, Math.round(rawCost/50)*50);
   }
 
   /* ---- revenue share 2–10% ---- */
@@ -1091,7 +1117,9 @@ function computeQuote(s){
   share += s.confidence==='verified'?1 : s.confidence==='unknown'?-2 : 0;
   share += 0.5;  // new-net-revenue basis: share applies to growth above baseline only
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;
-  share = clamp(Math.round(share*2)/2, 2, 10);
+  share = (s.pmodel==='performance')
+    ? clamp(Math.round(share*1.7*2)/2, 4, 18)   // performance: higher, uncapped share
+    : clamp(Math.round(share*2)/2, 2, 10);
 
   /* ---- conservative attribution: we credit/bill only on revenue we can stand behind.
           softened from prior 0.3/0.5/0.8 — the demand model is already conservative, so the
@@ -1108,9 +1136,10 @@ function computeQuote(s){
 }
 
 /* 12-month series: customers compound, revenue = accumulated customers × monthly value.
-   Billing share applies only to the attribution-discounted slice; capped at twice the fixed fee. */
+   Billing share applies only to the attribution-discounted slice — UNCAPPED, so the share
+   scales with the new revenue it actually earns (alignment, not a ceiling). */
 function buildSeries(q, price, share){
-  const months=[]; const mrr=[]; const invoice=[]; let cum=0, capped=false;
+  const months=[]; const mrr=[]; const invoice=[]; let cum=0;
   const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
   for(let m=1;m<=12;m++){
     months.push(m);
@@ -1119,8 +1148,7 @@ function buildSeries(q, price, share){
     const rev = cum*q.mrrPC;
     mrr.push(rev);
     if(price!=null){
-      let sc = share/100*(rev*q.attribFactor);
-      if(sc>2*price){ sc=2*price; capped=true; }
+      const sc = share/100*(rev*q.attribFactor);   // uncapped revenue share
       invoice.push(price+sc);
     } else invoice.push(null);
   }
@@ -1133,7 +1161,7 @@ function buildSeries(q, price, share){
   const runRateROI = (price>0) ? (exitMRR*q.attribFactor)/price : null;
   // highest fee that still clears the target ongoing return (the client-value ceiling)
   const ceil2x = exitMRR*q.attribFactor/ROI_TARGET;
-  return {months, mrr, invoice, capped,
+  return {months, mrr, invoice,
           year1Rev, year1Attrib, year1Cost,
           roi: year1Cost>0 ? year1Attrib/year1Cost : null,
           runRateROI, ceil2x,
@@ -1152,6 +1180,7 @@ function readState(){
     geo: document.getElementById('scopeGeo').checked,
     rank: num('rank'), seoScore: num('seoScore'), geoScore: num('geoScore'),
     compstr: document.getElementById('compstr').value,
+    pmodel: document.getElementById('pmodel').value,
     units: num('units'),
     yearly: num('yearly'), years: num('years'),
     aov: num('aov'), freq: num('freq'),
@@ -1179,7 +1208,7 @@ function getNegotiated(q){
     if(!isNaN(v)) share=clamp(v,0,100);
   }
   const series = buildSeries(q, price, share);
-  return {price, share, series, roi: series.roi, runRate: series.runRateROI, shareCapped: series.capped};
+  return {price, share, series, roi: series.roi, runRate: series.runRateROI};
 }
 
 function resetNeg(kind){
@@ -1459,6 +1488,14 @@ function render(){
     adEl.classList.add('show');
     adEl.innerHTML='<span class="ad-big">≈'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo</span> captured by month 12 — about <b>'+fmt$(q.adValuePM)+'/mo</b> you’d otherwise pay Google Ads for the same traffic, versus the '+fmt$(n.price)+'/mo program fee.';
   } else adEl.classList.remove('show');
+
+  /* internal: agency total take = fixed + uncapped rev share (rep-facing only) */
+  const tEl=document.getElementById('o-take');
+  if(q.price!=null && n.series.invoice[11]!=null){
+    const runTake=n.series.invoice[11], yr1=n.series.invoice.reduce((x,y)=>x+(y||0),0), runRev=runTake-n.price;
+    tEl.innerHTML='<b>Internal — your take:</b> '+fmt$(n.price)+'/mo fixed + ~'+fmt$(runRev)+'/mo share once ramped = <b>'+fmt$(runTake)+'/mo</b> run-rate (≈'+fmt$(yr1)+' in year 1).'
+      +(s.pmodel==='performance'?'<span class="perf-tag">Performance</span>':'');
+  } else tEl.innerHTML='';
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
   document.getElementById('note-yrs').innerHTML = (s.years>0)
@@ -1570,6 +1607,7 @@ function resetAll(){
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
   document.getElementById('compstr').value='moderate';
+  document.getElementById('pmodel').value='balanced';
   document.getElementById('volsource').value='none';
   document.getElementById('scopeSeo').checked = true;
   document.getElementById('scopeGeo').checked = true;
@@ -1758,7 +1796,7 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
   if(![...p.keys()].length) return;
   const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc',
                   'rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin',
-                  'acq','commission'];
+                  'acq','commission','pmodel'];
   fields.forEach(id=>{
     if(!p.has(id)) return;
     const el = document.getElementById(id);
