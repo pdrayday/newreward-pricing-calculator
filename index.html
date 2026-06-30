@@ -692,18 +692,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         </select></div>
       </div>
     </div>
-    <div class="row2">
-      <div class="fgroup">
-        <label class="flabel">Pricing model
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>How the deal is structured.</b><br>• <b>Balanced</b> — the standard quote: a higher fixed monthly fee plus a modest 2–10% revenue share.<br>• <b>Performance-weighted</b> — cuts the fixed fee ~30% (and floors it lower) and leans on the revenue share, pushing it toward the <b>10% rate cap</b>. The rate caps at 10%, but the <b>dollar amount is uncapped</b> — it scales with the new revenue it earns. Lower up-front risk for the client and a higher headline ROI; your upside rides on results.</span></button>
-        </label>
-        <div class="fwrap"><select id="pmodel">
-          <option value="balanced" selected>Balanced — higher fixed, modest share</option>
-          <option value="performance">Performance — lower fixed, bigger uncapped share</option>
-        </select></div>
-      </div>
-      <div class="fgroup"></div>
-    </div>
   </div>
 
   <!-- 03 CURRENT VISIBILITY -->
@@ -1082,7 +1070,7 @@ function computeQuote(s){
 
   /* ---- rev-share start month + ramp length: harder markets and more intensive (low-visibility)
           engagements push back when rev share starts and lengthen the climb to full output ---- */
-  const rampMonth = clamp(2 + (difficulty>=6?1:0) + (intensityGap>=0.6?1:0), 2, 4);
+  const rampMonth = clamp(3 + (difficulty>=6?1:0) + (intensityGap>=0.6?1:0), 3, 5);
   const rampSpan  = clamp(2 + Math.round(intensityGap*2), 2, 4);   // months from start to full output
 
   /* ---- fixed monthly price = research-based COST TO DELIVER ----
@@ -1099,11 +1087,9 @@ function computeQuote(s){
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
     const workFactor = 1 + 0.10*rankN + 0.10*cpcN2 + 0.14*compN;  // visibility gap now flows via intensityCost
     const rawCost = scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor;
-    // Performance model trades fixed fee for a bigger uncapped revenue share, so the fixed is cut
-    // ~30% and floored lower (the rev share carries the agency's upside).
-    price = (s.pmodel==='performance')
-      ? Math.max(900,  Math.round(rawCost*0.70/50)*50)
-      : Math.max(1200, Math.round(rawCost/50)*50);
+    // Performance-weighted pricing: fixed fee cut ~30% and floored low — the uncapped revenue
+    // share (a 10% RATE cap, but no dollar ceiling) carries the agency's upside.
+    price = Math.max(900, Math.round(rawCost*0.70/50)*50);
   }
 
   /* ---- revenue share 2–10% ---- */
@@ -1117,9 +1103,8 @@ function computeQuote(s){
   share += s.confidence==='verified'?1 : s.confidence==='unknown'?-2 : 0;
   share += 0.5;  // new-net-revenue basis: share applies to growth above baseline only
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;
-  share = (s.pmodel==='performance')
-    ? clamp(Math.round(share*1.7*2)/2, 4, 10)   // performance leans on share, but rate is still capped at 10%
-    : clamp(Math.round(share*2)/2, 2, 10);      // dollars are uncapped (10% of growing revenue); the RATE caps at 10%
+  // share leans toward the 10% RATE cap; dollar amount uncapped (10% of growing revenue)
+  share = clamp(Math.round(share*1.7*2)/2, 4, 10);
 
   /* ---- conservative attribution: we credit/bill only on revenue we can stand behind.
           softened from prior 0.3/0.5/0.8 — the demand model is already conservative, so the
@@ -1180,7 +1165,6 @@ function readState(){
     geo: document.getElementById('scopeGeo').checked,
     rank: num('rank'), seoScore: num('seoScore'), geoScore: num('geoScore'),
     compstr: document.getElementById('compstr').value,
-    pmodel: document.getElementById('pmodel').value,
     units: num('units'),
     yearly: num('yearly'), years: num('years'),
     aov: num('aov'), freq: num('freq'),
@@ -1432,7 +1416,7 @@ function render(){
       ? 'negotiated — recommended '+q.share+'% &nbsp;·&nbsp; <a onclick="return resetNeg(\'share\')">use recommended</a>' : '';
   let pLow=false, shLow=false;
   if(q.price!=null){
-    const floor=Math.max(1200, Math.round(q.price*0.85/50)*50);
+    const floor=Math.max(900, Math.round(q.price*0.85/50)*50);
     pLow = n.price<floor;
     pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Keep at least '+fmt$(floor)+' (recommended '+fmt$(q.price)+').';
   }
@@ -1493,8 +1477,7 @@ function render(){
   const tEl=document.getElementById('o-take');
   if(q.price!=null && n.series.invoice[11]!=null){
     const runTake=n.series.invoice[11], yr1=n.series.invoice.reduce((x,y)=>x+(y||0),0), runRev=runTake-n.price;
-    tEl.innerHTML='<b>Internal — your take:</b> '+fmt$(n.price)+'/mo fixed + ~'+fmt$(runRev)+'/mo share once ramped = <b>'+fmt$(runTake)+'/mo</b> run-rate (≈'+fmt$(yr1)+' in year 1).'
-      +(s.pmodel==='performance'?'<span class="perf-tag">Performance</span>':'');
+    tEl.innerHTML='<b>Internal — your take:</b> '+fmt$(n.price)+'/mo fixed + ~'+fmt$(runRev)+'/mo share once ramped = <b>'+fmt$(runTake)+'/mo</b> run-rate (≈'+fmt$(yr1)+' in year 1, share uncapped).';
   } else tEl.innerHTML='';
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
@@ -1607,7 +1590,6 @@ function resetAll(){
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
   document.getElementById('compstr').value='moderate';
-  document.getElementById('pmodel').value='balanced';
   document.getElementById('volsource').value='none';
   document.getElementById('scopeSeo').checked = true;
   document.getElementById('scopeGeo').checked = true;
@@ -1796,7 +1778,7 @@ document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDir
   if(![...p.keys()].length) return;
   const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc',
                   'rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin',
-                  'acq','commission','pmodel'];
+                  'acq','commission'];
   fields.forEach(id=>{
     if(!p.has(id)) return;
     const el = document.getElementById(id);
