@@ -859,8 +859,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
 
-    <div class="o-take no-print" id="o-take"></div>
-
     <div class="o-diff">
       <div class="o-diff-top">
         <span class="o-diff-label">Market difficulty</span>
@@ -1390,7 +1388,7 @@ function render(){
   if(!priceDirty) pEdit.value = q.price!=null ? q.price : '';
   if(!shareDirty) shEdit.value = q.share;
   set('o-price-sub', q.price!=null
-      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — <b style="color:var(--gold-bright)">drops to '+fmt$(n.series.perfPrice)+'/mo</b> when the revenue share begins (month '+q.rampMonth+')'
+      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — drops to '+fmt$(n.series.perfPrice)+'/mo when the revenue share begins (month '+q.rampMonth+')'
       : 'select a service in Scope');
   set('o-ramp', 'month '+q.rampMonth);
 
@@ -1481,12 +1479,6 @@ function render(){
     adEl.innerHTML='<span class="ad-big">≈'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo</span> captured by month 12 — about <b>'+fmt$(q.adValuePM)+'/mo</b> you’d otherwise pay Google Ads for the same traffic, versus the '+fmt$(n.price)+'/mo program fee.';
   } else adEl.classList.remove('show');
 
-  /* internal: agency total take = fixed + uncapped rev share (rep-facing only) */
-  const tEl=document.getElementById('o-take');
-  if(q.price!=null && n.series.invoice[11]!=null){
-    const perf=n.series.perfPrice, runTake=n.series.invoice[11], yr1=n.series.invoice.reduce((x,y)=>x+(y||0),0), runRev=runTake-perf;
-    tEl.innerHTML='<b>Internal — your take:</b> build '+fmt$(n.price)+'/mo → then '+fmt$(perf)+'/mo fixed + ~'+fmt$(runRev)+'/mo share = <b>'+fmt$(runTake)+'/mo</b> run-rate (≈'+fmt$(yr1)+' in year 1, share uncapped).';
-  } else tEl.innerHTML='';
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
   document.getElementById('note-yrs').innerHTML = (s.years>0)
@@ -1504,7 +1496,7 @@ function render(){
   set('o-runrate-note', '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed');
   set('o-rampcard', 'Month '+q.rampMonth);
   set('o-window', q.windowDays+' days');
-  set('o-window-note', 're-quote once live data lands');
+  set('o-window-note', '');
 
   /* projection chart + timeline */
   renderChart(q,n);
@@ -1535,7 +1527,7 @@ function render(){
     +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
     +(q.nScopes===2?'dual-channel upside':'visibility gap')
     +' = ~'+Math.round(q.newCust)+' customers/mo × '+fmt$(q.yearlyValue)+'/yr');
-  parts.push('<b>Attribution:</b> billed on '+Math.round(q.attribFactor*100)+'% of modeled growth until tracking proves more'
+  parts.push('<b>Attribution:</b> the revenue share is only charged on '+Math.round(q.attribFactor*100)+'% of new growth — a deliberate discount that assumes the rest came from other channels, until tracking confirms how much our work actually drove'
     +(q.volQ<1?' &nbsp;·&nbsp; <b>Conservative demand model:</b> −'+Math.round((1-q.volQ)*100)+'% applied to modeled demand':''));
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
