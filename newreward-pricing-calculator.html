@@ -502,7 +502,7 @@ select option{background:#171410;color:var(--text)}
 .o-adsave b{color:var(--gold-bright)}
 .o-adsave .ad-big{color:var(--text);font-weight:800;font-size:13.5px}
 
-/* internal: agency total take (fixed + uncapped rev share) — rep-facing, hidden from the PDF */
+/* internal: agency total take (fixed + rev share) — rep-facing, hidden from the PDF */
 .o-take{margin-top:12px;font-size:11.5px;color:var(--muted);line-height:1.5;
   border-left:3px solid var(--gold-line);padding:7px 11px;background:rgba(212,162,74,.05);border-radius:0 8px 8px 0}
 .o-take b{color:var(--gold-bright)}
@@ -1102,7 +1102,7 @@ function computeQuote(s){
   /* ---- revenue share: CALCULATED from the client's economics so it's fair to both sides ----
      Higher gross margin → they can afford to share a bit more; commissions they already pay to
      staff/reps pull our share down; larger deals take a slightly lower % (still a bigger $ amount).
-     Uncapped in dollars, and clamped to a 2–10% RATE. Reps can fine-tune the % live. */
+     Clamped to a 2–10% RATE. Reps can fine-tune the % live. */
   let share = 5;
   const shMargin = s.margin??ind.margin;                                  // affordability: profit they keep per sale
   share += shMargin>=65?2 : shMargin>=50?1 : shMargin>=35?0 : shMargin>=25?-1 : -2;
@@ -1130,8 +1130,8 @@ function computeQuote(s){
 
 /* 12-month series. TWO-PHASE billing:
    • Build phase (months 1 .. rampMonth-1): full fixed fee, no revenue share.
-   • Performance phase (rampMonth .. 12): fixed drops 20%, plus an UNCAPPED revenue share
-     (share % of attributable new net revenue — no dollar ceiling). */
+   • Performance phase (rampMonth .. 12): fixed drops 20%, plus a revenue share
+     (share % of attributable new net revenue). */
 const PERF_DISCOUNT = 0.80;   // fixed fee once the revenue share starts = build fixed × 0.80
 function buildSeries(q, price, share){
   const perfPrice = price!=null ? Math.round(price*PERF_DISCOUNT/50)*50 : null;   // reduced fixed once share starts
@@ -1146,7 +1146,7 @@ function buildSeries(q, price, share){
     if(price!=null){
       const inShare = m>=q.rampMonth;                          // rev share only in the performance phase
       const fixedM = inShare ? perfPrice : price;              // fixed drops 20% when the share begins
-      const sc = inShare ? share/100*(rev*q.attribFactor) : 0; // uncapped revenue share
+      const sc = inShare ? share/100*(rev*q.attribFactor) : 0; // revenue share on attributable growth
       invoice.push(fixedM+sc);
     } else invoice.push(null);
   }
@@ -1201,7 +1201,7 @@ function getNegotiated(q){
   }
   if(shareDirty){
     const v=parseFloat(document.getElementById('o-share-edit').value);
-    if(!isNaN(v)) share=clamp(v,0,10);   // rev-share RATE capped at 10% (dollars uncapped)
+    if(!isNaN(v)) share=clamp(v,0,10);   // rev-share rate capped at 10%
   }
   if(rampDirty){
     const v=parseInt(document.getElementById('o-ramp-edit').value,10);
@@ -1488,7 +1488,7 @@ function render(){
 
   /* organic vs paid: what the captured traffic would cost in Google Ads */
   const adEl=document.getElementById('o-adsave');
-  if(q.price!=null && q.clicksPM>0 && (s.cpc||0)>0){
+  if(q.price!=null && q.clicksPM>0 && (s.cpc||0)>0 && q.adValuePM>n.price){   // only show when organic beats paid (ad-equivalent value > the program fee)
     adEl.classList.add('show');
     adEl.innerHTML='<span class="ad-big">≈'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo</span> captured by month 12 — about <b>'+fmt$(q.adValuePM)+'/mo</b> you’d otherwise pay Google Ads for the same traffic, versus the '+fmt$(n.price)+'/mo program fee.';
   } else adEl.classList.remove('show');
@@ -1750,7 +1750,7 @@ function buildPDF(){
   const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
   const noteLines=doc.splitTextToSize(noteTxt,W);
   noteLines.forEach(function(ln){doc.text(ln,L,y); y+=3.4;});
-  if(q.adValuePM>0){
+  if(q.adValuePM>n.price){   // only show when organic beats paid (ad-equivalent value > the program fee)
     y+=1.5;
     doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
     doc.text('~'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo by month 12 — about '+fmt$(q.adValuePM)+'/mo in equivalent Google Ads spend, vs the '+fmt$(n.price)+'/mo program fee.',L,y,{maxWidth:W});
