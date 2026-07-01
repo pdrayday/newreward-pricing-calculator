@@ -1743,7 +1743,7 @@ function buildPDF(){
   if(q.adValuePM>0){
     y+=1.5;
     doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-    doc.text('≈'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo by month 12 ≈ '+fmt$(q.adValuePM)+'/mo in equivalent Google Ads spend — vs the '+fmt$(n.price)+'/mo program fee.',L,y,{maxWidth:W});
+    doc.text('~'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo by month 12 — about '+fmt$(q.adValuePM)+'/mo in equivalent Google Ads spend, vs the '+fmt$(n.price)+'/mo program fee.',L,y,{maxWidth:W});
   }
 
   /* fine-print disclosure */
