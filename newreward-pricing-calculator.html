@@ -42,8 +42,8 @@
   --text:#161003;
   --muted:#161003;
   --muted2:#161003;
-  --green:#1f5a2c;
-  --red:#c00b00;
+  --green:#0aa138;
+  --red:#ee1409;
 }
 [data-theme="ivory"] body{background:#cda75c}
 [data-theme="ivory"] body::before{
@@ -437,6 +437,9 @@ select option{background:#171410;color:var(--text)}
 .badge.good{background:rgba(127,184,138,.12);color:var(--green);border:1px solid rgba(127,184,138,.35)}
 .badge.mid{background:rgba(212,162,74,.12);color:var(--gold-bright);border:1px solid var(--gold-line)}
 .badge.bad{background:rgba(200,55,42,.12);color:var(--red);border:1px solid rgba(200,55,42,.35)}
+/* light mode: stronger, more vibrant green/red badge tints */
+[data-theme="ivory"] .badge.good{background:rgba(10,161,56,.16);color:var(--green);border:1px solid rgba(10,161,56,.55)}
+[data-theme="ivory"] .badge.bad{background:rgba(238,20,9,.14);color:var(--red);border:1px solid rgba(238,20,9,.55)}
 
 .o-summary{
   margin-top:22px;background:rgba(212,162,74,.05);
