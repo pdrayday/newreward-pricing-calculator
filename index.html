@@ -1530,7 +1530,6 @@ function render(){
     +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
     +(q.nScopes===2?'dual-channel upside':'visibility gap')
     +' = ~'+Math.round(q.newCust)+' customers/mo × '+fmt$(q.yearlyValue)+'/yr');
-  if(q.volQ<1) parts.push('<b>Conservative demand model:</b> −'+Math.round((1-q.volQ)*100)+'% applied to modeled demand');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -1738,7 +1737,14 @@ function buildPDF(){
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   y+=2.5;
   doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Months 1–'+(q.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+q.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.',L,y,{maxWidth:W});
+  const noteTxt='Months 1–'+(q.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+q.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
+  const noteLines=doc.splitTextToSize(noteTxt,W);
+  noteLines.forEach(function(ln){doc.text(ln,L,y); y+=3.4;});
+  if(q.adValuePM>0){
+    y+=1.5;
+    doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    doc.text('≈'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo by month 12 ≈ '+fmt$(q.adValuePM)+'/mo in equivalent Google Ads spend — vs the '+fmt$(n.price)+'/mo program fee.',L,y,{maxWidth:W});
+  }
 
   /* fine-print disclosure */
   doc.setFont('helvetica','italic'); doc.setFontSize(6.3); doc.setTextColor(150,143,130);
