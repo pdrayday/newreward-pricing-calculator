@@ -1527,8 +1527,7 @@ function render(){
     +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
     +(q.nScopes===2?'dual-channel upside':'visibility gap')
     +' = ~'+Math.round(q.newCust)+' customers/mo × '+fmt$(q.yearlyValue)+'/yr');
-  parts.push('<b>Attribution:</b> the revenue share is only charged on '+Math.round(q.attribFactor*100)+'% of new growth — a deliberate discount that assumes the rest came from other channels, until tracking confirms how much our work actually drove'
-    +(q.volQ<1?' &nbsp;·&nbsp; <b>Conservative demand model:</b> −'+Math.round((1-q.volQ)*100)+'% applied to modeled demand':''));
+  if(q.volQ<1) parts.push('<b>Conservative demand model:</b> −'+Math.round((1-q.volQ)*100)+'% applied to modeled demand');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -1709,7 +1708,7 @@ function buildPDF(){
     ['Data basis', 'Estimated from research'],
     ['Revenue basis', 'New net revenue (above baseline)'],
     ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
-    ['Rev share starts', 'Month '+q.rampMonth+' (full fixed until then, −20% after)'],
+    ['Rev share starts', 'Month '+q.rampMonth],
     ['Review window', q.windowDays+' days — re-quote with live data']
   ];
   const half=Math.ceil(rows.length/2), rowH=5.6, colW=(W+6)/2;
