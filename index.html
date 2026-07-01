@@ -1087,24 +1087,25 @@ function computeQuote(s){
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
     const workFactor = 1 + 0.10*rankN + 0.10*cpcN2 + 0.14*compN;  // visibility gap now flows via intensityCost
     const rawCost = scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor;
-    // Performance-weighted pricing: fixed fee cut ~30% and floored low — the uncapped revenue
-    // share (a 10% RATE cap, but no dollar ceiling) carries the agency's upside.
-    price = Math.max(900, Math.round(rawCost*0.70/50)*50);
+    // BUILD-phase fixed = full cost to deliver — the client pays this while we build, BEFORE the
+    // revenue share starts. Once the share kicks in, the fixed drops 20% (see PERF_DISCOUNT in buildSeries).
+    price = Math.max(1200, Math.round(rawCost/50)*50);
   }
 
-  /* ---- revenue share 2–10% ---- */
+  /* ---- revenue share: CALCULATED from the client's economics so it's fair to both sides ----
+     Higher gross margin → they can afford to share a bit more; commissions they already pay to
+     staff/reps pull our share down; larger deals take a slightly lower % (still a bigger $ amount).
+     Uncapped in dollars, and clamped to a 2–10% RATE. Reps can fine-tune the % live. */
   let share = 5;
-  const m = s.margin??ind.margin;
-  share += m>=65?2 : m>=50?1 : m>=35?0 : m>=25?-1 : -2;
-  const a = s.acq??15;
-  share += a>=20?1 : a>=12?0.5 : a>=8?0 : -0.5;
-  const c = s.commission??8;
-  share += c>=12?-1 : c>=8?-0.5 : 0;
-  share += s.confidence==='verified'?1 : s.confidence==='unknown'?-2 : 0;
-  share += 0.5;  // new-net-revenue basis: share applies to growth above baseline only
-  share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;
-  // share leans toward the 10% RATE cap; dollar amount uncapped (10% of growing revenue)
-  share = clamp(Math.round(share*1.7*2)/2, 4, 10);
+  const shMargin = s.margin??ind.margin;                                  // affordability: profit they keep per sale
+  share += shMargin>=65?2 : shMargin>=50?1 : shMargin>=35?0 : shMargin>=25?-1 : -2;
+  const shAcq = s.acq??15;                                                // growth appetite
+  share += shAcq>=20?1 : shAcq>=12?0.5 : shAcq>=8?0 : -0.5;
+  const shComm = s.commission??8;                                         // comp they already pay stacks with ours
+  share += shComm>=12?-1 : shComm>=8?-0.5 : 0;
+  share += 0.5;                                                           // new-net-revenue basis (growth above baseline)
+  share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;                  // very large deals take a slightly lower %
+  share = clamp(Math.round(share*2)/2, 2, 10);
 
   /* ---- conservative attribution: we credit/bill only on revenue we can stand behind.
           softened from prior 0.3/0.5/0.8 — the demand model is already conservative, so the
@@ -1120,10 +1121,13 @@ function computeQuote(s){
           seoIntensity, geoIntensity, intensityGap, intensityLabel};
 }
 
-/* 12-month series: customers compound, revenue = accumulated customers × monthly value.
-   Billing share applies only to the attribution-discounted slice — UNCAPPED, so the share
-   scales with the new revenue it actually earns (alignment, not a ceiling). */
+/* 12-month series. TWO-PHASE billing:
+   • Build phase (months 1 .. rampMonth-1): full fixed fee, no revenue share.
+   • Performance phase (rampMonth .. 12): fixed drops 20%, plus an UNCAPPED revenue share
+     (share % of attributable new net revenue — no dollar ceiling). */
+const PERF_DISCOUNT = 0.80;   // fixed fee once the revenue share starts = build fixed × 0.80
 function buildSeries(q, price, share){
+  const perfPrice = price!=null ? Math.round(price*PERF_DISCOUNT/50)*50 : null;   // reduced fixed once share starts
   const months=[]; const mrr=[]; const invoice=[]; let cum=0;
   const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
   for(let m=1;m<=12;m++){
@@ -1133,20 +1137,21 @@ function buildSeries(q, price, share){
     const rev = cum*q.mrrPC;
     mrr.push(rev);
     if(price!=null){
-      const sc = share/100*(rev*q.attribFactor);   // uncapped revenue share
-      invoice.push(price+sc);
+      const inShare = m>=q.rampMonth;                          // rev share only in the performance phase
+      const fixedM = inShare ? perfPrice : price;              // fixed drops 20% when the share begins
+      const sc = inShare ? share/100*(rev*q.attribFactor) : 0; // uncapped revenue share
+      invoice.push(fixedM+sc);
     } else invoice.push(null);
   }
   const year1Rev = mrr.reduce((a,b)=>a+b,0);
   const year1Attrib = year1Rev*q.attribFactor;
   const year1Cost = price!=null ? invoice.reduce((a,b)=>a+b,0) : null;
   const exitMRR = mrr[11];
-  // run-rate (ongoing) ROI: month-12 monthly attributable revenue vs the monthly fee —
-  // what the program returns once it's built, after the year-1 ramp. The "worth it" number.
-  const runRateROI = (price>0) ? (exitMRR*q.attribFactor)/price : null;
-  // highest fee that still clears the target ongoing return (the client-value ceiling)
+  // run-rate (ongoing) ROI: month-12 attributable revenue vs the ONGOING (reduced) fixed fee.
+  const runRateROI = (perfPrice>0) ? (exitMRR*q.attribFactor)/perfPrice : null;
+  // highest ongoing fee that still clears the target return (client-value ceiling)
   const ceil2x = exitMRR*q.attribFactor/ROI_TARGET;
-  return {months, mrr, invoice,
+  return {months, mrr, invoice, perfPrice,
           year1Rev, year1Attrib, year1Cost,
           roi: year1Cost>0 ? year1Attrib/year1Cost : null,
           runRateROI, ceil2x,
@@ -1374,7 +1379,7 @@ function render(){
   set('o-roi', rrCons!=null ? fx(rrCons)+'×' : '—');
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
-      ? 'Conservative run-rate once built — assumes we capture only part of the modeled demand (≈'+fmt$(n.series.exitMRR)+'/mo modeled attributable vs '+fmt$(n.price)+'/mo fee). '
+      ? 'Conservative run-rate once built — ≈'+fmt$(n.series.exitMRR)+'/mo modeled attributable vs the '+fmt$(n.series.perfPrice)+'/mo ongoing fee. '
         +'Year 1 is the ramp at '+fx(y1)+'× while the program builds, then it compounds.'
       : 'Select at least one service in Scope to build the quote');
 
@@ -1384,7 +1389,7 @@ function render(){
   if(!priceDirty) pEdit.value = q.price!=null ? q.price : '';
   if(!shareDirty) shEdit.value = q.share;
   set('o-price-sub', q.price!=null
-      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' program fee'
+      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — <b style="color:var(--gold-bright)">drops to '+fmt$(n.series.perfPrice)+'/mo</b> when the revenue share begins (month '+q.rampMonth+')'
       : 'select a service in Scope');
   set('o-ramp', 'month '+q.rampMonth);
 
@@ -1476,8 +1481,8 @@ function render(){
   /* internal: agency total take = fixed + uncapped rev share (rep-facing only) */
   const tEl=document.getElementById('o-take');
   if(q.price!=null && n.series.invoice[11]!=null){
-    const runTake=n.series.invoice[11], yr1=n.series.invoice.reduce((x,y)=>x+(y||0),0), runRev=runTake-n.price;
-    tEl.innerHTML='<b>Internal — your take:</b> '+fmt$(n.price)+'/mo fixed + ~'+fmt$(runRev)+'/mo share once ramped = <b>'+fmt$(runTake)+'/mo</b> run-rate (≈'+fmt$(yr1)+' in year 1, share uncapped).';
+    const perf=n.series.perfPrice, runTake=n.series.invoice[11], yr1=n.series.invoice.reduce((x,y)=>x+(y||0),0), runRev=runTake-perf;
+    tEl.innerHTML='<b>Internal — your take:</b> build '+fmt$(n.price)+'/mo → then '+fmt$(perf)+'/mo fixed + ~'+fmt$(runRev)+'/mo share = <b>'+fmt$(runTake)+'/mo</b> run-rate (≈'+fmt$(yr1)+' in year 1, share uncapped).';
   } else tEl.innerHTML='';
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
@@ -1516,7 +1521,7 @@ function render(){
     txt = who+' competes in '+FOOT[s.footprint].name+where+' rated '+q.difficulty+'/10 ('+dw[1].toLowerCase()+'). '
       + 'Once ramped, the model signs ~'+Math.round(q.newCust)+' new customers a month — roughly '+fmtK(q.arrAddedPM)
       + ' in new annual contracts every month. The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
-      + fmt$(n.price)+'/mo fixed plus a '+n.share+'% share of attributable new net revenue beginning in month '+q.rampMonth+'. '
+      + fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus a '+n.share+'% share of attributable new net revenue from month '+q.rampMonth+'. '
       + 'Figures are estimated from research — confirm with live data within the '+q.windowDays+'-day review window.';
   }
   set('o-summary', txt);
@@ -1662,7 +1667,7 @@ function buildPDF(){
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'once built — return after the year-1 ramp':'select a service', DGOLD, true, true);
   box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
-  box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', scopeTxt+' fee'+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
+  box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+q.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
   box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'attributable new net revenue, from month '+q.rampMonth+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
 
   y+=h1+4;
@@ -1709,7 +1714,7 @@ function buildPDF(){
     ['Data basis', 'Estimated from research'],
     ['Revenue basis', 'New net revenue (above baseline)'],
     ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
-    ['Rev share starts', 'Month '+q.rampMonth+' (fixed fee only until then)'],
+    ['Rev share starts', 'Month '+q.rampMonth+' (full fixed until then, −20% after)'],
     ['Review window', q.windowDays+' days — re-quote with live data']
   ];
   const half=Math.ceil(rows.length/2), rowH=5.6, colW=(W+6)/2;
@@ -1734,15 +1739,9 @@ function buildPDF(){
     +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
     +'/yr by month 12 (before attribution).';
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
-  if(q.clicksPM>0 && (s.cpc||0)>0){
-    const math3='Organic vs. paid: ~'+Math.round(q.clicksPM).toLocaleString()+' visits/mo captured by month 12 ≈ '+fmtK(q.adValuePM)+'/mo in equivalent Google Ads spend — versus the '+fmt$(n.price)+'/mo fee.';
-    doc.setFont('helvetica','bold'); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-    doc.splitTextToSize(math3,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
-    doc.setFont('helvetica','normal'); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  }
   y+=2.5;
   doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Month'+(q.rampMonth>2?'s 1–'+(q.rampMonth-1):' 1')+' bill'+(q.rampMonth>2?'':'s')+' the fixed fee only; the share starts month '+q.rampMonth+' on growth above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.',L,y,{maxWidth:W});
+  doc.text('Months 1–'+(q.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+q.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.',L,y,{maxWidth:W});
 
   /* fine-print disclosure */
   doc.setFont('helvetica','italic'); doc.setFontSize(6.3); doc.setTextColor(150,143,130);
