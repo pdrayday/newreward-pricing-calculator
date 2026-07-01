@@ -468,6 +468,9 @@ select option{background:#171410;color:var(--text)}
 .edit-num input:focus{border-bottom:1px solid var(--gold);box-shadow:none}
 .edit-num input.too-low{color:var(--red);border-bottom-color:rgba(200,55,42,.7)}
 #o-share-edit{width:66px}
+.oc-val.edit-num{gap:6px}
+.oc-val .rampword{font-size:20px;font-weight:700;color:var(--gold-bright)}
+#o-ramp-edit{width:42px;font-size:20px;font-weight:800}
 .neg-note{display:inline-block;margin-top:4px;font-size:11px;color:var(--muted2)}
 .neg-note a{color:var(--gold);text-decoration:none;border-bottom:1px dotted var(--gold-deep);cursor:pointer}
 .neg-warn{display:none;margin-top:10px;background:rgba(200,55,42,.10);border:1px solid rgba(200,55,42,.4);
@@ -899,8 +902,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="oc-note" id="o-runrate-note">potential, not guaranteed</div>
       </div>
       <div class="ocard">
-        <div class="oc-label">Rev share starts <button class="tip tip-left" type="button" aria-label="help">?<span class="tipbox">When the revenue share begins. It starts at month 3, plus one month if the market is difficult (≥6/10) and one more if the client's current visibility is very low — so harder, more competitive jobs get extra build time before performance billing kicks in. Always lands between month 3 and 5.</span></button></div>
-        <div class="oc-val gold" id="o-rampcard">—</div>
+        <div class="oc-label">Rev share starts <button class="tip tip-left" type="button" aria-label="help">?<span class="tipbox">When the revenue share begins. It starts at month 3, plus one month if the market is difficult (≥6/10) and one more if the client's current visibility is very low — so harder, more competitive jobs get extra build time before performance billing kicks in. Editable — set any month you agree to.</span></button></div>
+        <div class="oc-val gold edit-num" title="Editable — set the month the revenue share begins"><span class="rampword">Month</span><input id="o-ramp-edit" type="number" min="2" max="12" step="1" aria-label="Revenue share start month"></div>
         <div class="oc-note">fixed fee only until then</div>
       </div>
       <div class="ocard" style="grid-column:span 2">
@@ -1089,9 +1092,11 @@ function computeQuote(s){
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
     const workFactor = 1 + 0.10*rankN + 0.10*cpcN2 + 0.14*compN;  // visibility gap now flows via intensityCost
     const rawCost = scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor;
-    // BUILD-phase fixed = full cost to deliver — the client pays this while we build, BEFORE the
-    // revenue share starts. Once the share kicks in, the fixed drops 20% (see PERF_DISCOUNT in buildSeries).
-    price = Math.max(1200, Math.round(rawCost/50)*50);
+    // BUILD-phase fixed = 90% of cost-to-deliver — trimmed 10% so the client's upfront fee is a
+    // little lighter (a small performance-weighting toward the share). The client pays this while
+    // we build, BEFORE the revenue share starts. Once the share kicks in, the fixed drops another
+    // 20% (see PERF_DISCOUNT in buildSeries) → ~72% of cost-to-deliver ongoing.
+    price = Math.max(1200, Math.round(rawCost*0.90/50)*50);
   }
 
   /* ---- revenue share: CALCULATED from the client's economics so it's fair to both sides ----
@@ -1186,10 +1191,10 @@ const fmtK = v => v>=1000 ? '$'+(v/1000).toFixed(v>=10000?0:1)+'k' : '$'+Math.ro
 const fmtBig = v => v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : fmt$(v);
 
 /* negotiation overrides: outputs are editable live; recompute downstream numbers */
-let priceDirty=false, shareDirty=false;
+let priceDirty=false, shareDirty=false, rampDirty=false;
 
 function getNegotiated(q){
-  let price=q.price, share=q.share;
+  let price=q.price, share=q.share, rampMonth=q.rampMonth;
   if(q.price!=null && priceDirty){
     const v=parseFloat(document.getElementById('o-price-edit').value);
     if(v>0) price=Math.round(v);
@@ -1198,12 +1203,17 @@ function getNegotiated(q){
     const v=parseFloat(document.getElementById('o-share-edit').value);
     if(!isNaN(v)) share=clamp(v,0,10);   // rev-share RATE capped at 10% (dollars uncapped)
   }
-  const series = buildSeries(q, price, share);
-  return {price, share, series, roi: series.roi, runRate: series.runRateROI};
+  if(rampDirty){
+    const v=parseInt(document.getElementById('o-ramp-edit').value,10);
+    if(v>=2 && v<=12) rampMonth=v;       // month the revenue share begins (editable)
+  }
+  const qq = (rampMonth!==q.rampMonth) ? Object.assign({}, q, {rampMonth}) : q;
+  const series = buildSeries(qq, price, share);
+  return {price, share, rampMonth, series, roi: series.roi, runRate: series.runRateROI};
 }
 
 function resetNeg(kind){
-  if(kind==='price') priceDirty=false; else shareDirty=false;
+  if(kind==='price') priceDirty=false; else if(kind==='share') shareDirty=false; else rampDirty=false;
   render(); return false;
 }
 
@@ -1386,14 +1396,15 @@ function render(){
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
-  const pEdit=document.getElementById('o-price-edit'), shEdit=document.getElementById('o-share-edit');
+  const pEdit=document.getElementById('o-price-edit'), shEdit=document.getElementById('o-share-edit'), rEdit=document.getElementById('o-ramp-edit');
   pEdit.disabled = q.price==null;
   if(!priceDirty) pEdit.value = q.price!=null ? q.price : '';
   if(!shareDirty) shEdit.value = q.share;
+  if(!rampDirty) rEdit.value = q.rampMonth;
   set('o-price-sub', q.price!=null
-      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — drops to '+fmt$(n.series.perfPrice)+'/mo when the revenue share begins (month '+q.rampMonth+')'
+      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — drops to '+fmt$(n.series.perfPrice)+'/mo when the revenue share begins (month '+n.rampMonth+')'
       : 'select a service in Scope');
-  set('o-ramp', 'month '+q.rampMonth);
+  set('o-ramp', 'month '+n.rampMonth);
 
   /* market-rate confirmation — no numbers, so the client never sees negotiation room */
   const mEl=document.getElementById('o-market');
@@ -1411,7 +1422,7 @@ function render(){
     const row=(name,ig)=> ig ? '<div class="ig-row"><span>'+name+' visibility '+Math.round((1-ig.gap)*100)+'/100</span><span class="ig-grade ig-'+ig.label+'">'+ig.label+'</span></div>' : '';
     igEl.innerHTML = '<div class="ig-head">Engagement intensity</div>'
       + row('SEO', q.seoIntensity) + row('GEO', q.geoIntensity)
-      + '<div class="ig-note">Graded from current visibility — lower scores mean more build work, which raises the cost to deliver and pushes full output to month '+(q.rampMonth+q.rampSpan-1)+'.</div>';
+      + '<div class="ig-note">Graded from current visibility — lower scores mean more build work, which raises the cost to deliver and pushes full output to month '+(n.rampMonth+q.rampSpan-1)+'.</div>';
   } else igEl.innerHTML='';
 
   /* negotiation guardrails */
@@ -1497,7 +1508,6 @@ function render(){
   set('o-arrpm-note', '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value');
   set('o-runrate', '+'+fmtK(n.series.exitARR)+'/yr');
   set('o-runrate-note', '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed');
-  set('o-rampcard', 'Month '+q.rampMonth);
   set('o-window', q.windowDays+' days');
   set('o-window-note', '');
 
@@ -1505,8 +1515,8 @@ function render(){
   renderChart(q,n);
   document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
     '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
-    +(q.rampMonth>2?' <b>Months 2–'+(q.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
-    +' <b>Month '+q.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline.'
+    +(n.rampMonth>2?' <b>Months 2–'+(n.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
+    +' <b>Month '+n.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline.'
     +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Keep conversion realistic (~4–8%).</span>';
 
   /* summary */
@@ -1519,7 +1529,7 @@ function render(){
     txt = who+' competes in '+FOOT[s.footprint].name+where+' rated '+q.difficulty+'/10 ('+dw[1].toLowerCase()+'). '
       + 'Once ramped, the model signs ~'+Math.round(q.newCust)+' new customers a month — roughly '+fmtK(q.arrAddedPM)
       + ' in new annual contracts every month. The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
-      + fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus a '+n.share+'% share of attributable new net revenue from month '+q.rampMonth+'. '
+      + fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus a '+n.share+'% share of attributable new net revenue from month '+n.rampMonth+'. '
       + 'Figures are estimated from research — confirm with live data within the '+q.windowDays+'-day review window.';
   }
   set('o-summary', txt);
@@ -1584,7 +1594,7 @@ function researchWithAI(){
 }
 
 function resetAll(){
-  priceDirty=false; shareDirty=false;
+  priceDirty=false; shareDirty=false; rampDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
   const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,convrate:'',margin:'',acq:15,commission:8,yearly:'',years:'',aov:'',freq:''};
   for(const k in d) document.getElementById(k).value = d[k];
@@ -1663,8 +1673,8 @@ function buildPDF(){
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'once built — return after the year-1 ramp':'select a service', DGOLD, true, true);
   box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
-  box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+q.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
-  box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'attributable new net revenue, from month '+q.rampMonth+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
+  box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
+  box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'attributable new net revenue, from month '+n.rampMonth+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
 
   y+=h1+4;
   const h2=23;
@@ -1710,7 +1720,7 @@ function buildPDF(){
     ['Data basis', 'Estimated from research'],
     ['Revenue basis', 'New net revenue (above baseline)'],
     ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
-    ['Rev share starts', 'Month '+q.rampMonth],
+    ['Rev share starts', 'Month '+n.rampMonth],
     ['Review window', q.windowDays+' days — re-quote with live data']
   ];
   const half=Math.ceil(rows.length/2), rowH=5.6, colW=(W+6)/2;
@@ -1737,7 +1747,7 @@ function buildPDF(){
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   y+=2.5;
   doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  const noteTxt='Months 1–'+(q.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+q.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
+  const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
   const noteLines=doc.splitTextToSize(noteTxt,W);
   noteLines.forEach(function(ln){doc.text(ln,L,y); y+=3.4;});
   if(q.adValuePM>0){
@@ -1764,7 +1774,7 @@ function buildPDF(){
 /* scope toggles define a different program — clear any negotiated overrides
    so the recommended price always responds to SEO/GEO on/off */
 ['scopeSeo','scopeGeo'].forEach(id=>{
-  document.getElementById(id).addEventListener('change', ()=>{ priceDirty=false; shareDirty=false; render(); });
+  document.getElementById(id).addEventListener('change', ()=>{ priceDirty=false; shareDirty=false; rampDirty=false; render(); });
 });
 document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
   el.addEventListener('input', render);
@@ -1772,6 +1782,7 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
 });
 document.getElementById('o-price-edit').addEventListener('input', ()=>{ priceDirty=true; render(); });
 document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDirty=true; render(); });
+document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty=true; render(); });
 
 /* ---- URL prefill: open the calculator with ?client=...&industry=highticket&volume=1200...
    and every matching input is filled. Used by researched demo-prep links. ---- */
