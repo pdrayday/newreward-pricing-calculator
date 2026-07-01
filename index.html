@@ -768,9 +768,9 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   <div class="section">
     <div class="sec-head"><div class="sec-num">05</div><div class="sec-title">Client Economics — Feasibility</div></div>
     <div class="row2">
-      <div class="fgroup">
+      <div class="fgroup" id="fg-yearly">
         <label class="flabel">Avg customer value / year
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one customer pays per year (e.g., a $75/mo pest plan = $900/yr). Revenue projections use this yearly number — not lifetime value — so growth is never overstated. Leave blank for an industry benchmark.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one customer pays per year (e.g., a $75/mo pest plan = $900/yr). Revenue projections use this yearly number — not lifetime value — so growth is never overstated. Leave blank for an industry benchmark. (For e-commerce, this is replaced by Average order value × Purchases/year.)</span></button>
         </label>
         <div class="fwrap"><span class="prefix">$</span><input type="number" id="yearly" class="has-prefix" placeholder="Auto-estimated" min="0"></div>
         <div class="auto-note" id="note-yr"></div>
@@ -1046,8 +1046,9 @@ function computeQuote(s){
      value priority: order economics (AOV × purchases/yr — a $/mo subscription is just ×12)
      > explicit annual value > industry benchmark. */
   const aovYear = (s.industry==='ecom' && s.aov>0 && s.freq>0) ? s.aov*s.freq : null;
-  const yrIsAuto = !(aovYear>0 || s.yearly>0);
-  const yearlyValue = aovYear>0 ? aovYear : (s.yearly>0 ? s.yearly : ind.yr);
+  const useYearly = s.industry!=='ecom' && s.yearly>0;   // the annual-value field is ecom-hidden, so ecom never reads it
+  const yrIsAuto = !(aovYear>0 || useYearly);
+  const yearlyValue = aovYear>0 ? aovYear : (useYearly ? s.yearly : ind.yr);
   const retainYears = clamp(s.years??ind.yrs, 1, 20);
   const ltv = yearlyValue*retainYears;            // context only — not used in revenue math
   // achievable click share decays in very large markets (you can't win 15% of 50k searches)
@@ -1462,7 +1463,9 @@ function render(){
   document.getElementById('note-vol').innerHTML = q.volIsAuto
       ? 'Auto: '+IND[s.industry].name+' baseline '+IND[s.industry].vol.toLocaleString()
         +' × '+FOOT[s.footprint].reach+'× reach = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : '';
-  document.getElementById('row-aov').style.display = (s.industry==='ecom') ? '' : 'none';
+  const isEcom = s.industry==='ecom';
+  document.getElementById('row-aov').style.display = isEcom ? '' : 'none';       // AOV × purchases shown only for ecom
+  document.getElementById('fg-yearly').style.display = isEcom ? 'none' : '';     // annual-value field hidden for ecom (AOV replaces it)
   document.getElementById('note-yr').innerHTML = q.aovYear>0
       ? 'From order value: <b>'+fmt$(q.yearlyValue)+'/yr</b> (used instead of the field above)'
       : (q.yrIsAuto ? 'Auto: '+IND[s.industry].name+' benchmark = <b>'+fmt$(q.yearlyValue)+'/yr</b>' : '');
