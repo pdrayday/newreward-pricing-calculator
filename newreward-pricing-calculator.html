@@ -253,7 +253,7 @@ header{
   .opanel{padding:24px 20px 20px}
   /* ROI headline sized for small screens */
   .o-price{font-size:42px}
-  .o-price .permo{font-size:15px}
+  .o-price .permo{font-size:11px}
   /* one-column output cards */
   .ocards{grid-template-columns:1fr}
   .ocard[style*="span 2"]{grid-column:auto!important}
@@ -397,7 +397,7 @@ select option{background:#171410;color:var(--text)}
   color:#ffd64f;
   text-shadow:0 0 28px rgba(255,200,60,.45), 0 0 6px rgba(255,214,79,.25);
 }
-.o-price .permo{font-size:19px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0}
+.o-price .permo{font-size:14px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0;white-space:nowrap}
 .o-sub{color:var(--muted);font-size:12.5px;margin-top:6px}
 
 .o-share{
@@ -1500,12 +1500,9 @@ function render(){
   document.getElementById('note-ltv').innerHTML =
       'Lifetime value: '+fmt$(q.yearlyValue)+' × '+q.retainYears+' yrs = <b>'+fmt$(q.ltv)+'</b> (context only)';
 
-  /* organic vs paid: what the captured traffic would cost in Google Ads */
-  const adEl=document.getElementById('o-adsave');
-  if(q.price!=null && q.clicksPM>0 && (s.cpc||0)>0 && q.adValuePM>n.price){   // only show when organic beats paid (ad-equivalent value > the program fee)
-    adEl.classList.add('show');
-    adEl.innerHTML='<span class="ad-big">≈'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo</span> captured by month 12 — about <b>'+fmt$(q.adValuePM)+'/mo</b> you’d otherwise pay Google Ads for the same traffic, versus the '+fmt$(n.price)+'/mo program fee.';
-  } else adEl.classList.remove('show');
+  /* organic vs paid: hidden whenever the equivalent Google Ads spend exceeds the program fee
+     (and it was already hidden in the reverse case) — so the comparison never appears. */
+  document.getElementById('o-adsave').classList.remove('show');
 
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
@@ -1764,11 +1761,8 @@ function buildPDF(){
   const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
   const noteLines=doc.splitTextToSize(noteTxt,W);
   noteLines.forEach(function(ln){doc.text(ln,L,y); y+=3.4;});
-  if(q.adValuePM>n.price){   // only show when organic beats paid (ad-equivalent value > the program fee)
-    y+=1.5;
-    doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-    doc.text('~'+Math.round(q.clicksPM).toLocaleString()+' organic visits/mo by month 12 — about '+fmt$(q.adValuePM)+'/mo in equivalent Google Ads spend, vs the '+fmt$(n.price)+'/mo program fee.',L,y,{maxWidth:W});
-  }
+  /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
+     ad-equivalent spend exceeds the fee, and it never showed in the reverse case). */
 
   /* fine-print disclosure */
   doc.setFont('helvetica','italic'); doc.setFontSize(6.3); doc.setTextColor(150,143,130);
