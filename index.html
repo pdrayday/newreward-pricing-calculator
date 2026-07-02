@@ -1308,16 +1308,29 @@ function evalRoiGuardrail(s,q,n){
      If so, it's not a fit at this scope — suggest the widest footprint that WOULD be viable. */
   const ceil2x=n.series.ceil2x;
   if(ceil2x < n.price){
-    const order=['national','metro','multi','local']; let sug='';
-    for(let i=order.indexOf(s.footprint)+1;i<order.length;i++){
-      const q2=computeQuote(Object.assign({},s,{footprint:order[i]}));
-      const r2=buildSeries(q2,q2.price,q2.share).runRateROI;
-      if(r2>=ROI_TARGET){ sug=' A '+FOOT[order[i]].name+' program (~'+fmt$(q2.price)+'/mo) would be viable at '+(r2>=10?Math.round(r2):r2.toFixed(1))+'× ongoing.'; break; }
+    /* a national online store or SaaS can't "go local" — footprint tightening isn't a real
+       fix for non-geo businesses, so point them at the demand and scope levers instead */
+    const nonGeo = (s.industry==='ecom'||s.industry==='b2b') && s.footprint==='national';
+    let sug='';
+    if(!nonGeo){
+      const order=['national','metro','multi','local'];
+      for(let i=order.indexOf(s.footprint)+1;i<order.length;i++){
+        /* manually-entered demand belongs to the CURRENT footprint — scale it down with the
+           tighter footprint's reach so the suggestion never "fixes" the ROI using demand the
+           smaller program couldn't actually chase */
+        const patch={footprint:order[i]};
+        if(s.volume>0) patch.volume=Math.round(s.volume*FOOT[order[i]].reach/FOOT[s.footprint].reach);
+        const q2=computeQuote(Object.assign({},s,patch));
+        const r2=buildSeries(q2,q2.price,q2.share).runRateROI;
+        if(r2>=ROI_TARGET){ sug=' A '+FOOT[order[i]].name+' program (~'+fmt$(q2.price)+'/mo) would be viable at '+(r2>=10?Math.round(r2):r2.toFixed(1))+'× ongoing.'; break; }
+      }
     }
     items.push('<b>Not viable at this scope.</b> Delivering '+(q.nScopes===2?'SEO + GEO':(s.seo?'SEO':'GEO'))
       +' properly for '+FOOT[s.footprint].name+' costs ~'+fmt$(n.price)+'/mo, but this market only supports ~'
       +fmt$(ceil2x)+'/mo for a 1.3× ongoing return.'
-      +(sug||' Recommend a tighter footprint, a narrower scope, or building demand first.'));
+      +(sug|| (nonGeo
+        ? ' This business sells nationally, so a tighter footprint isn\'t the fix — verify the real search demand in Keyword Planner or Semrush (a national keyword set is usually far larger than an unchecked estimate), broaden the keyword cluster, or trim the scope to one channel.'
+        : ' Recommend a tighter footprint, a narrower scope, or building demand first.')));
   }
 
   /* even at best-case other levers, can volume alone get there? */
@@ -1385,13 +1398,14 @@ function render(){
      ramp/investment year) is shown as context underneath, since SEO/GEO compounds over 12–24 mo. */
   const rr = n.runRate, y1 = n.roi;
   const fx = v => (v>=10?Math.round(v):v.toFixed(1));
-  /* headline = the CONSERVATIVE run-rate (ongoing) ROI — the low end of the band, so the
-     number shown is what the program returns even if we capture only part of the demand. */
+  /* headline = the FULL band, conservative floor → modeled. The viability verdict tests the
+     modeled run-rate, so showing both ends keeps the big number and the verdict in agreement
+     (a lone conservative figure could read "1.2×" beside a green Viable box). */
   const rrCons = rr!=null ? rr*ROI_LO : null;
-  set('o-roi', rrCons!=null ? fx(rrCons)+'×' : '—');
+  set('o-roi', rrCons!=null ? fx(rrCons)+'–'+fx(rr)+'×' : '—');
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
-      ? 'Conservative run-rate once built — ≈'+fmt$(n.series.exitMRR)+'/mo modeled attributable vs the '+fmt$(n.series.perfPrice)+'/mo ongoing fee. '
+      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmt$(n.series.exitMRR)+'/mo attributable vs the '+fmt$(n.series.perfPrice)+'/mo ongoing fee. '
         +'Year 1 is the ramp at '+fx(y1)+'× while the program builds, then it compounds.'
       : 'Select at least one service in Scope to build the quote');
 
@@ -1667,11 +1681,11 @@ function buildPDF(){
   };
   const h1=28;
   const fxr=v=>(v>=10?Math.round(v):v.toFixed(1));
-  const ongTxt = n.runRate!=null ? fxr(n.runRate*ROI_LO)+'×' : '—';
+  const ongTxt = n.runRate!=null ? fxr(n.runRate*ROI_LO)+'–'+fxr(n.runRate)+'×' : '—';
   const y1Txt  = roi!=null ? fxr(roi)+'×' : '—';
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
-  box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'once built — return after the year-1 ramp':'select a service', DGOLD, true, true);
+  box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'conservative floor to modeled — once built':'select a service', DGOLD, true, true);
   box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
   box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
   box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'attributable new net revenue, from month '+n.rampMonth+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
