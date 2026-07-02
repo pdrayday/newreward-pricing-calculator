@@ -1111,11 +1111,16 @@ function computeQuote(s){
     const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
     const workFactor = 1 + 0.10*rankN + 0.10*cpcN2 + 0.14*compN;  // visibility gap now flows via intensityCost
     const rawCost = scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor;
-    // BUILD-phase fixed = 90% of cost-to-deliver — trimmed 10% so the client's upfront fee is a
-    // little lighter (a small performance-weighting toward the share). The client pays this while
-    // we build, BEFORE the revenue share starts. Once the share kicks in, the fixed drops another
-    // 20% (see PERF_DISCOUNT in buildSeries) → ~72% of cost-to-deliver ongoing.
-    price = Math.max(1200, Math.round(rawCost*0.90/50)*50);
+    // BUILD-phase fixed = 90% of cost-to-deliver, then ANCHORED INTO THE 2026 MARKET BAND
+    // (MARKET_SEO / MARKET_GEO above) for this scope + industry + footprint. The recommended
+    // price is therefore always the CHEAPEST defensible market-rate figure — it green-checks
+    // against published 2026 pricing by construction, and only a negotiated discount below the
+    // band floor reads "below market". Cost drivers (units, intensity, competitors, rank, CPC)
+    // still lift the price above the floor when the work genuinely costs more. Once the share
+    // kicks in, the fixed drops 20% (see PERF_DISCOUNT in buildSeries).
+    const [mLo,mHi] = marketBand(s,nScopes);
+    price = Math.max(1200, Math.round(clamp(rawCost*0.90, mLo, mHi)/50)*50);
+    if(price<mLo) price+=50; else if(price>mHi) price-=50;   // keep the $50 rounding inside the band
   }
 
   /* ---- revenue share: CALCULATED from the client's economics so it's fair to both sides ----
