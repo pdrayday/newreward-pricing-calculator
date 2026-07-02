@@ -1119,7 +1119,7 @@ function computeQuote(s){
     // still lift the price above the floor when the work genuinely costs more. Once the share
     // kicks in, the fixed drops 20% (see PERF_DISCOUNT in buildSeries).
     const [mLo,mHi] = marketBand(s,nScopes);
-    price = Math.max(1200, Math.round(clamp(rawCost*0.90, mLo, mHi)/50)*50);
+    price = Math.max(1500, Math.round(clamp(rawCost*0.90, mLo, mHi)/50)*50);   // hard floor: $1,500/mo for every combination
     if(price<mLo) price+=50; else if(price>mHi) price-=50;   // keep the $50 rounding inside the band
   }
 
@@ -1475,7 +1475,7 @@ function render(){
       ? 'negotiated — recommended '+q.share+'% &nbsp;·&nbsp; <a onclick="return resetNeg(\'share\')">use recommended</a>' : '';
   let pLow=false, shLow=false;
   if(q.price!=null){
-    const floor=Math.max(900, Math.round(q.price*0.85/50)*50);
+    const floor=Math.max(1500, Math.round(q.price*0.85/50)*50);   // negotiation never goes below the $1,500 minimum
     pLow = n.price<floor;
     pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Keep at least '+fmt$(floor)+' (recommended '+fmt$(q.price)+').';
   }
