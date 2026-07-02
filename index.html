@@ -989,6 +989,24 @@ const COMP = {
   strong:   {w:0.68, name:'Strong — entrenched market leaders'},
   dominant: {w:1.00, name:'Dominant — national brands / very high authority'}
 };
+/* ===== 2026 PUBLISHED MARKET-RATE BENCHMARKS (researched July 2026) =====
+   Used by the market-rate check to verify the quoted fee against the REAL market —
+   not against our own recommendation.
+   SEO retainers: ALM Corp / Arc4 / SEOProfy 2026 pricing guides — local single-market
+   $1.5–3.5k, multi-location $2.5–5k, metro/competitive $3–7.5k, national/SaaS/e-comm $3.5–12k.
+   AEO/GEO retainers: Digital Elevator / WebFX / Gigawatt Group 2026 — entry $1–2.5k,
+   mid-market $2–8k. Competitive verticals (legal/medical, SaaS, e-comm) price 15–20% higher
+   (SEO GrowUp B2B SaaS guide; NewMedia e-commerce guide).
+   Bundled SEO+GEO adds the GEO channel at a bundle discount: ~35% of the GEO floor and
+   ~75% of its ceiling — matching published combined mid-market retainers of $2–8k+. */
+const MARKET_SEO = {local:[1500,3500], multi:[2500,5000], metro:[3000,7500], national:[3500,12000]};
+const MARKET_GEO = {local:[1000,2500], multi:[1500,3500], metro:[2000,5000], national:[2500,8000]};
+const MARKET_IND = {local:1.00, highticket:1.15, b2b:1.20, ecom:1.20};
+function marketBand(s,nScopes){
+  const adj=MARKET_IND[s.industry]??1, sb=MARKET_SEO[s.footprint], gb=MARKET_GEO[s.footprint];
+  if(nScopes===2) return [(sb[0]+0.35*gb[0])*adj, (sb[1]+0.75*gb[1])*adj];
+  return s.seo ? [sb[0]*adj, sb[1]*adj] : [gb[0]*adj, gb[1]*adj];
+}
 /* engagement intensity grade, derived from a channel's current visibility score (0–100):
    the lower the score, the more catch-up build work, so the more intensive the engagement. */
 function intensityGrade(score){
@@ -1421,14 +1439,17 @@ function render(){
       : 'select a service in Scope');
   set('o-ramp', 'month '+n.rampMonth);
 
-  /* market-rate confirmation — no numbers, so the client never sees negotiation room */
+  /* market-rate confirmation — verified against the published 2026 SEO / AEO-GEO retainer
+     benchmarks in MARKET_SEO / MARKET_GEO above, NOT against our own recommendation.
+     No numbers shown, so the client never sees negotiation room. */
   const mEl=document.getElementById('o-market');
   if(q.price!=null){
-    const lo=q.price*0.90, hi=q.price*1.25;
-    mEl.innerHTML = (n.price>=lo && n.price<=hi)
-      ? '<span class="in-range">&#10003; Within the typical market rate</span> for a '+IND[s.industry].name.toLowerCase()+' targeting '+FOOT[s.footprint].name+'.'
-      : (n.price<lo ? 'Below the typical market rate for this scope.'
-                    : 'Above the typical market rate for this scope.');
+    const [mLo,mHi]=marketBand(s,q.nScopes);
+    const scopeName=q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO':'AEO/GEO');
+    mEl.innerHTML = (n.price>=mLo && n.price<=mHi)
+      ? '<span class="in-range">&#10003; Within the typical 2026 market rate</span> for '+scopeName+' for a '+IND[s.industry].name.toLowerCase()+' targeting '+FOOT[s.footprint].name+' — verified against published agency pricing research.'
+      : (n.price<mLo ? 'Below the typical 2026 market rate for this scope and market — above-market value at this fee.'
+                     : 'Above the typical 2026 market rate for this scope and market.');
   } else mEl.innerHTML='';
 
   /* engagement intensity — graded from the SEO/GEO visibility scores */
