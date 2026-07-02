@@ -965,18 +965,19 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 /* Per-industry benchmarks (research-backed, 2025). conv = typical visit→customer %,
    margin = typical gross %, yr = annual customer value, yrs = retention, vol = money-term
    cluster volume. These auto-fill any field left blank so each industry starts realistic. */
-/* cost = relative cost-to-deliver multiplier (research-based: competition is the #1 cost driver) */
+/* cost = relative cost-to-deliver multiplier — intentionally FLAT (compressed spread across
+   industries and footprints per pricing decision: everything stays near the local-service base) */
 const IND = {
   local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, cost:1.00, name:'Local service'},
-  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, cost:1.35, name:'High-ticket local'},
-  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.45, name:'B2B / SaaS'},
-  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.50, name:'E-commerce / National'}
+  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, cost:1.08, name:'High-ticket local'},
+  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.10, name:'B2B / SaaS'},
+  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.12, name:'E-commerce / National'}
 };
 const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
-  multi:    {w:1.25, cost:1.25, reach:2.4, name:'a 2–5 market footprint'},
-  metro:    {w:1.55, cost:1.45, reach:4.0, name:'a major metro / regional market'},
-  national: {w:2.00, cost:1.75, reach:9.0, name:'a national market'}
+  multi:    {w:1.25, cost:1.06, reach:2.4, name:'a 2–5 market footprint'},
+  metro:    {w:1.55, cost:1.12, reach:4.0, name:'a major metro / regional market'},
+  national: {w:2.00, cost:1.20, reach:9.0, name:'a national market'}
 };
 /* competitor entrenchment / domain-authority gap: how strong the incumbents already are.
    The client's own side of the gap is captured by the SEO/GEO visibility scores; this is the
