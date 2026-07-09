@@ -755,7 +755,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel" id="lbl-volsource">Volume source
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Measured sources (Keyword Planner, Semrush, GSC) count in full. An AI prompt test is treated as a strong estimate (−5%); Trends/manual get a slightly larger −10–15% adjustment so demand is never overstated.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Demand measured in Keyword Planner, Semrush, or GSC counts in full; other estimates are weighted conservatively so demand is never overstated.</span></button>
           <span class="flag-pill">▲ verify</span>
         </label>
         <div class="fwrap"><select id="volsource">
@@ -1036,7 +1036,7 @@ function intensityGrade(score){
   const label = gap>=0.67 ? 'Intensive' : gap>=0.34 ? 'Standard' : 'Light';
   return {gap, label};
 }
-/* demand-confidence haircut: unverified volume sources get a conservative discount */
+/* demand-confidence weighting: measured sources count in full; estimates are weighted conservatively */
 const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
 const ROI_TARGET = 1.3;  // viability bar: the run-rate (ongoing) ROI a program should clear
 /* conservative factor applied to the modeled run-rate for the headline ROI: the number shown
@@ -1897,7 +1897,7 @@ function buildPDF(mode){
     ['AEO/GEO visibility score','0-100: how often AI assistants mention or recommend the client today. Most local businesses score under 25.'],
     ['Visibility gap','100 minus the visibility score — the untapped demand left to win. Drives both the revenue upside and the effort required.'],
     ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint.'],
-    ['Volume source','Where the volume number came from. Measured tools (Keyword Planner, Semrush, GSC) count in full; unverified estimates take a 5-20% haircut so demand is never overstated.'],
+    ['Volume source','Where the search-demand number came from. Demand measured in tools like Keyword Planner, Semrush, or GSC counts in full; estimates are weighted conservatively so demand is never overstated.'],
     ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market.'],
     ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],
     ['Retention','How many years a typical customer stays. Sets the monthly churn in the 12-month projection.'],
@@ -1908,16 +1908,16 @@ function buildPDF(mode){
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
     ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the ongoing fee, shown conservative floor to modeled.'],
     ['Year-1 ROI','The ramp year: attributable revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — SEO/GEO compounds.'],
-    ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored inside published 2026 SEO/GEO market rates (never below $1,500). Drops 20% once the revenue share starts.'],
-    ['Revenue share','2-10% of attributable NEW net revenue — growth above today\'s baseline only. Calculated from margin, acquisition budget, commissions, and deal size.'],
+    ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20% once the revenue share starts.'],
+    ['Revenue share','A small percentage of attributable NEW net revenue — growth above today\'s baseline only. Calculated from the client\'s margin, acquisition budget, commissions, and deal size, so it is fair to both sides.'],
     ['New net revenue / baseline','Only revenue ABOVE what the client already makes counts toward the share. Existing business is never billed.'],
-    ['Attribution (attributable)','The conservative credit factor: billing uses 60% of modeled new revenue for estimated data (85% once verified) — we never bill on growth we can\'t stand behind.'],
+    ['Attribution (attributable)','The conservative credit standard: billing counts only the new revenue that can be confidently attributed to the program — we never bill on growth we can\'t stand behind.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
     ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
     ['Ramp / rev-share start','The first months are build (fixed fee only). The share starts month 3-5 depending on difficulty and visibility — one month sooner if already ranked top-5.'],
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
     ['LTV — lifetime value','Yearly customer value times retention years. Shown for context only; never used in the revenue math.'],
-    ['Click share','The percent of monthly searches the program realistically captures once ramped (3-15%, shrinking in very large markets).'],
+    ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets.'],
     ['Market-rate check','The quote is verified against published 2026 SEO and AEO/GEO retainer benchmarks for the same scope, industry, and footprint.'],
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
