@@ -1821,6 +1821,70 @@ function buildPDF(){
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
 
+  /* ============ PAGE 2 — TERMINOLOGY (plain-English glossary) ============ */
+  doc.addPage();
+  doc.setFillColor(10,8,6); doc.rect(0,0,210,24,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
+  doc.text('Terminology',L,11);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
+  doc.text('A plain-English glossary of every term used in this proposal and calculator.',L,17.5);
+  const GLOSS=[
+    ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
+    ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
+    ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
+    ['Industry model','The business type (local service, high-ticket local, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank.'],
+    ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, or national. Wider = more demand, competitors, and pages to optimize.'],
+    ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — cost rises with economies of scale.'],
+    ['Competitor strength','How entrenched the incumbents are (domain authority, backlinks). The dominant driver of market difficulty.'],
+    ['Average search rank','The client\'s average Google position for money phrases. Top-5 speeds up the ramp; page 2+ raises the cost. Blended 50/50 with the SEO visibility score.'],
+    ['SEO visibility score','0-100 visibility in traditional Google search. Lower = bigger gap = more upside and more work. Pulled toward what the rank implies.'],
+    ['AEO/GEO visibility score','0-100: how often AI assistants mention or recommend the client today. Most local businesses score under 25.'],
+    ['Visibility gap','100 minus the visibility score — the untapped demand left to win. Drives both the revenue upside and the effort required.'],
+    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint.'],
+    ['Volume source','Where the volume number came from. Measured tools (Keyword Planner, Semrush, GSC) count in full; unverified estimates take a 5-20% haircut so demand is never overstated.'],
+    ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market.'],
+    ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],
+    ['Retention','How many years a typical customer stays. Sets the monthly churn in the 12-month projection.'],
+    ['AOV x purchases / year','E-commerce: average order value times orders per year = the yearly customer value.'],
+    ['Conversion rate','The percent of website visitors who become paying customers. Realistic is 2-8% for most businesses.'],
+    ['Gross margin','What the client keeps from each sale after direct costs. Higher margins support a higher revenue share.'],
+    ['Acquisition budget','The share of revenue the client will spend to win a new customer. 10-20% is healthy for growth-mode businesses.'],
+    ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
+    ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the ongoing fee, shown conservative floor to modeled.'],
+    ['Year-1 ROI','The ramp year: attributable revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — SEO/GEO compounds.'],
+    ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored inside published 2026 SEO/GEO market rates (never below $1,500). Drops 20% once the revenue share starts.'],
+    ['Revenue share','2-10% of attributable NEW net revenue — growth above today\'s baseline only. Calculated from margin, acquisition budget, commissions, and deal size.'],
+    ['New net revenue / baseline','Only revenue ABOVE what the client already makes counts toward the share. Existing business is never billed.'],
+    ['Attribution (attributable)','The conservative credit factor: billing uses 60% of modeled new revenue for estimated data (85% once verified) — we never bill on growth we can\'t stand behind.'],
+    ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
+    ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
+    ['Ramp / rev-share start','The first months are build (fixed fee only). The share starts month 3-5 depending on difficulty and visibility — one month sooner if already ranked top-5.'],
+    ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
+    ['LTV — lifetime value','Yearly customer value times retention years. Shown for context only; never used in the revenue math.'],
+    ['Click share','The percent of monthly searches the program realistically captures once ramped (3-15%, shrinking in very large markets).'],
+    ['Market-rate check','The quote is verified against published 2026 SEO and AEO/GEO retainer benchmarks for the same scope, industry, and footprint.'],
+    ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
+  ];
+  const gColW=(W-8)/2;
+  let gx=L, gy=31;
+  GLOSS.forEach(function(g){
+    doc.setFontSize(6.6);
+    const lines=doc.splitTextToSize(g[1],gColW);
+    const h=3.3+lines.length*2.55+1.9;
+    if(gy+h>278){ gx=L+gColW+8; gy=31; }                      // flow into column 2
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    doc.text(g[0],gx,gy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.6); doc.setTextColor(70,63,52);
+    lines.forEach(function(ln,i){ doc.text(ln,gx,gy+3.3+i*2.55); });
+    gy+=h;
+  });
+  /* footer band — page 2 */
+  doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
+  doc.text('NEW REWARD',L,291,{charSpace:1});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
+  doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
+
   const name=(s.client||'client').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'')||'client';
   doc.save('NewReward-Proposal-'+name+'.pdf');
 }
