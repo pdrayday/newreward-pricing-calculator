@@ -1870,6 +1870,20 @@ function buildPDF(mode){
   doc.text('Terminology',L,11);
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('A plain-English glossary of every term used in this proposal and calculator.',L,17.5);
+
+  /* ---- the principle behind the pricing — the calculator's purpose, stated plainly ---- */
+  const PRINCIPLE='This calculator exists to do two things at once: show every client exactly how their price is built — openly and honestly, with nothing hidden — and keep our own pricing disciplined. Every figure is derived from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work genuinely requires — low enough to keep the client competitive in their industry and market, sound enough to deliver the program properly. A price that only works when it works for both sides.';
+  doc.setFontSize(7.6);
+  const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
+  const prH=8+prLines.length*3.1+4;
+  doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
+  doc.roundedRect(L,29,W,prH,2,2,'FD');
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,35.5,{charSpace:.6});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  prLines.forEach(function(ln,i){ doc.text(ln,L+6,40.5+i*3.1); });
+  const gTop=29+prH+7;
+
   const GLOSS=[
     ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
     ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
@@ -1908,12 +1922,12 @@ function buildPDF(mode){
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
   const gColW=(W-8)/2;
-  let gx=L, gy=31;
+  let gx=L, gy=gTop;
   GLOSS.forEach(function(g){
     doc.setFontSize(6.6);
     const lines=doc.splitTextToSize(g[1],gColW);
     const h=3.3+lines.length*2.55+1.9;
-    if(gy+h>278){ gx=L+gColW+8; gy=31; }                      // flow into column 2
+    if(gy+h>278){ gx=L+gColW+8; gy=gTop; }                    // flow into column 2
     doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
     doc.text(g[0],gx,gy);
     doc.setFont('helvetica','normal'); doc.setFontSize(6.6); doc.setTextColor(70,63,52);
