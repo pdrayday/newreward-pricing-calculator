@@ -1742,7 +1742,11 @@ function buildPDF(mode){
   doc.setTextColor(255,255,255); doc.text('New ',L,19);
   doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]); doc.text('Reward', L+doc.getTextWidth('New '),19);
   doc.setFontSize(7); doc.text('GET FOUND. GET TRUSTED. GET CHOSEN.', L, 27, {charSpace:.9});
-  doc.setFontSize(9.5); doc.text('GROWTH PROGRAM PROPOSAL', R, 17, {align:'right',charSpace:.6});
+  /* right-align manually: jsPDF's align:'right' ignores charSpace, pushing the title off the page edge */
+  doc.setFontSize(9.5);
+  const gppTitle='GROWTH PROGRAM PROPOSAL';
+  const gppW=doc.getTextWidth(gppTitle)+0.6*(gppTitle.length-1);
+  doc.text(gppTitle, R-gppW, 17, {charSpace:.6});
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(190,182,168);
   doc.text(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), R, 23, {align:'right'});
 
