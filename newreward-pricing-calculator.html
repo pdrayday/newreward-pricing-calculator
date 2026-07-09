@@ -27,82 +27,75 @@
   --radius:14px;
   --font:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
 }
-/* ===== LIGHT MODE (Ivory) — GOLD page + BLACK particles, matching NewReward.com ===== */
+/* ===== LIGHT MODE (Ivory) — WHITE page, black + gold accents: the dark theme inverted ===== */
 [data-theme="ivory"]{
-  color-scheme:dark;
-  --bg:#cda75c;
-  --panel:#d6b36c;
-  --panel2:#c19a40;
-  --field:#d6b36c;
-  --gold:#1a1206;
-  --gold-bright:#3a2a0b;
-  --gold-deep:#2a1f08;
-  --gold-line:rgba(0,0,0,.22);
-  --gold-line-soft:rgba(0,0,0,.12);
-  --text:#161003;
-  --muted:#161003;
-  --muted2:#161003;
-  --green:#0aa138;
-  --red:#ee1409;
+  color-scheme:light;
+  --bg:#ffffff;
+  --panel:#faf8f3;
+  --panel2:#f3eee3;
+  --field:#ffffff;
+  --gold:#a87c2e;
+  --gold-bright:#8a6a2a;
+  --gold-deep:#6b5523;
+  --gold-line:rgba(154,116,48,.40);
+  --gold-line-soft:rgba(154,116,48,.20);
+  --text:#14100a;
+  --muted:#4a4234;
+  --muted2:#71675a;
+  --green:#1e7a33;
+  --red:#c81e10;
 }
-[data-theme="ivory"] body{background:#cda75c}
+[data-theme="ivory"] body{background:#ffffff}
 [data-theme="ivory"] body::before{
   background:
-    radial-gradient(900px 420px at 12% -5%, rgba(0,0,0,.05), transparent 60%),
-    radial-gradient(700px 380px at 95% 8%, rgba(0,0,0,.03), transparent 60%);
+    radial-gradient(900px 420px at 12% -5%, rgba(168,124,46,.07), transparent 60%),
+    radial-gradient(700px 380px at 95% 8%, rgba(168,124,46,.05), transparent 60%);
 }
-[data-theme="ivory"] .bgfx{opacity:.95}
-[data-theme="ivory"] .fxcanvas{filter:brightness(0)}
-[data-theme="ivory"] .wordmark{color:#161003}
+[data-theme="ivory"] .bgfx{opacity:.55}
+[data-theme="ivory"] .fxcanvas{filter:brightness(.55) saturate(1.25)}  /* dark-gold particles on white */
+[data-theme="ivory"] .wordmark{color:#14100a}
 [data-theme="ivory"] .btn-gold{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
-/* light mode: clearly black outlines on the entry fields only (not the editable price / rev-share output boxes) */
-[data-theme="ivory"] .inputs input[type=text],[data-theme="ivory"] .inputs input[type=number],[data-theme="ivory"] .inputs input[type=url],[data-theme="ivory"] .inputs select{border:1.5px solid #161003}
-[data-theme="ivory"] .inputs input:focus,[data-theme="ivory"] .inputs select:focus{border-color:#161003;box-shadow:0 0 0 3px rgba(0,0,0,.18)}
-[data-theme="ivory"] .toggle-row{border:1.5px solid #161003}
+/* black outlines on the entry fields — inverted from the gold-line fields of dark mode */
+[data-theme="ivory"] .inputs input[type=text],[data-theme="ivory"] .inputs input[type=number],[data-theme="ivory"] .inputs input[type=url],[data-theme="ivory"] .inputs select{border:1.5px solid #14100a}
+[data-theme="ivory"] .inputs input:focus,[data-theme="ivory"] .inputs select:focus{border-color:#a87c2e;box-shadow:0 0 0 3px rgba(168,124,46,.22)}
+[data-theme="ivory"] .toggle-row{border:1.5px solid #14100a;background:#ffffff}
+[data-theme="ivory"] .slider{background:#e9e3d5;border-color:rgba(154,116,48,.4)}
+[data-theme="ivory"] .slider::before{background:#a99b80}
 [data-theme="ivory"] select{
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23161003' stroke-width='1.6' stroke-linecap='round'/></svg>");
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%2314100a' stroke-width='1.6' stroke-linecap='round'/></svg>");
 }
-[data-theme="ivory"] select option{background:#d6b36c;color:#161003}
+[data-theme="ivory"] select option{background:#ffffff;color:#14100a}
 [data-theme="ivory"] .switch input:checked + .slider{background:linear-gradient(135deg,#241a06,#0c0802)}
 [data-theme="ivory"] .switch input:checked + .slider::before{background:#f0d8a0}
-[data-theme="ivory"] .tip .tipbox{background:#1d1913;color:#f4efe5;border-color:rgba(0,0,0,.35)}
-[data-theme="ivory"] .o-price{color:#161003;text-shadow:none}
-/* chart: solid black revenue bars, white black-outlined cost bars on the gold panel */
-[data-theme="ivory"] #o-chart .bar-rev{fill:#161003!important}
-[data-theme="ivory"] #o-chart .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
-[data-theme="ivory"] .proj-key .k-rev{background:#161003}
-[data-theme="ivory"] .proj-key .k-cost{background:#ffffff;border-color:#161003}
-/* below-target figure + panel outline: strong true red, no glow */
-[data-theme="ivory"] .o-price.roi-below{color:#e8432f;-webkit-text-stroke:0;text-stroke:0;text-shadow:0 0 26px rgba(200,55,42,.45)}
-[data-theme="ivory"] .o-price.roi-below .permo{color:#e8432f}
-[data-theme="ivory"] .opanel.roi-below{border-color:#c00b00;border-width:2px;box-shadow:none}
-[data-theme="ivory"] .opanel.roi-below .o-kicker{color:#e8432f}
-/* guardrail + warning boxes: subtle dark tint on gold, red accents, black text */
-[data-theme="ivory"] .roi-warn{background:rgba(0,0,0,.055);border-color:#c00b00;color:#1a0703}
-[data-theme="ivory"] .roi-warn .rw-kick{color:#c00b00}
-[data-theme="ivory"] .roi-warn li b{color:#1a0703}
-[data-theme="ivory"] .roi-warn .rw-fix{color:#5e4108}
-[data-theme="ivory"] .roi-warn .rw-foot{color:#161003}
-[data-theme="ivory"] .roi-ok{background:rgba(0,0,0,.045);border-color:rgba(31,90,44,.55);color:#143d1e}
+[data-theme="ivory"] .tip .tipbox{background:#1d1913;color:#f4efe5;border-color:rgba(154,116,48,.5)}
+/* headline: rich gold on white, no glow — inverted from the glowing gold-on-black */
+[data-theme="ivory"] .o-price{color:#9a7430;text-shadow:none}
+[data-theme="ivory"] .diffbar{background:#e9e3d5}
+/* chart: gold revenue bars as in dark mode; cost bars white with a black outline */
+[data-theme="ivory"] #o-chart .bar-cost{fill:#ffffff!important;stroke:#14100a!important;stroke-width:1.5!important}
+[data-theme="ivory"] .proj-key .k-cost{background:#ffffff;border-color:#14100a}
+/* below-target figure + panel outline: strong red, no glow */
+[data-theme="ivory"] .o-price.roi-below{color:#c81e10;-webkit-text-stroke:0;text-stroke:0;text-shadow:none}
+[data-theme="ivory"] .o-price.roi-below .permo{color:#c81e10}
+[data-theme="ivory"] .opanel.roi-below{border-color:#c81e10;border-width:2px;box-shadow:none}
+[data-theme="ivory"] .opanel.roi-below .o-kicker{color:#c81e10}
+/* guardrail + warning boxes: light tints on white, red / green accents, dark text */
+[data-theme="ivory"] .roi-warn{background:rgba(200,30,16,.05);border-color:#c81e10;color:#4a0e05}
+[data-theme="ivory"] .roi-warn .rw-kick{color:#c81e10}
+[data-theme="ivory"] .roi-warn li b{color:#2c1005}
+[data-theme="ivory"] .roi-warn .rw-fix{color:#6b5523}
+[data-theme="ivory"] .roi-warn .rw-foot{color:#4a4234}
+[data-theme="ivory"] .roi-ok{background:rgba(30,122,51,.06);border-color:rgba(30,122,51,.5);color:#143d1e}
 [data-theme="ivory"] .roi-ok b{color:#0f3018}
 [data-theme="ivory"] input.roi-flag,[data-theme="ivory"] select.roi-flag{
-  color:#c00b00;
-  border-color:#c00b00!important;border-width:3px!important;
+  color:#c81e10;
+  border-color:#c81e10!important;border-width:3px!important;
   box-shadow:none!important;
 }
-[data-theme="ivory"] .flabel .flag-pill{background:#c00b00;border-color:#c00b00;color:#fff}
-[data-theme="ivory"] .neg-warn{background:rgba(0,0,0,.055);border-color:#c00b00;color:#1a0703}
-[data-theme="ivory"] .edit-num input.too-low{color:#c00b00}
-/* force ALL body text black in light mode — beats any stray light/inherited colors */
-[data-theme="ivory"] .wrap *{color:#161003 !important;-webkit-text-fill-color:#161003 !important}
-/* exceptions that must keep their own color (placed after, so they win) */
-[data-theme="ivory"] .btn-gold,[data-theme="ivory"] .btn-gold *{color:#f0d8a0 !important;-webkit-text-fill-color:#f0d8a0 !important}
-[data-theme="ivory"] .flag-pill{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important}
-[data-theme="ivory"] .tip .tipbox,[data-theme="ivory"] .tip .tipbox *{color:#f4efe5 !important;-webkit-text-fill-color:#f4efe5 !important}
-[data-theme="ivory"] .o-price.roi-below,[data-theme="ivory"] .o-price.roi-below *{color:#e8432f !important;-webkit-text-fill-color:#e8432f !important}
-[data-theme="ivory"] .opanel.roi-below .o-kicker{color:#e8432f !important;-webkit-text-fill-color:#e8432f !important}
-[data-theme="ivory"] .roi-warn .rw-kick{color:#c00b00 !important;-webkit-text-fill-color:#c00b00 !important}
-[data-theme="ivory"] .roi-ok,[data-theme="ivory"] .roi-ok *{color:#143d1e !important;-webkit-text-fill-color:#143d1e !important}
+[data-theme="ivory"] .flabel .flag-pill{background:#c81e10;border-color:#c81e10;color:#fff}
+[data-theme="ivory"] .neg-warn{background:rgba(200,30,16,.05);border-color:#c81e10;color:#4a0e05}
+[data-theme="ivory"] .edit-num input.too-low{color:#c81e10}
+/* the theme toggle's active pill stays black with gold text */
 [data-theme="ivory"] .theme-switch button[aria-pressed="true"]{color:#f0d8a0 !important;-webkit-text-fill-color:#f0d8a0 !important}
 
 /* ===== in-page PDF preview overlay ===== */
