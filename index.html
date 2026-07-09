@@ -871,7 +871,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> on attributable <b style="color:var(--gold-bright)">new net revenue</b> — growth above today's baseline only. Begins <span id="o-ramp">month 2</span>.<br><span class="neg-note" id="o-share-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> on attributable <b style="color:var(--gold-bright)">new net revenue</b> — growth above today's baseline only. Begins <span id="o-ramp">month 2</span>; accrues monthly, invoiced quarterly.<br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
 
@@ -1594,7 +1594,7 @@ function render(){
   document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
     '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
     +(n.rampMonth>2?' <b>Months 2–'+(n.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
-    +' <b>Month '+n.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline.'
+    +' <b>Month '+n.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline (accrues monthly, invoiced quarterly).'
     +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Keep conversion realistic (~4–8%).</span>';
 
   /* summary */
@@ -1773,7 +1773,7 @@ function buildPDF(mode){
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'conservative floor to modeled — once built':'select a service', DGOLD, true, true);
   box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
   box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
-  box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'attributable new net revenue, from month '+n.rampMonth+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
+  box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'new net revenue from month '+n.rampMonth+' — accrues monthly, billed quarterly'+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
 
   y+=h1+4;
   const h2=23;
@@ -1846,7 +1846,7 @@ function buildPDF(mode){
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   y+=2.5;
   doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
+  const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline — it accrues month by month and is invoiced quarterly. (est.)/(benchmark)/(modeled) values are verified in the review window.';
   const noteLines=doc.splitTextToSize(noteTxt,W);
   noteLines.forEach(function(ln){doc.text(ln,L,y); y+=3.4;});
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
@@ -1882,7 +1882,20 @@ function buildPDF(mode){
   doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,35.5,{charSpace:.6});
   doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   prLines.forEach(function(ln,i){ doc.text(ln,L+6,40.5+i*3.1); });
-  const gTop=29+prH+7;
+
+  /* ---- how ranking works — a short primer, since the whole model hangs on it ---- */
+  const RANKING='Google ranks results by relevance and authority: how well a page answers the search, how much the site has earned trust (helpful content, links from reputable sites, reviews, consistency over time), and — for local searches — proximity and the strength of the Google Business Profile. AI engines (ChatGPT, Gemini, Perplexity, Google AI Overviews) recommend businesses they can verify across those same signals: search visibility, authoritative mentions, and clear, citable content. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.';
+  const rkTop=29+prH+5;
+  doc.setFontSize(7.3);
+  const rkLines=doc.splitTextToSize(RANKING,W-12);
+  const rkH=8+rkLines.length*3.0+3;
+  doc.setFillColor(255,255,255); doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.4);
+  doc.roundedRect(L,rkTop,W,rkH,2,2,'FD');
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,rkTop+6.5,{charSpace:.6});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.3); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  rkLines.forEach(function(ln,i){ doc.text(ln,L+6,rkTop+11.2+i*3.0); });
+  const gTop=rkTop+rkH+6;
 
   const GLOSS=[
     ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
@@ -1906,15 +1919,15 @@ function buildPDF(mode){
     ['Gross margin','What the client keeps from each sale after direct costs. Higher margins support a higher revenue share.'],
     ['Acquisition budget','The share of revenue the client will spend to win a new customer. 10-20% is healthy for growth-mode businesses.'],
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
-    ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the ongoing fee, shown conservative floor to modeled.'],
+    ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the ongoing fee, shown from conservative floor to modeled. Why it matters: it is the number that proves the program keeps paying for itself after the build.'],
     ['Year-1 ROI','The ramp year: attributable revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — SEO/GEO compounds.'],
     ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20% once the revenue share starts.'],
-    ['Revenue share','A small percentage of attributable NEW net revenue — growth above today\'s baseline only. Calculated from the client\'s margin, acquisition budget, commissions, and deal size, so it is fair to both sides.'],
-    ['New net revenue / baseline','Only revenue ABOVE what the client already makes counts toward the share. Existing business is never billed.'],
+    ['Revenue share','Our performance stake: a small percentage of attributable NEW net revenue — only growth above the client\'s pre-program baseline, never existing business. It accrues month by month once it begins and is invoiced quarterly (every three months) for the life of the engagement. The percentage is calculated from the client\'s margin, acquisition budget, existing commissions, and deal size, so it stays fair to both sides.'],
+    ['New net revenue / baseline','The baseline is the revenue the client already generates before the program starts. Only tracked growth ABOVE that line counts toward the share — existing business is never billed. Why it matters: it is what makes the share pure performance pay.'],
     ['Attribution (attributable)','The conservative credit standard: billing counts only the new revenue that can be confidently attributed to the program — we never bill on growth we can\'t stand behind.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
     ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
-    ['Ramp / rev-share start','The first months are build (fixed fee only). The share starts month 3-5 depending on difficulty and visibility — one month sooner if already ranked top-5.'],
+    ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built. From the start month, the fixed fee drops and the share begins (accruing monthly, invoiced quarterly). Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
     ['LTV — lifetime value','Yearly customer value times retention years. Shown for context only; never used in the revenue math.'],
     ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets.'],
@@ -1924,14 +1937,14 @@ function buildPDF(mode){
   const gColW=(W-8)/2;
   let gx=L, gy=gTop;
   GLOSS.forEach(function(g){
-    doc.setFontSize(6.6);
+    doc.setFontSize(6.25);
     const lines=doc.splitTextToSize(g[1],gColW);
-    const h=3.3+lines.length*2.55+1.9;
-    if(gy+h>278){ gx=L+gColW+8; gy=gTop; }                    // flow into column 2
-    doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    const h=3.1+lines.length*2.42+1.6;
+    if(gy+h>279){ gx=L+gColW+8; gy=gTop; }                    // flow into column 2
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.9); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
     doc.text(g[0],gx,gy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(6.6); doc.setTextColor(70,63,52);
-    lines.forEach(function(ln,i){ doc.text(ln,gx,gy+3.3+i*2.55); });
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.25); doc.setTextColor(70,63,52);
+    lines.forEach(function(ln,i){ doc.text(ln,gx,gy+3.1+i*2.42); });
     gy+=h;
   });
   /* footer band — page 2 */
