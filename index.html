@@ -889,7 +889,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="o-proj">
       <div class="o-diff-top">
         <span class="o-diff-label">12-Month Projection</span>
-        <span class="proj-key"><i class="kk k-rev"></i>New revenue<i class="kk k-cost"></i>Your cost</span>
+        <span class="proj-key"><i class="kk k-rev"></i>New revenue<i class="kk k-cost"></i>Total cost (fixed + share)</span>
       </div>
       <div id="o-chart"></div>
       <div class="o-timeline" id="o-timeline"></div>
@@ -1289,7 +1289,7 @@ function renderChart(q,n){
     const cx=X0+i*gw+gw/2;
     const rh=mrr[i]/maxV*(Y1-Y0), ch=invoice[i]/maxV*(Y1-Y0);
     g+='<rect class="bar-rev" x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"><title>Month '+m+' new monthly revenue: '+fmt$(mrr[i])+'</title></rect>';
-    g+='<rect class="bar-cost" x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"><title>Month '+m+' total cost: '+fmt$(invoice[i])+'</title></rect>';
+    g+='<rect class="bar-cost" x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"><title>Month '+m+' total cost (fixed + share): '+fmt$(invoice[i])+'</title></rect>';
     g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>';
   });
   g+='<text x="'+(X0-7)+'" y="'+(Y0+4)+'" text-anchor="end">'+fmtK(maxV)+'</text>';
@@ -1595,7 +1595,7 @@ function render(){
     '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
     +(n.rampMonth>2?' <b>Months 2–'+(n.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
     +' <b>Month '+n.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline (accrues monthly, invoiced quarterly).'
-    +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Keep conversion realistic (~4–8%).</span>';
+    +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Cost bars show the total: the fixed fee, plus the revenue share once it begins.</span>';
 
   /* summary */
   const who = s.client || 'This client';
