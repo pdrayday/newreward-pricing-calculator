@@ -51,8 +51,19 @@
     radial-gradient(900px 420px at 12% -5%, rgba(168,124,46,.07), transparent 60%),
     radial-gradient(700px 380px at 95% 8%, rgba(168,124,46,.05), transparent 60%);
 }
-[data-theme="ivory"] .bgfx{opacity:.55}
-[data-theme="ivory"] .fxcanvas{filter:brightness(.55) saturate(1.25)}  /* dark-gold particles on white */
+[data-theme="ivory"] .bgfx{opacity:.95}
+[data-theme="ivory"] .fxcanvas{filter:brightness(.34) saturate(1.7)}  /* deep-gold particles + waves, prominent on white */
+[data-theme="ivory"] .bgfx .stars,[data-theme="ivory"] .bgfx .stars2{filter:brightness(.34) saturate(1.7)}
+[data-theme="ivory"] .bgfx .aurora{
+  background:
+    radial-gradient(38% 48% at 22% 32%, rgba(122,86,26,.28), transparent 62%),
+    radial-gradient(34% 44% at 80% 22%, rgba(154,116,48,.22), transparent 62%),
+    radial-gradient(46% 54% at 62% 82%, rgba(107,85,35,.24), transparent 62%);
+}
+[data-theme="ivory"] .bgfx .wavefx{
+  opacity:.8;
+  background:radial-gradient(120% 60% at 50% 120%, rgba(122,86,26,.24), transparent 60%);
+}
 [data-theme="ivory"] .wordmark{color:#14100a}
 [data-theme="ivory"] .btn-gold{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
 /* black outlines on the entry fields — inverted from the gold-line fields of dark mode */
