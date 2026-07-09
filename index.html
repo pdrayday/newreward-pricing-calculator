@@ -105,6 +105,15 @@
 [data-theme="ivory"] .roi-ok,[data-theme="ivory"] .roi-ok *{color:#143d1e !important;-webkit-text-fill-color:#143d1e !important}
 [data-theme="ivory"] .theme-switch button[aria-pressed="true"]{color:#f0d8a0 !important}
 
+/* ===== in-page PDF preview overlay ===== */
+.pdf-preview{position:fixed;inset:0;z-index:200;background:rgba(4,3,2,.9);
+  display:flex;flex-direction:column;padding:18px;backdrop-filter:blur(4px)}
+.pdf-preview[hidden]{display:none}
+.pp-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.pp-bar .pp-title{color:#f4efe5;font-size:13px;font-weight:600;letter-spacing:.02em}
+.pdf-preview iframe{flex:1;width:100%;border:1px solid var(--gold-line);border-radius:12px;background:#525659}
+@media(max-width:640px){.pdf-preview{padding:10px}.pp-bar .pp-title{font-size:11px}}
+
 /* ===== theme switch widget ===== */
 .theme-switch{display:inline-flex;align-items:center;gap:3px;padding:3px;
   background:var(--field);border:1px solid var(--gold-line);border-radius:999px}
@@ -929,7 +938,10 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#6b5523"/><stop offset=".5" stop-color="#e9c172"/><stop offset="1" stop-color="#6b5523"/></linearGradient></defs>
     </svg>
 
-    <button class="btn btn-gold no-print" id="pdfbtn" style="width:100%;margin-top:6px" onclick="downloadPDF()">Download PDF</button>
+    <div class="no-print" style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn btn-ghost" style="flex:1" onclick="previewPDF()" title="See exactly what the PDF will contain — nothing is downloaded">Preview PDF</button>
+      <button class="btn btn-gold" id="pdfbtn" style="flex:1" onclick="downloadPDF()">Download PDF</button>
+    </div>
 
     <div class="o-foot">
       <span class="of-tag">New Reward</span>
@@ -940,6 +952,15 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
 </div><!-- /grid -->
 </div><!-- /wrap -->
+
+<!-- in-page PDF preview overlay (no file is downloaded) -->
+<div class="pdf-preview no-print" id="pdf-preview" hidden>
+  <div class="pp-bar">
+    <span class="pp-title">Proposal preview — exactly what the PDF will contain. Nothing has been downloaded.</span>
+    <button class="btn btn-gold" onclick="closePdfPreview()">Close preview</button>
+  </div>
+  <iframe id="pp-frame" title="Proposal PDF preview"></iframe>
+</div>
 
 <script>
 /* ===== dark / light (Noir / Ivory) theme toggle — shares preference with the site ===== */
@@ -1664,19 +1685,40 @@ function resetAll(){
   render();
 }
 
-/* ---- PDF download: builds a branded one-page proposal (outputs + all inputs) ---- */
-function downloadPDF(){
-  if(window.jspdf && window.jspdf.jsPDF) return buildPDF();
+/* ---- PDF: builds the branded proposal (outputs + inputs + glossary page).
+        Download saves the file; Preview renders the SAME document in an in-page
+        overlay from a blob URL — nothing is ever downloaded. ---- */
+function withJsPDF(then){
+  if(window.jspdf && window.jspdf.jsPDF) return then();
   const sc=document.createElement('script');
   sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  sc.onload=buildPDF;
+  sc.onload=then;
   sc.onerror=()=>alert('Could not load the PDF library — check the internet connection and try again.');
   document.head.appendChild(sc);
 }
+function downloadPDF(){ withJsPDF(function(){ buildPDF('save'); }); }
+function previewPDF(){ withJsPDF(function(){ buildPDF('preview'); }); }
+
+/* in-page preview overlay — shows the exact PDF from a blob URL, nothing downloaded */
+let ppUrl=null;
+function openPdfPreview(url){
+  if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'')){ window.open(url,'_blank'); return; }  // mobile browsers can't render PDFs in an iframe
+  ppUrl=url;
+  document.getElementById('pp-frame').src=url;
+  document.getElementById('pdf-preview').hidden=false;
+  document.body.style.overflow='hidden';
+}
+function closePdfPreview(){
+  document.getElementById('pdf-preview').hidden=true;
+  document.getElementById('pp-frame').src='about:blank';
+  if(ppUrl){ try{URL.revokeObjectURL(ppUrl);}catch(e){} ppUrl=null; }
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closePdfPreview(); });
 
 function selText(id){ return document.getElementById(id).selectedOptions[0].textContent; }
 
-function buildPDF(){
+function buildPDF(mode){
   const s=readState(), q=computeQuote(s);
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
@@ -1886,7 +1928,11 @@ function buildPDF(){
   doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
 
   const name=(s.client||'client').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'')||'client';
-  doc.save('NewReward-Proposal-'+name+'.pdf');
+  if(mode==='preview'){
+    openPdfPreview(doc.output('bloburl'));    // rendered in-page — no file is created on disk
+  } else {
+    doc.save('NewReward-Proposal-'+name+'.pdf');
+  }
 }
 
 /* scope toggles define a different program — clear any negotiated overrides
