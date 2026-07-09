@@ -1748,7 +1748,7 @@ function buildPDF(mode){
   const gppW=doc.getTextWidth(gppTitle)+0.6*(gppTitle.length-1);
   doc.text(gppTitle, R-gppW, 17, {charSpace:.6});
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(190,182,168);
-  doc.text(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), R, 23, {align:'right'});
+  doc.text(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), R-gppW/2, 23, {align:'center'});   // centered under the title
 
   /* prepared for */
   let y=51;
