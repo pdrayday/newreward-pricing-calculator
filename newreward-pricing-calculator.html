@@ -197,6 +197,8 @@ header{
 .head-title{flex:1}
 .wordmark{font-size:34px;font-weight:800;letter-spacing:-.015em;color:#fff;line-height:1.1}
 .wordmark span{color:var(--gold)}
+a.wordmark{display:inline-block;text-decoration:none;cursor:pointer;transition:.15s}
+a.wordmark:hover span{color:var(--gold-bright)}
 .head-title .tagline{
   color:var(--gold);font-size:12px;letter-spacing:.32em;text-transform:uppercase;
   margin-top:6px;font-weight:600;
@@ -605,7 +607,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
 <header>
   <div class="head-title">
-    <div class="wordmark">New <span>Reward</span></div>
+    <a class="wordmark" href="https://pdrayday.github.io/newreward/" target="_blank" rel="noopener" title="New Reward — home">New <span>Reward</span></a>
     <div class="tagline">Pricing Calculator</div>
     <div class="motto">Get Found. Get Trusted. Get Chosen.</div>
   </div>
