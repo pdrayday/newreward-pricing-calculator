@@ -1634,9 +1634,9 @@ function researchWithAI(){
   const note=document.getElementById('note-research');
   if(!url){ note.innerHTML='<b style="color:var(--gold-bright)">Enter the client’s website above first.</b>'; return; }
   const base=location.origin+location.pathname;
-  const prompt='You are pricing a NewReward SEO/GEO program. Research the business below and return calculator inputs.\n\n'
+  const prompt='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs.\n\n'
     +'Business website: '+url+'\n\n'
-    +'BE DETERMINISTIC AND CONSERVATIVE. The same business must produce the same values every time — whether this runs on the web or in the Claude app, today or next week. When unsure, choose the more conservative (lower) option, and LEAVE numeric fields BLANK so the calculator uses its vetted industry benchmark instead of a guess. Do not invent precise numbers.\n\n'
+    +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the conservative (lower) end. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'Classification rules — follow exactly:\n'
     +'- industry: "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
     +'- footprint: a business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
@@ -1645,15 +1645,23 @@ function researchWithAI(){
     +'- seoScore (0–100) and geoScore (0–100): how visible they are TODAY. Most local businesses are SEO 25–40 and GEO 5–20; only score higher with clear evidence of strong rankings or AI mentions.\n'
     +'- rank: their rough average Google position for money phrases (1–100). cpc: typical Google Ads cost-per-click ($2–6 everyday local, $8–25 medical/legal/SaaS).\n'
     +'- For E-COMMERCE only, you MAY set aov (typical order value, read from their product/pricing pages) and freq (orders per year; use 12 for a clear monthly subscription) — these build the customer value. If not clearly determinable, leave both blank.\n'
-    +'- LEAVE BLANK (do not guess): Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission — blanks use the industry benchmark, which is what keeps results identical across runs. Fill one only if you have a specific measured figure.\n\n'
+    +'DEEP-RESEARCH THE CLIENT ECONOMICS — fill ALL of these with business-specific figures (this is where accuracy is won):\n'
+    +'- volume: combined monthly Google searches for their money phrase PLUS its close variants across their whole service area — research typical demand for this exact niche and city size (the cluster, not one phrase). Round to a clean number and include volsource=aiprompt in the link.\n'
+    +'- yearly (avg customer value/yr): what ONE customer pays per year. For one-time-purchase businesses (custom homes, roofing, remodeling), use the average project/contract value and set years=1. For recurring or membership businesses, annual spend per customer.\n'
+    +'- years (retention): how long a typical customer keeps paying — 1 for one-time projects, 2-5 for recurring or membership models.\n'
+    +'- convrate: the percent of WEBSITE VISITORS who eventually become PAYING CUSTOMERS (visitor-to-customer, NOT visitor-to-lead). Everyday local services typically 3-8; high-consideration or luxury purchases 1-3.\n'
+    +'- margin: the GROSS margin typical for this exact vertical (e.g. custom home builders 15-25, roofing 25-35, med spas 60-70, law 50-65, SaaS 75-85, e-commerce 40-60).\n'
+    +'- acq: percent of revenue this business would sensibly spend to win a new customer (10-20 typical; large one-time-ticket businesses often run lower).\n'
+    +'- commission: percent of the gross sale they already pay staff or reps in this vertical (construction/realty-adjacent 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10).\n\n'
     +'Then give me BOTH of the following:\n\n'
-    +'(1) A two-column markdown table titled "Calculator Inputs" (columns "Input" and "Value") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), SEO included, AEO/GEO included. Write "blank (benchmark)" for any field intentionally left blank. Add one short line under the table explaining the key assumptions.\n\n'
+    +'(1) A two-column markdown table titled "Calculator Inputs" (columns "Input" and "Value") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. Under the table, give a one-line justification each for volume, customer value, conversion rate, and margin (source or reasoning), so a human can sanity-check them.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&aov=NUM&freq=NUM\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | b2b | ecom\n'
     +'- footprint: local | multi | metro | national\n'
-    +'- compstr: weak | moderate | strong | dominant';
+    +'- compstr: weak | moderate | strong | dominant\n'
+    +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     if(isMobile){
