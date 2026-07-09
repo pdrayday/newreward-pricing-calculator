@@ -29,7 +29,7 @@
 }
 /* ===== LIGHT MODE (Ivory) — WHITE page, black + gold accents: the dark theme inverted ===== */
 [data-theme="ivory"]{
-  color-scheme:light;
+  color-scheme:only light;   /* 'only' blocks Chrome Auto-Dark from force-inverting the white theme */
   --bg:#ffffff;
   --panel:#faf8f3;
   --panel2:#f3eee3;
@@ -963,6 +963,10 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   function setTheme(t){
     html.setAttribute('data-theme',t);
     try{localStorage.setItem('nr-theme',t);}catch(e){}
+    /* 'only light' opts the page out of Chrome's Auto Dark Mode, which would otherwise
+       force-darken the white theme at paint time on browsers with that setting enabled */
+    var msc=document.querySelector('meta[name="color-scheme"]');
+    if(msc) msc.setAttribute('content', t==='ivory' ? 'only light' : 'dark');
     document.querySelectorAll('.theme-switch button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.theme===t));});
   }
   document.querySelectorAll('.theme-switch button').forEach(function(b){b.addEventListener('click',function(){setTheme(b.dataset.theme);});});
