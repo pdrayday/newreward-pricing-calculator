@@ -110,6 +110,19 @@
 /* the theme toggle's active pill stays black with gold text */
 [data-theme="ivory"] .theme-switch button[aria-pressed="true"]{color:#f0d8a0 !important;-webkit-text-fill-color:#f0d8a0 !important}
 
+/* ===== platform logo strip (markup pulled from the main site at load) ===== */
+.platforms{background:rgba(212,162,74,.05);border-top:1px solid var(--gold-line-soft);border-bottom:1px solid var(--gold-line-soft);margin:-8px 0 26px}
+.platforms .wrap,.platforms .row{padding:0;margin:0;max-width:none}
+.platforms .row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:26px;padding:14px 10px}
+.platforms .plabel{font-size:10.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--muted2)}
+.platforms .logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.platforms .logo b{font-size:13.5px;font-weight:500;color:var(--muted)}
+.platforms .logo svg{width:20px;height:20px;display:block}
+.platforms .plogo{height:20px;width:auto;display:block}
+.platforms .plogo-grok{filter:invert(1)}                       /* white on dark */
+[data-theme="ivory"] .platforms .plogo-grok{filter:none}       /* original dark mark on white */
+@media(max-width:640px){.platforms .row{gap:16px}.platforms .logo b{font-size:12px}}
+
 /* ===== in-page PDF preview overlay ===== */
 .pdf-preview{position:fixed;inset:0;z-index:200;background:rgba(4,3,2,.9);
   display:flex;flex-direction:column;padding:18px;backdrop-filter:blur(4px)}
@@ -623,6 +636,9 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <button class="btn btn-ghost" onclick="resetAll()">Reset</button>
   </div>
 </header>
+
+<!-- platform logo strip — injected live from the main site so it always matches -->
+<div id="platforms-strip" class="no-print" aria-hidden="true"></div>
 
 <div class="grid">
 
@@ -2020,6 +2036,23 @@ document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
 })();
 render();
+
+/* ---- platform logo strip: fetched from the main site (same origin) so the logos are
+        always EXACTLY the ones on NewReward.com. Fails silently if unreachable. ---- */
+(function(){
+  var slot=document.getElementById('platforms-strip'); if(!slot) return;
+  fetch('https://pdrayday.github.io/newreward/index.html')
+    .then(function(r){ return r.ok ? r.text() : Promise.reject(); })
+    .then(function(t){
+      var doc=new DOMParser().parseFromString(t,'text/html');
+      var strip=doc.querySelector('.platforms'); if(!strip) return;
+      strip.querySelectorAll('img').forEach(function(im){
+        im.src='https://pdrayday.github.io/newreward/'+(im.getAttribute('src')||'').replace(/^\.?\//,'');
+      });
+      strip.classList.add('no-print');
+      slot.replaceWith(strip);
+    }).catch(function(){ /* strip is decorative — skip on failure */ });
+})();
 </script>
 
 <!-- ambient particle + wave canvas (ported from the New Reward home page) -->
