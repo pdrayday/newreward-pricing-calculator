@@ -65,6 +65,7 @@
   background:radial-gradient(120% 60% at 50% 120%, rgba(122,86,26,.24), transparent 60%);
 }
 [data-theme="ivory"] .wordmark{color:#14100a}
+[data-theme="ivory"] .wordmark span{color:#c08c34}
 [data-theme="ivory"] .btn-gold{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
 /* black outlines on the entry fields — inverted from the gold-line fields of dark mode */
 [data-theme="ivory"] .inputs input[type=text],[data-theme="ivory"] .inputs input[type=number],[data-theme="ivory"] .inputs input[type=url],[data-theme="ivory"] .inputs select{border:1.5px solid #14100a}
@@ -195,15 +196,18 @@ header{
   margin-bottom:34px;
 }
 .head-title{flex:1}
-.wordmark{font-size:34px;font-weight:800;letter-spacing:-.015em;color:#fff;line-height:1.1}
-.wordmark span{color:var(--gold)}
+/* wordmark matches the NewReward.com site logo exactly: Inter 300, 23px, +.01em,
+   "Reward" gold at weight 400, sentence-case brand tagline underneath */
+.wordmark{font-size:23px;font-weight:300;letter-spacing:.01em;color:var(--text);line-height:1.04}
+.wordmark span{color:#bf953a;font-weight:400}
 a.wordmark{display:inline-block;text-decoration:none;cursor:pointer;transition:.15s}
 a.wordmark:hover span{color:var(--gold-bright)}
 .head-title .tagline{
   color:var(--gold);font-size:12px;letter-spacing:.32em;text-transform:uppercase;
   margin-top:6px;font-weight:600;
 }
-.motto{color:var(--muted2);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;margin-top:5px}
+.motto{color:#eec77c;font-size:11px;font-weight:300;letter-spacing:.04em;text-transform:none;margin-top:2px}
+[data-theme="ivory"] .motto{color:#8a6410}
 .head-actions{display:flex;gap:10px;align-items:center}
 .btn{
   font-family:var(--font);font-size:13px;font-weight:600;letter-spacing:.06em;
@@ -225,7 +229,7 @@ a.wordmark:hover span{color:var(--gold-bright)}
 @media(max-width:1020px){
   .grid{grid-template-columns:1fr}
   .outputs{position:static!important}
-  .wordmark{font-size:26px}
+  .wordmark{font-size:22px}
 }
 
 /* ============ INPUT SECTIONS ============ */
@@ -262,7 +266,7 @@ a.wordmark:hover span{color:var(--gold-bright)}
   /* header wraps: title on top, toggle + reset on their own row */
   header{flex-wrap:wrap;gap:14px;padding:20px 0 16px;margin-bottom:24px}
   .head-title{flex:1 1 100%}
-  .wordmark{font-size:23px}
+  .wordmark{font-size:21px}
   .head-actions{margin-left:0;flex-wrap:wrap}
   .section{padding:20px 18px 18px;margin-bottom:16px}
   .opanel{padding:24px 20px 20px}
@@ -280,7 +284,7 @@ a.wordmark:hover span{color:var(--gold-bright)}
 }
 @media(max-width:380px){
   .o-price{font-size:36px}
-  .wordmark{font-size:21px}
+  .wordmark{font-size:19px}
   .sec-title{letter-spacing:.16em}
 }
 .fgroup{margin-bottom:16px}
@@ -608,8 +612,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <header>
   <div class="head-title">
     <a class="wordmark" href="https://pdrayday.github.io/newreward/" target="_blank" rel="noopener" title="New Reward — home">New <span>Reward</span></a>
+    <div class="motto">Get found. Get trusted. Get chosen.</div>
     <div class="tagline">Pricing Calculator</div>
-    <div class="motto">Get Found. Get Trusted. Get Chosen.</div>
   </div>
   <div class="head-actions">
     <div class="theme-switch no-print" role="group" aria-label="Preview theme">
