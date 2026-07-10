@@ -119,8 +119,8 @@
 .platforms .logo b{font-size:13.5px;font-weight:500;color:var(--muted)}
 .platforms .logo svg{width:20px;height:20px;display:block}
 .platforms .plogo{height:20px;width:auto;display:block}
-.platforms .plogo-grok{filter:invert(1)}                       /* white on dark */
-[data-theme="ivory"] .platforms .plogo-grok{filter:none}       /* original dark mark on white */
+.platforms .plogo-grok{filter:none}                            /* the mark is white — shows as-is on dark */
+[data-theme="ivory"] .platforms .plogo-grok{filter:invert(1)}  /* inverted to black on the white theme */
 @media(max-width:640px){.platforms .row{gap:16px}.platforms .logo b{font-size:12px}}
 
 /* ===== in-page PDF preview overlay ===== */
