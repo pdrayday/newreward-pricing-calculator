@@ -1797,19 +1797,10 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(190,182,168);
   doc.text(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), R-gppW/2, 23, {align:'center'});   // centered under the title
 
-  /* negotiated-discount ribbon — when the rep discounts the fixed fee and/or the share,
-     it is the FIRST thing the client sees, right under the header band */
+  /* negotiated discount flags — shown inside the fee boxes (gold highlight) so the
+     discount is unmissable without disturbing the layout */
   const discP = priceDirty && q.price!=null && n.price<q.price;
   const discS = shareDirty && n.share<q.share;
-  if(discP||discS){
-    doc.setFillColor(235,179,68); doc.setDrawColor(198,142,38); doc.setLineWidth(.3);
-    doc.roundedRect(L,42,W,7,1.5,1.5,'FD');
-    const dparts=[];
-    if(discP) dparts.push('fixed fee '+fmt$(q.price)+' » '+fmt$(n.price)+'/mo');
-    if(discS) dparts.push('revenue share '+q.share+'% » '+n.share+'%');
-    doc.setFont('helvetica','bold'); doc.setFontSize(7.4); doc.setTextColor(26,17,3);
-    doc.text('NEGOTIATED DISCOUNT APPLIED — '+dparts.join('  ·  '), L+5, 46.6);
-  }
 
   /* prepared for */
   let y=51;
@@ -1850,8 +1841,15 @@ function buildPDF(mode){
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'conservative floor to modeled — once built':'select a service', DGOLD, true, true);
   box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
-  box(L+90, 42,h1,'FIXED MONTHLY', n.price!=null?fmt$(n.price)+'/mo':'—', (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''), DARK, true);
-  box(L+134,48,h1,'REVENUE SHARE', n.share+'%', 'new net revenue from month '+n.rampMonth+' — accrues monthly, billed quarterly'+((shareDirty&&n.share!==q.share)?' (neg.)':''), DARK, true);
+  box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
+      n.price!=null?fmt$(n.price)+'/mo':'—',
+      discP ? 'was '+fmt$(q.price)+' · then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
+            : (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''),
+      DARK, true, discP);
+  box(L+134,48,h1, discS?'SHARE — DISCOUNTED':'REVENUE SHARE', n.share+'%',
+      discS ? 'was '+q.share+'% · from month '+n.rampMonth+', billed quarterly'
+            : 'new net revenue from month '+n.rampMonth+' — accrues monthly, billed quarterly'+((shareDirty&&n.share!==q.share)?' (neg.)':''),
+      DARK, true, discS);
 
   y+=h1+4;
   const h2=23;
