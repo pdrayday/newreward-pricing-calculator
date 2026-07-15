@@ -1820,7 +1820,7 @@ function buildPDF(mode){
 
   /* metric boxes */
   y+=6;
-  const box=(x,w,h,label,val,note,valColor,big,hero)=>{
+  const box=(x,w,h,label,val,note,valColor,big,hero,strike)=>{
     const labC=hero?[94,63,12]:GRAY, noteC=hero?[94,63,12]:GRAY, valC=hero?[26,17,3]:valColor;
     if(hero){ doc.setFillColor(235,179,68); doc.setDrawColor(198,142,38); }
     else { doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(LINE[0],LINE[1],LINE[2]); }
@@ -1828,10 +1828,18 @@ function buildPDF(mode){
     doc.roundedRect(x,y,w,h,2,2,'FD');
     doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(labC[0],labC[1],labC[2]);
     doc.text(label,x+5,y+6.5,{charSpace:.5});
+    if(strike){   /* the original price, struck through, above the discounted figure */
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.2); doc.setTextColor(labC[0],labC[1],labC[2]);
+      doc.text(strike,x+5,y+11.2);
+      const stw=doc.getTextWidth(strike);
+      doc.setDrawColor(labC[0],labC[1],labC[2]); doc.setLineWidth(.45);
+      doc.line(x+4.6,y+10.1,x+5.4+stw,y+10.1);
+      doc.setFont('helvetica','bold');
+    }
     doc.setFontSize(big?(hero?19:18):13); doc.setTextColor(valC[0],valC[1],valC[2]);
-    doc.text(String(val),x+5,y+(big?16:14.5));
+    doc.text(String(val),x+5,y+(strike?18:(big?16:14.5)));
     if(note){ doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(noteC[0],noteC[1],noteC[2]);
-      doc.splitTextToSize(note,w-10).slice(0,2).forEach((ln,i)=>doc.text(ln,x+5,y+(big?21.5:19.5)+i*3.3)); }
+      doc.splitTextToSize(note,w-10).slice(0,2).forEach((ln,i)=>doc.text(ln,x+5,y+(strike?22.7:(big?21.5:19.5))+i*3.3)); }
   };
   const h1=28;
   const fxr=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
@@ -1843,13 +1851,13 @@ function buildPDF(mode){
   box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
   box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
       n.price!=null?fmt$(n.price)+'/mo':'—',
-      discP ? 'was '+fmt$(q.price)+' · then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
+      discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
             : (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''),
-      DARK, true, discP);
+      DARK, true, discP, discP?fmt$(q.price)+'/mo':null);
   box(L+134,48,h1, discS?'SHARE — DISCOUNTED':'REVENUE SHARE', n.share+'%',
-      discS ? 'was '+q.share+'% · from month '+n.rampMonth+', billed quarterly'
+      discS ? 'from month '+n.rampMonth+', billed quarterly'
             : 'new net revenue from month '+n.rampMonth+' — accrues monthly, billed quarterly'+((shareDirty&&n.share!==q.share)?' (neg.)':''),
-      DARK, true, discS);
+      DARK, true, discS, discS?q.share+'%':null);
 
   y+=h1+4;
   const h2=23;
