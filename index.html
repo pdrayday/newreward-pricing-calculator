@@ -1551,12 +1551,12 @@ function render(){
   if(q.price!=null){
     const floor=Math.max(1500, Math.round(q.price*0.85/50)*50);   // negotiation never goes below the $1,500 minimum
     pLow = n.price<floor;
-    pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Keep at least '+fmt$(floor)+' (recommended '+fmt$(q.price)+').';
+    pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Use the recommended '+fmt$(q.price)+'.';
   }
   pWarn.classList.toggle('show',pLow);
   const shFloor=Math.max(2, q.share-1.5);
   shLow = n.share<shFloor;
-  shWarn.innerHTML='&#9888; This revenue share is too low — below the performance floor for this engagement. Keep at least '+shFloor+'% (recommended '+q.share+'%).';
+  shWarn.innerHTML='&#9888; This revenue share is too low for the engagement. Use the recommended '+q.share+'%.';
   shWarn.classList.toggle('show',shLow);
   pEdit.classList.toggle('too-low',pLow);
   shEdit.classList.toggle('too-low',shLow);
