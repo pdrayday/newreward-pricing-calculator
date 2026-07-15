@@ -897,7 +897,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> on attributable <b style="color:var(--gold-bright)">new net revenue</b> — growth above today's baseline only. Begins <span id="o-ramp">month 2</span>; accrues monthly, invoiced quarterly.<br><span class="neg-note" id="o-share-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> on attributable <b style="color:var(--gold-bright)">new net revenue won each quarter</b> — new customers signed above today's baseline × their first-year value. Begins <span id="o-ramp">month 2</span>; billed quarterly.<br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
 
@@ -1243,7 +1243,10 @@ function buildSeries(q, price, share){
     if(price!=null){
       const inShare = m>=q.rampMonth;                          // rev share only in the performance phase
       const fixedM = inShare ? perfPrice : price;              // fixed drops 20% when the share begins
-      const sc = inShare ? share/100*(rev*q.attribFactor) : 0; // revenue share on attributable growth
+      /* BOOKED BASIS: the share is taken on the attributable new net revenue WON in the period —
+         new customers signed × their first-year value × attribution — accrued monthly here for
+         the chart, collected as one invoice each quarter. */
+      const sc = inShare ? share/100*(q.newCust*f*q.yearlyValue*q.attribFactor) : 0;
       invoice.push(fixedM+sc);
     } else invoice.push(null);
   }
@@ -1251,11 +1254,13 @@ function buildSeries(q, price, share){
   const year1Attrib = year1Rev*q.attribFactor;
   const year1Cost = price!=null ? invoice.reduce((a,b)=>a+b,0) : null;
   const exitMRR = mrr[11];
-  // run-rate (ongoing) ROI: month-12 attributable revenue vs the ONGOING (reduced) fixed fee.
-  const runRateROI = (perfPrice>0) ? (exitMRR*q.attribFactor)/perfPrice : null;
-  // highest ongoing fee that still clears the target return (client-value ceiling)
+  // run-rate (ongoing) ROI: month-12 attributable revenue vs the FULL ongoing cost —
+  // the reduced fixed fee PLUS the booked-basis share at full ramp (honest denominator).
+  const ongoingCost = perfPrice!=null ? perfPrice + share/100*q.newCust*q.yearlyValue*q.attribFactor : null;
+  const runRateROI = (ongoingCost>0) ? (exitMRR*q.attribFactor)/ongoingCost : null;
+  // highest ongoing cost that still clears the target return (client-value ceiling)
   const ceil2x = exitMRR*q.attribFactor/ROI_TARGET;
-  return {months, mrr, invoice, perfPrice,
+  return {months, mrr, invoice, perfPrice, ongoingCost,
           year1Rev, year1Attrib, year1Cost,
           roi: year1Cost>0 ? year1Attrib/year1Cost : null,
           runRateROI, ceil2x,
@@ -1503,7 +1508,7 @@ function render(){
   set('o-roi', rrCons!=null ? fx(rrCons)+'–'+fx(rr)+'×' : '—');
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
-      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmt$(n.series.exitMRR)+'/mo attributable vs the '+fmt$(n.series.perfPrice)+'/mo ongoing fee. '
+      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmt$(n.series.exitMRR)+'/mo attributable vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
         +'Year 1 is the ramp at '+fx(y1)+'× while the program builds, then it compounds.'
       : 'Select at least one service in Scope to build the quote');
 
@@ -1637,7 +1642,7 @@ function render(){
   document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
     '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
     +(n.rampMonth>2?' <b>Months 2–'+(n.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
-    +' <b>Month '+n.rampMonth+'+</b> — revenue share begins on attributable growth above today’s baseline (accrues monthly, invoiced quarterly).'
+    +' <b>Month '+n.rampMonth+'+</b> — revenue share begins: each quarter, the share is billed on the attributable new business won in that quarter.'
     +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Cost bars show the total: the fixed fee, plus the revenue share once it begins.</span>';
 
   /* summary */
@@ -1808,7 +1813,7 @@ function buildPDF(mode){
   doc.text('PREPARED FOR',L,y,{charSpace:.8});
   if(discP||discS){
     doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text('Below the typical 2026 market rate for this scope and market', R, y, {align:'right'});
+    doc.text('Pricing: below the typical 2026 market rate for this scope and market', R, y, {align:'right'});
     doc.setFont('helvetica','bold');   // restore the style the client-name line expects
   }
   y+=6.5;
@@ -1855,8 +1860,8 @@ function buildPDF(mode){
             : (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''),
       DARK, true, discP, discP?fmt$(q.price)+'/mo':null);
   box(L+134,48,h1, discS?'SHARE — DISCOUNTED':'REVENUE SHARE', n.share+'%',
-      discS ? 'from month '+n.rampMonth+', billed quarterly'
-            : 'new net revenue from month '+n.rampMonth+' — accrues monthly, billed quarterly'+((shareDirty&&n.share!==q.share)?' (neg.)':''),
+      discS ? 'from month '+n.rampMonth+', billed quarterly on new business won'
+            : 'new business won each quarter, from month '+n.rampMonth+' — billed quarterly'+((shareDirty&&n.share!==q.share)?' (neg.)':''),
       DARK, true, discS, discS?q.share+'%':null);
 
   y+=h1+4;
@@ -1934,7 +1939,7 @@ function buildPDF(mode){
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   y+=2.5;
   doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins on new revenue above baseline — it accrues month by month and is invoiced quarterly. (est.)/(benchmark)/(modeled) values are verified in the review window.';
+  const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the '+n.share+'% share begins — billed each quarter on the attributable new business won in that quarter, above today\'s baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
   const noteLines=doc.splitTextToSize(noteTxt,W);
   noteLines.forEach(function(ln){doc.text(ln,L,y); y+=3.4;});
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
@@ -2010,12 +2015,12 @@ function buildPDF(mode){
     ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the ongoing fee, shown from conservative floor to modeled. Why it matters: it is the number that proves the program keeps paying for itself after the build.'],
     ['Year-1 ROI','The ramp year: attributable revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — SEO/GEO compounds.'],
     ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20% once the revenue share starts.'],
-    ['Revenue share','Our performance stake: a small percentage of attributable NEW net revenue — only growth above the client\'s pre-program baseline, never existing business. It accrues month by month once it begins and is invoiced quarterly (every three months) for the life of the engagement. The percentage is calculated from the client\'s margin, acquisition budget, existing commissions, and deal size, so it stays fair to both sides.'],
+    ['Revenue share','Our performance stake: every quarter, a small percentage of the attributable new net revenue WON in that quarter — the new customers signed above the client\'s pre-program baseline times their first-year value. Billed every three months for the life of the engagement; never on existing business. The percentage is calculated from the client\'s margin, acquisition budget, existing commissions, and deal size, so it stays fair to both sides.'],
     ['New net revenue / baseline','The baseline is the revenue the client already generates before the program starts. Only tracked growth ABOVE that line counts toward the share — existing business is never billed. Why it matters: it is what makes the share pure performance pay.'],
     ['Attribution (attributable)','The conservative credit standard: billing counts only the new revenue that can be confidently attributed to the program — we never bill on growth we can\'t stand behind.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
     ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
-    ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built. From the start month, the fixed fee drops and the share begins (accruing monthly, invoiced quarterly). Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
+    ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built. From the start month, the fixed fee drops and the share begins — billed quarterly on the new business won each quarter. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
     ['LTV — lifetime value','Yearly customer value times retention years — the full worth of one customer over their lifetime. It is shown deliberately UNUSED: LTV is the number most agencies project on to inflate ROI, and this model refuses to — every projection runs on the smaller one-year value, with retention entering the math only as churn. If the program pays for itself on year-one value alone, the lifetime value is pure upside on top.'],
     ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets.'],
