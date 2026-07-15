@@ -1621,7 +1621,7 @@ function render(){
   const cr = custRate(q.newCust);
   set('o-cust-label', cr.monthly ? 'New customers / month' : 'New customers / year');
   set('o-cust', cr.v);
-  set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+(q.closeRate*100).toFixed(1).replace(/\.0$/,'')+'% × '
+  set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
       +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap'));
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
@@ -1661,7 +1661,7 @@ function render(){
   const parts = [];
   const crA = custRate(q.newCust);
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +(q.closeRate*100).toFixed(1).replace(/\.0$/,'')+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
     +(q.nScopes===2?'dual-channel upside':'visibility gap')
     +' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
@@ -1896,7 +1896,7 @@ function buildPDF(mode){
   y+=4.5;
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
     +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
   doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
