@@ -847,7 +847,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">Of the website visitors search sends you, the percentage who become paying customers (visit-to-customer). Keep it realistic — low single digits for most local businesses (≈3–8%), higher only for strong high-intent niches. It drives the whole projection. Leave blank to use the industry typical (local ~5%, high-ticket ~4%, B2B/SaaS ~2%, e-commerce ~2%).</span></button>
           <span class="flag-pill">▲ raise</span>
         </label>
-        <div class="fwrap"><input type="number" id="convrate" class="has-suffix" placeholder="e.g. 5" min="1" max="100"><span class="suffix">%</span></div>
+        <div class="fwrap"><input type="number" id="convrate" class="has-suffix" placeholder="e.g. 5" min="0.1" max="100" step="0.1"><span class="suffix">%</span></div>
         <div class="auto-note" id="note-conv"></div>
       </div>
       <div class="fgroup">
@@ -923,7 +923,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="ocards">
       <div class="ocard">
-        <div class="oc-label">New customers / month</div>
+        <div class="oc-label" id="o-cust-label">New customers / month</div>
         <div class="oc-val gold" id="o-cust">—</div>
         <div class="oc-note" id="o-cust-note">modeled, once ramped</div>
       </div>
@@ -1081,6 +1081,14 @@ const DIFF_WORDS = [
 ];
 
 const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+/* human framing for slow-cadence wins: a custom home builder signs a few contracts a YEAR,
+   not several a month — outputs switch to per-year phrasing below ~0.75 customers/month */
+function custRate(n){
+  if(n>=0.75) return {v:'~'+Math.round(n), unit:'/mo', txt:'~'+Math.round(n)+' new customer'+(Math.round(n)===1?'':'s')+' a month', monthly:true};
+  const yr=n*12;
+  if(yr>=0.75) return {v:'~'+Math.max(1,Math.round(yr)), unit:'/yr', txt:'~'+Math.max(1,Math.round(yr))+' new customer'+(Math.round(yr)<=1?'':'s')+' a year', monthly:false};
+  return {v:'<1', unit:'/yr', txt:'under one new customer a year', monthly:false};
+}
 const num = id => { const v = parseFloat(document.getElementById(id).value); return isNaN(v)?null:v; };
 const fmt$ = v => '$'+Math.round(v).toLocaleString('en-US');
 
@@ -1138,14 +1146,14 @@ function computeQuote(s){
   const ltv = yearlyValue*retainYears;            // context only — not used in revenue math
   // achievable click share decays in very large markets (you can't win 15% of 50k searches)
   const clickShare = clamp(0.15*Math.pow(1500/Math.max(vol,1), 0.35), 0.03, 0.15);
-  const closeRate = clamp(s.convrate??ind.conv, 1, 100)/100;
+  const closeRate = clamp(s.convrate??ind.conv, 0.1, 100)/100;   // decimals allowed: a $750k custom home converts at 0.1–0.5%, not 1%+
   // only the demand a channel isn't already capturing counts as NEW revenue:
   // a 13/100 channel has 87% of its upside left; a 57/100 channel only 43%.
   // both channels compound (sum × 0.8 overlap) and never model below the best single
   const gapSeo = 1 - seoEff/100;   // rank-blended: a top-3 site has little SEO upside left, whatever score was typed
   const gapGeo = 1 - clamp(s.geoScore??22,0,100)/100;
-  const chFactor = nScopes===2 ? Math.max(gapSeo, gapGeo, (gapSeo+gapGeo)*0.8)
-                 : s.seo ? gapSeo : s.geo ? gapGeo : 0;
+  const chFactor = Math.min(1, nScopes===2 ? Math.max(gapSeo, gapGeo, (gapSeo+gapGeo)*0.8)
+                 : s.seo ? gapSeo : s.geo ? gapGeo : 0);   // capped at 100% — we never model winning more than the available demand
   const volQ = VOLQ[s.volsource] ?? 1;
   const newCust = vol*clickShare*closeRate*chFactor*volQ;
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
@@ -1358,7 +1366,7 @@ function evalRoiGuardrail(s,q,n){
   warn.classList.remove('show'); ok.classList.remove('show'); warn.innerHTML=''; ok.innerHTML='';
   if(q.price==null || n.runRate==null) return;
 
-  const fx=v=>(v>=10?Math.round(v):v.toFixed(1));
+  const fx=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
   const rr=n.runRate, rrTxt = fx(rr);
   const y1Txt = fx(n.roi);
   if(rr>=ROI_TARGET){
@@ -1439,7 +1447,7 @@ function evalRoiGuardrail(s,q,n){
   }
 
   const conv=s.convrate??IND[s.industry].conv;
-  if(conv<8){
+  if(conv<8 && q.yearlyValue<50000){   // "raise conversion" advice is nonsense for $100k+ purchases, where sub-1% is normal
     flagRoi('convrate');
     const ct=solveUp('convrate', conv, 100);
     items.push('<b>Conversion rate is '+conv+'%.</b> Visit-to-customer averages ~4% for local services (5–8% is good) — sharpen lead response, offers, and landing pages.'
@@ -1486,7 +1494,8 @@ function render(){
   /* Headline = run-rate (ongoing) ROI — what the program returns once built. Year-1 (the
      ramp/investment year) is shown as context underneath, since SEO/GEO compounds over 12–24 mo. */
   const rr = n.runRate, y1 = n.roi;
-  const fx = v => (v>=10?Math.round(v):v.toFixed(1));
+  /* displayed returns cap at 30×+ — beyond that the number stops being credible and starts over-promising */
+  const fx = v => v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
   /* headline = the FULL band, conservative floor → modeled. The viability verdict tests the
      modeled run-rate, so showing both ends keeps the big number and the verdict in agreement
      (a lone conservative figure could read "1.2×" beside a green Viable box). */
@@ -1608,12 +1617,16 @@ function render(){
   document.getElementById('note-margin').innerHTML = (s.margin>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].margin+'%</b>';
 
-  /* cards */
-  set('o-cust', '~'+Math.round(q.newCust));
-  set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+(q.closeRate*100).toFixed(0)+'% × '
+  /* cards — customer pace adapts to the business cadence (per month vs per year) */
+  const cr = custRate(q.newCust);
+  set('o-cust-label', cr.monthly ? 'New customers / month' : 'New customers / year');
+  set('o-cust', cr.v);
+  set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+(q.closeRate*100).toFixed(1).replace(/\.0$/,'')+'% × '
       +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap'));
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
-  set('o-arrpm-note', '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value');
+  set('o-arrpm-note', cr.monthly
+      ? '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value'
+      : cr.txt+' × '+fmt$(q.yearlyValue)+' each · ≈'+fmtK(q.newCust*12*q.yearlyValue)+'/yr in new contract value');
   set('o-runrate', '+'+fmtK(n.series.exitARR)+'/yr');
   set('o-runrate-note', '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed');
   set('o-window', q.windowDays+' days');
@@ -1634,9 +1647,11 @@ function render(){
   if(q.price==null){
     txt = who+' needs at least one service selected — turn on SEO, AEO/GEO, or both to build the quote.';
   } else {
+    const crS = custRate(q.newCust);
     txt = who+' competes in '+FOOT[s.footprint].name+where+' rated '+q.difficulty+'/10 ('+dw[1].toLowerCase()+'). '
-      + 'Once ramped, the model signs ~'+Math.round(q.newCust)+' new customers a month — roughly '+fmtK(q.arrAddedPM)
-      + ' in new annual contracts every month. The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
+      + 'Once ramped, the model signs '+crS.txt+' — roughly '
+      + (crS.monthly ? fmtK(q.arrAddedPM)+' in new annual contracts every month.' : fmtK(q.newCust*12*q.yearlyValue)+' a year in new contract value.')
+      + ' The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
       + fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus a '+n.share+'% share of attributable new net revenue from month '+n.rampMonth+'. '
       + 'Figures are estimated from research — confirm with live data within the '+q.windowDays+'-day review window.';
   }
@@ -1644,10 +1659,11 @@ function render(){
 
   /* assumptions */
   const parts = [];
+  const crA = custRate(q.newCust);
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
+    +(q.closeRate*100).toFixed(1).replace(/\.0$/,'')+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
     +(q.nScopes===2?'dual-channel upside':'visibility gap')
-    +' = ~'+Math.round(q.newCust)+' customers/mo × '+fmt$(q.yearlyValue)+'/yr');
+    +' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -1682,7 +1698,8 @@ function researchWithAI(){
     +'- convrate: the percent of WEBSITE VISITORS who eventually become PAYING CUSTOMERS (visitor-to-customer, NOT visitor-to-lead). Everyday local services typically 3-8; high-consideration or luxury purchases 1-3.\n'
     +'- margin: the GROSS margin typical for this exact vertical (e.g. custom home builders 15-25, roofing 25-35, med spas 60-70, law 50-65, SaaS 75-85, e-commerce 40-60).\n'
     +'- acq: percent of revenue this business would sensibly spend to win a new customer (10-20 typical; large one-time-ticket businesses often run lower).\n'
-    +'- commission: percent of the gross sale they already pay staff or reps in this vertical (construction/realty-adjacent 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10).\n\n'
+    +'- commission: percent of the gross sale they already pay staff or reps in this vertical (construction/realty-adjacent 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10).\n'
+    +'- ULTRA-HIGH-TICKET REALISM CHECK (customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n\n'
     +'Then give me BOTH of the following:\n\n'
     +'(1) A two-column markdown table titled "Calculator Inputs" (columns "Input" and "Value") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. Under the table, give a one-line justification each for volume, customer value, conversion rate, and margin (source or reasoning), so a human can sanity-check them.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
@@ -1807,7 +1824,7 @@ function buildPDF(mode){
       doc.splitTextToSize(note,w-10).slice(0,2).forEach((ln,i)=>doc.text(ln,x+5,y+(big?21.5:19.5)+i*3.3)); }
   };
   const h1=28;
-  const fxr=v=>(v>=10?Math.round(v):v.toFixed(1));
+  const fxr=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
   const ongTxt = n.runRate!=null ? fxr(n.runRate*ROI_LO)+'–'+fxr(n.runRate)+'×' : '—';
   const y1Txt  = roi!=null ? fxr(roi)+'×' : '—';
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
@@ -1819,7 +1836,8 @@ function buildPDF(mode){
 
   y+=h1+4;
   const h2=23;
-  box(L,58,h2,'NEW CUSTOMERS', '~'+Math.round(q.newCust)+' /mo', 'modeled monthly signings once ramped', DARK);
+  const crP = custRate(q.newCust);
+  box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'modeled signings once ramped'+(crP.monthly?'':' — a realistic pace for this business'), DARK);
   box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
   box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — potential, before attribution', DARK);
 
@@ -1880,11 +1898,14 @@ function buildPDF(mode){
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +(q.closeRate*100).toFixed(0)+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
     +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
-    +'  =  ~'+Math.round(q.newCust)+' new customers/mo';
+    +'  =  '+crP.v+' new customers'+crP.unit;
   doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
-  const math2='~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
-    +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
-    +'/yr by month 12 (before attribution).';
+  const math2=crP.monthly
+    ? '~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
+      +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
+      +'/yr by month 12 (before attribution).'
+    : crP.v+' customers/yr × '+fmt$(q.yearlyValue)+' each = '+fmtK(q.newCust*12*q.yearlyValue)
+      +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12 (before attribution).';
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   y+=2.5;
   doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
