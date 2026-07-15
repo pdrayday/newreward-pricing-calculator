@@ -1797,10 +1797,29 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(190,182,168);
   doc.text(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), R-gppW/2, 23, {align:'center'});   // centered under the title
 
+  /* negotiated-discount ribbon — when the rep discounts the fixed fee and/or the share,
+     it is the FIRST thing the client sees, right under the header band */
+  const discP = priceDirty && q.price!=null && n.price<q.price;
+  const discS = shareDirty && n.share<q.share;
+  if(discP||discS){
+    doc.setFillColor(235,179,68); doc.setDrawColor(198,142,38); doc.setLineWidth(.3);
+    doc.roundedRect(L,42,W,7,1.5,1.5,'FD');
+    const dparts=[];
+    if(discP) dparts.push('fixed fee '+fmt$(q.price)+' » '+fmt$(n.price)+'/mo');
+    if(discS) dparts.push('revenue share '+q.share+'% » '+n.share+'%');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.4); doc.setTextColor(26,17,3);
+    doc.text('NEGOTIATED DISCOUNT APPLIED — '+dparts.join('  ·  '), L+5, 46.6);
+  }
+
   /* prepared for */
   let y=51;
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('PREPARED FOR',L,y,{charSpace:.8});
+  if(discP||discS){
+    doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+    doc.text('Below the typical 2026 market rate for this scope and market', R, y, {align:'right'});
+    doc.setFont('helvetica','bold');   // restore the style the client-name line expects
+  }
   y+=6.5;
   doc.setFontSize(15); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   doc.text(s.client||'Prospective Client',L,y);
