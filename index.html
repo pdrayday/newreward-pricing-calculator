@@ -601,15 +601,23 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 #o-chart text,.cz-body text{fill:var(--muted2);font-size:9.5px;font-family:var(--font)}
 #o-chart{cursor:zoom-in}
 .cz-hint{font-size:10px;color:var(--muted2);text-align:right;margin-top:2px;letter-spacing:.04em}
-/* ===== full-screen chart zoom overlay ===== */
+/* ===== chart zoom overlay — page-width panel on desktop, full-width on mobile ===== */
 .chart-zoom{position:fixed;inset:0;z-index:200;background:rgba(4,3,2,.9);backdrop-filter:blur(4px);
-  display:flex;flex-direction:column;padding:18px}
+  display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 .chart-zoom[hidden]{display:none}
+.cz-inner{width:min(1224px,94vw);display:flex;flex-direction:column}
 .cz-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
 .cz-bar .cz-title{color:#f4efe5;font-size:14px;font-weight:600}
-.cz-body{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;
-  background:var(--panel);border:1px solid var(--gold-line);border-radius:14px;padding:24px}
-.cz-body svg{width:100%;height:100%}
+.cz-body{background:var(--panel);border:1px solid var(--gold-line);border-radius:14px;padding:24px}
+.cz-body svg{width:100%;height:auto;display:block}
+@media(max-width:640px){.chart-zoom{padding:10px}.cz-inner{width:100%}.cz-bar .cz-title{font-size:11px}}
+/* floating bar tooltip */
+.bar-tip{position:fixed;z-index:300;pointer-events:none;background:#1d1913;border:1px solid rgba(212,162,74,.5);
+  border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.55;color:#f4efe5;
+  box-shadow:0 10px 28px rgba(0,0,0,.5);white-space:nowrap}
+.bar-tip b{color:#eec77c}
+.bar-tip[hidden]{display:none}
+#o-chart rect,.cz-body rect{cursor:crosshair}
 /* cost bars: white fill + bold black outline in BOTH themes so they never blend with revenue */
 #o-chart .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
 .o-timeline{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.65}
@@ -1002,13 +1010,18 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 </div><!-- /grid -->
 </div><!-- /wrap -->
 
+<!-- floating tooltip for chart bars -->
+<div class="bar-tip" id="bar-tip" hidden></div>
+
 <!-- full-screen chart zoom -->
 <div class="chart-zoom no-print" id="chart-zoom" hidden>
-  <div class="cz-bar">
-    <span class="cz-title">12-Month Projection — new revenue vs total monthly cost (fixed + revenue share)</span>
-    <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
+  <div class="cz-inner">
+    <div class="cz-bar">
+      <span class="cz-title">12-Month Projection — new revenue vs total monthly cost (fixed + revenue share)</span>
+      <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
+    </div>
+    <div class="cz-body" id="cz-body"></div>
   </div>
-  <div class="cz-body" id="cz-body"></div>
 </div>
 
 <!-- in-page PDF preview overlay (no file is downloaded) -->
@@ -1242,10 +1255,11 @@ function computeQuote(s){
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;                  // very large deals take a slightly lower %
   share = clamp(Math.round(share*2)/2, 2, 10);
 
-  /* ---- conservative attribution: we credit/bill only on revenue we can stand behind.
-          softened from prior 0.3/0.5/0.8 — the demand model is already conservative, so the
-          extra discount no longer needs to be punitive. ---- */
-  let attribFactor = s.confidence==='verified'?0.85 : s.confidence==='estimated'?0.60 : 0.40;
+  /* ---- attribution: every win is tracked and 100% verifiable — a win is a win, there is
+          no in-between, so no provability haircut. Conservatism lives in the demand model
+          (volume-source weighting, the 100% demand cap, click-share decay) and in the
+          conservative-floor display band. ---- */
+  let attribFactor = 1;
 
   const windowDays = s.confidence==='verified'?60 : 90;
 
@@ -1351,10 +1365,12 @@ function resetNeg(kind){
   render(); return false;
 }
 
+let chartSeries=null;   // month-by-month values behind the bars, for the hover tooltip (small chart AND zoom)
 function renderChart(q,n){
   const el=document.getElementById('o-chart');
-  if(n.price==null){ el.innerHTML=''; return; }
+  if(n.price==null){ el.innerHTML=''; chartSeries=null; return; }
   const {months,mrr,invoice}=n.series;
+  chartSeries={mrr:mrr.slice(), invoice:invoice.slice()};
   const maxV=Math.max(...mrr,...invoice,1);
   const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/12;
   let g='';
@@ -1363,8 +1379,8 @@ function renderChart(q,n){
   months.forEach((m,i)=>{
     const cx=X0+i*gw+gw/2;
     const rh=mrr[i]/maxV*(Y1-Y0), ch=invoice[i]/maxV*(Y1-Y0);
-    g+='<rect class="bar-rev" x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"><title>Month '+m+' new monthly revenue: '+fmt$(mrr[i])+'</title></rect>';
-    g+='<rect class="bar-cost" x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"><title>Month '+m+' total cost (fixed + share): '+fmt$(invoice[i])+'</title></rect>';
+    g+='<rect class="bar-rev" data-m="'+m+'" x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"></rect>';
+    g+='<rect class="bar-cost" data-m="'+m+'" x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"></rect>';
     g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>';
   });
   g+='<text x="'+(X0-7)+'" y="'+(Y0+4)+'" text-anchor="end">'+fmtK(maxV)+'</text>';
@@ -1688,7 +1704,7 @@ function render(){
       '<p><b>The share only ever applies to new customers our work wins.</b> Existing customers, repeat business, referrals, and anything the client finds on their own are <span class="sm-big">never touched</span> — the revenue baseline is measured before we start, and everything below it is off-limits. We are not taking a percentage of the business they already built.</p>'
       +'<p><b>100% verifiable proof, or nothing.</b> A win only counts when it can be <span class="sm-big">proven</span> to have come from this program — tracked calls, forms, and bookings. If we can\'t prove we won it, we don\'t take a dime of share on it. Period.</p>'
       +'<p><b>One proven win, in exact dollars:</b> a new customer worth '+fmt$(q.yearlyValue)+' in first-year value &times; '+n.share+'% share = <span class="sm-big">'+fmt$(q.yearlyValue*n.share/100)+'</span>, billed once, in the month the win lands. The client keeps the other '+fmt$(q.yearlyValue*(1-n.share/100))+' — and 100% of every repeat purchase after year one. The share is on revenue, not profit — and the rate is already sized to the client\'s margin ('+(s.margin??IND[s.industry].margin)+'% here), so lower-margin businesses pay a lower percentage.</p>'
-      +'<p><b>The white bars on the chart (projected total monthly cost):</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+': '+fmt$(n.series.perfPrice)+' reduced fixed + the share on that month\'s proven wins. At the modeled pace ('+crM.txt+'), and conservatively assuming only '+(q.attribFactor*100)+'% of modeled wins can be proven (we bill nothing on the rest), that\'s &asymp;'+fmt$(shareMo)+'/mo in share, &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo total</span>. Year-one total cost: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>. No proven wins in a month = no share that month.</p>';
+      +'<p><b>The white bars on the chart (projected total monthly cost):</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+': '+fmt$(n.series.perfPrice)+' reduced fixed + the share on that month\'s wins. At the modeled pace ('+crM.txt+'), that\'s &asymp;'+fmt$(shareMo)+'/mo in share, &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo total</span>. Year-one total cost: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>. No proven wins in a month = no share that month.</p>';
   }
 
   /* summary */
@@ -1835,6 +1851,24 @@ function closeChartZoom(){
   document.getElementById('cz-body').innerHTML='';
   document.body.style.overflow='';
 }
+
+/* hover tooltip on the chart bars — shows BOTH values for the month, in the small chart and the zoom */
+document.addEventListener('mousemove',function(e){
+  const tip=document.getElementById('bar-tip'); if(!tip) return;
+  const t=e.target;
+  const isBar=t && t.classList && (t.classList.contains('bar-rev')||t.classList.contains('bar-cost'));
+  if(isBar && chartSeries){
+    const m=parseInt(t.getAttribute('data-m'),10);
+    tip.innerHTML='<b>Month '+m+'</b><br>New revenue: <b>'+fmt$(chartSeries.mrr[m-1])+'</b><br>Total cost (fixed + share): <b>'+fmt$(chartSeries.invoice[m-1])+'</b>';
+    tip.hidden=false;
+    const pad=14; tip.style.left='0px'; tip.style.top='0px';
+    const r=tip.getBoundingClientRect();
+    let x=e.clientX+pad, y=e.clientY+pad;
+    if(x+r.width>window.innerWidth-8) x=e.clientX-r.width-pad;
+    if(y+r.height>window.innerHeight-8) y=e.clientY-r.height-pad;
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  } else tip.hidden=true;
+});
 
 function selText(id){ return document.getElementById(id).selectedOptions[0].textContent; }
 
@@ -2077,7 +2111,7 @@ function buildPDF(mode){
     ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20% once the revenue share starts.'],
     ['Revenue share','In plain terms: when our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed in the month the win lands. Only NEW customers above the pre-program baseline count; existing business is never touched. No new wins, no share — we only grow when the client grows. The percentage is calculated from the client\'s margin, acquisition budget, existing commissions, and deal size, so it stays fair to both sides.'],
     ['New net revenue / baseline','The baseline is the revenue the client already generates before the program starts; only tracked growth ABOVE that line counts toward the share. "Net" means revenue the client actually keeps after refunds or cancellations — it does NOT mean profit. The share is a percentage of revenue, and fairness to margin is built into the rate itself: lower-margin businesses are quoted a lower percentage.'],
-    ['Attribution (attributable)','One hundred percent verifiable proof, or no share: a win is only ever billed when it can be PROVEN to have come from this program — tracked calls, forms, and bookings. If we cannot prove we won it, we do not take a dime. The projections here are doubly conservative: they assume only a portion of modeled wins will even be provable.'],
+    ['Attribution (attributable)','One hundred percent verifiable proof, or no share: every win is tracked — calls, forms, and bookings — so every win is provable. A win is a win; there is no in-between. If a customer cannot be proven to have come from this program, they are not a win, and we do not take a dime.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
     ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
     ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built. From the start month, the fixed fee drops and the share begins — billed monthly on the new customers won. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
@@ -2122,7 +2156,7 @@ function buildPDF(mode){
     ['"Are you taking a percentage of my whole business?"',
      'No. Your baseline revenue is measured before we start and is permanently off-limits. The share applies only to NEW customers this program provably wins — '+n.share+'% of a new customer\'s first-year value, billed once, in the month the win lands. Your existing customers, referrals, and repeat business are never touched.'],
     ['"How do you prove a win actually came from you?"',
-     '100% verifiable attribution, or nothing: tracked phone numbers, forms, and booking links tied to your search and AI visibility. If we cannot prove a customer came from this program, we do not take a dime of share on them — period. The projections are even more conservative: they assume a portion of real wins won\'t be provable at all.'],
+     '100% verifiable attribution, or nothing: tracked phone numbers, forms, and booking links tied to your search and AI visibility. Every win is tracked, so every win is provable — a win is a win, there is no in-between. If a customer cannot be proven to have come from this program, we do not take a dime of share on them. Period.'],
     ['"Why not just run Google Ads?"',
      'Ads rent attention — the day the spend stops, the leads stop. Rankings and AI recommendations are owned assets that compound. Many clients run both; this program builds the part you keep.'],
     ['"I already do some SEO. Why add AEO/GEO?"',
