@@ -84,7 +84,7 @@
 [data-theme="ivory"] .o-price{color:#c08c34;text-shadow:0 0 18px rgba(212,162,74,.4)}
 [data-theme="ivory"] .diffbar{background:#e9e3d5}
 /* chart: gold revenue bars as in dark mode; cost bars white with a black outline */
-[data-theme="ivory"] #o-chart .bar-cost{fill:#ffffff!important;stroke:#14100a!important;stroke-width:1.5!important}
+[data-theme="ivory"] #o-chart .bar-cost,[data-theme="ivory"] .cz-body .bar-cost{fill:#ffffff!important;stroke:#14100a!important;stroke-width:1.5!important}
 [data-theme="ivory"] .proj-key .k-cost{background:#ffffff;border-color:#14100a}
 /* below-target figure + panel outline: strong red, no glow */
 [data-theme="ivory"] .o-price.roi-below{color:#c81e10;-webkit-text-stroke:0;text-stroke:0;text-shadow:none}
@@ -437,6 +437,11 @@ select option{background:#171410;color:var(--text)}
   padding-top:20px;border-top:1px solid var(--gold-line-soft);
 }
 .o-share .share-pct{font-size:32px;font-weight:800;color:var(--gold-bright)}
+.share-math{font-size:13px;color:var(--muted);line-height:1.7}
+.share-math p{margin:0 0 12px}
+.share-math p:last-child{margin-bottom:0}
+.share-math b{color:var(--gold-bright)}
+.share-math .sm-big{color:var(--text);font-weight:700}
 .o-share .share-desc{font-size:12.5px;color:var(--muted);line-height:1.45}
 
 .o-diff{margin-top:22px;padding-top:20px;border-top:1px solid var(--gold-line-soft)}
@@ -593,7 +598,18 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 .proj-key .k-cost{background:#ffffff;border:1px solid #0c0a08}
 #o-chart{margin-top:10px}
 #o-chart svg{width:100%;display:block}
-#o-chart text{fill:var(--muted2);font-size:9.5px;font-family:var(--font)}
+#o-chart text,.cz-body text{fill:var(--muted2);font-size:9.5px;font-family:var(--font)}
+#o-chart{cursor:zoom-in}
+.cz-hint{font-size:10px;color:var(--muted2);text-align:right;margin-top:2px;letter-spacing:.04em}
+/* ===== full-screen chart zoom overlay ===== */
+.chart-zoom{position:fixed;inset:0;z-index:200;background:rgba(4,3,2,.9);backdrop-filter:blur(4px);
+  display:flex;flex-direction:column;padding:18px}
+.chart-zoom[hidden]{display:none}
+.cz-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.cz-bar .cz-title{color:#f4efe5;font-size:14px;font-weight:600}
+.cz-body{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:var(--panel);border:1px solid var(--gold-line);border-radius:14px;padding:24px}
+.cz-body svg{width:100%;height:100%}
 /* cost bars: white fill + bold black outline in BOTH themes so they never blend with revenue */
 #o-chart .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
 .o-timeline{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.65}
@@ -874,6 +890,12 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
   </div>
 
+  <!-- 06 THE REVENUE-SHARE MATH — full transparency -->
+  <div class="section">
+    <div class="sec-head"><div class="sec-num">06</div><div class="sec-title">The Revenue-Share Math — Full Transparency</div></div>
+    <div id="share-math" class="share-math"></div>
+  </div>
+
   <div class="hintnote" style="margin-top:14px"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
 
 </div>
@@ -917,7 +939,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <span class="o-diff-label">12-Month Projection</span>
         <span class="proj-key"><i class="kk k-rev"></i>New revenue<i class="kk k-cost"></i>Total cost (fixed + share)</span>
       </div>
-      <div id="o-chart"></div>
+      <div id="o-chart" onclick="openChartZoom()" title="Click to enlarge"></div>
+      <div class="cz-hint no-print">&#10530; click the chart to enlarge</div>
       <div class="o-timeline" id="o-timeline"></div>
     </div>
 
@@ -978,6 +1001,15 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
 </div><!-- /grid -->
 </div><!-- /wrap -->
+
+<!-- full-screen chart zoom -->
+<div class="chart-zoom no-print" id="chart-zoom" hidden>
+  <div class="cz-bar">
+    <span class="cz-title">12-Month Projection — new revenue vs total monthly cost (fixed + revenue share)</span>
+    <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
+  </div>
+  <div class="cz-body" id="cz-body"></div>
+</div>
 
 <!-- in-page PDF preview overlay (no file is downloaded) -->
 <div class="pdf-preview no-print" id="pdf-preview" hidden>
@@ -1645,6 +1677,19 @@ function render(){
     +' <b>Month '+n.rampMonth+'+</b> — revenue share begins: each month, the share is billed on the new customers our work won that month. No new wins, no share.'
     +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Cost bars show the total: the fixed fee, plus the revenue share once it begins.</span>';
 
+  /* revenue-share math — full transparency, live numbers */
+  const smEl=document.getElementById('share-math');
+  if(q.price==null){ smEl.innerHTML='Select at least one service in Scope to see the math.'; }
+  else{
+    const perWin = q.yearlyValue*q.attribFactor*n.share/100;
+    const shareMo = n.share/100*q.newCust*q.yearlyValue*q.attribFactor;
+    const crM = custRate(q.newCust);
+    smEl.innerHTML =
+      '<p><b>The share only ever applies to new customers our work wins.</b> Existing customers, repeat business, referrals, and anything the client finds on their own are <span class="sm-big">never touched</span> — the revenue baseline is measured before we start, and everything below it is off-limits. We are not taking a percentage of the business they already built.</p>'
+      +'<p><b>One win, in exact dollars:</b> a new customer worth '+fmt$(q.yearlyValue)+' in first-year value &times; '+(q.attribFactor*100)+'% attribution credit &times; '+n.share+'% share = <span class="sm-big">'+fmt$(perWin)+'</span>, billed once, in the month the win lands. The client keeps the other '+fmt$(q.yearlyValue-perWin)+' — and 100% of every repeat purchase after year one.</p>'
+      +'<p><b>The white bars on the chart (projected total monthly cost):</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+': '+fmt$(n.series.perfPrice)+' reduced fixed + the share on that month\'s wins — at the modeled pace ('+crM.txt+') that\'s &asymp;'+fmt$(shareMo)+'/mo in share, &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo total</span>. Year-one total cost: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>. No new wins in a month = no share that month.</p>';
+  }
+
   /* summary */
   const who = s.client || 'This client';
   const where = s.phrase ? ' for “'+s.phrase+'”' : '';
@@ -1774,7 +1819,21 @@ function closePdfPreview(){
   if(ppUrl){ try{URL.revokeObjectURL(ppUrl);}catch(e){} ppUrl=null; }
   document.body.style.overflow='';
 }
-document.addEventListener('keydown',function(e){ if(e.key==='Escape') closePdfPreview(); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closePdfPreview(); closeChartZoom(); } });
+
+/* full-screen chart zoom — same SVG, scaled up losslessly */
+function openChartZoom(){
+  const src=document.getElementById('o-chart').innerHTML;
+  if(!src) return;
+  document.getElementById('cz-body').innerHTML=src;
+  document.getElementById('chart-zoom').hidden=false;
+  document.body.style.overflow='hidden';
+}
+function closeChartZoom(){
+  document.getElementById('chart-zoom').hidden=true;
+  document.getElementById('cz-body').innerHTML='';
+  document.body.style.overflow='';
+}
 
 function selText(id){ return document.getElementById(id).selectedOptions[0].textContent; }
 
