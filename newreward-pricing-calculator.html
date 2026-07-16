@@ -947,8 +947,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <span class="o-diff-label">12-Month Projection</span>
         <span class="proj-key"><i class="kk k-rev"></i>New revenue<i class="kk k-cost"></i>Total cost (fixed + share)</span>
       </div>
-      <div id="o-chart" onclick="openChartZoom()" title="Click to enlarge"></div>
-      <div class="cz-hint no-print">&#10530; click the chart to enlarge</div>
+      <div id="o-chart" onclick="openChartZoom()"></div>
       <div class="o-timeline" id="o-timeline"></div>
     </div>
 
@@ -1706,6 +1705,7 @@ function render(){
       '<p><b>The share only ever applies to new customers our work wins.</b> Existing customers, repeat business, referrals, and anything the client finds on their own are <span class="sm-big">never touched</span> — the revenue baseline is measured before we start, and everything below it is off-limits. We are not taking a percentage of the business they already built.</p>'
       +'<p><b>100% verifiable proof, or nothing.</b> A win only counts when it can be <span class="sm-big">proven</span> to have come from this program — tracked calls, forms, and bookings. If we can\'t prove we won it, we don\'t take a dime of share on it. Period.</p>'
       +'<p><b>One proven win, in exact dollars:</b> a new customer worth '+fmt$(q.yearlyValue)+' in first-year value &times; '+n.share+'% share = <span class="sm-big">'+fmt$(q.yearlyValue*n.share/100)+'</span>, billed once, in the month the win lands. The client keeps the other '+fmt$(q.yearlyValue*(1-n.share/100))+' — and 100% of every repeat purchase after year one. The share is on revenue, not profit — and the rate is already sized to the client\'s margin ('+(s.margin??IND[s.industry].margin)+'% here), so lower-margin businesses pay a lower percentage.</p>'
+      +'<p><b>Even at the extreme, the math favors the client.</b> Take a custom home builder: a 2% share on a $500,000 home is $10,000 — on a home that made them &asymp;<span class="sm-big">$90,000 in gross profit</span> they wouldn\'t otherwise have. They keep &asymp;$80K of new profit, plus <span class="sm-big">every repeat customer and referral, forever</span>.</p>'
       +'<p><b>The white bars on the chart (projected total monthly cost):</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+': '+fmt$(n.series.perfPrice)+' reduced fixed + the share on that month\'s wins. At the modeled pace ('+crM.txt+'), that\'s &asymp;'+fmt$(shareMo)+'/mo in share, &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo total</span>. Year-one total cost: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>. No proven wins in a month = no share that month.</p>';
   }
 
@@ -1859,6 +1859,7 @@ document.addEventListener('mousemove',function(e){
   const tip=document.getElementById('bar-tip'); if(!tip) return;
   const t=e.target;
   const isBar=t && t.classList && (t.classList.contains('bar-rev')||t.classList.contains('bar-cost'));
+  const inSmallChart=!isBar && t && t.closest && t.closest('#o-chart');
   if(isBar && chartSeries){
     const m=parseInt(t.getAttribute('data-m'),10);
     tip.innerHTML='<b>Month '+m+'</b><br>New revenue: <b>'+fmt$(chartSeries.mrr[m-1])+'</b><br>Total cost (fixed + share): <b>'+fmt$(chartSeries.invoice[m-1])+'</b>';
@@ -1869,6 +1870,11 @@ document.addEventListener('mousemove',function(e){
     if(x+r.width>window.innerWidth-8) x=e.clientX-r.width-pad;
     if(y+r.height>window.innerHeight-8) y=e.clientY-r.height-pad;
     tip.style.left=x+'px'; tip.style.top=y+'px';
+  } else if(inSmallChart && chartSeries){
+    /* hovering chart whitespace (not a bar): show the enlarge hint here instead of a native title */
+    tip.innerHTML='&#10530; Click to enlarge';
+    tip.hidden=false;
+    tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px';
   } else tip.hidden=true;
 });
 
@@ -1967,13 +1973,58 @@ function buildPDF(mode){
   box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
   box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — potential, before attribution', DARK);
 
-  /* summary */
-  y+=h2+8;
+  /* 12-month projection chart — same series as the calculator's chart, shared scale */
+  y+=h2+6;
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('PLAIN ENGLISH',L,y,{charSpace:.8});
-  y+=5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  doc.splitTextToSize(document.getElementById('o-summary').textContent,W).slice(0,4).forEach(ln=>{doc.text(ln,L,y); y+=4.4;});
+  doc.text('12-MONTH PROJECTION',L,y,{charSpace:.8});
+  doc.setFillColor(212,162,74); doc.rect(R-92,y-2.6,3.2,3.2,'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.4); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  doc.text('New revenue',R-87.5,y);
+  doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.35); doc.rect(R-62,y-2.6,3.2,3.2,'FD');
+  doc.text('Total cost (fixed + share)',R-57.5,y);
+  y+=3.5;
+  const pT=y, pB=y+19, pL2=L+13, pR2=R-2, pgw=(pR2-pL2)/12;
+  const pMax=Math.max.apply(null,n.series.mrr.concat(n.series.invoice,[1]))*1.05;
+  doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.25);
+  [0.25,0.5,0.75,1].forEach(function(f){const gy=pB-f*(pB-pT); doc.line(pL2,gy,pR2,gy);});
+  doc.line(pL2,pB,pR2,pB);
+  for(let i2=0;i2<12;i2++){
+    const cx2=pL2+i2*pgw+pgw/2;
+    const rH=n.series.mrr[i2]/pMax*(pB-pT), cH=Math.max(n.series.invoice[i2]/pMax*(pB-pT),0.8);
+    doc.setFillColor(212,162,74); doc.rect(cx2-3.7,pB-rH,3.3,rH,'F');
+    doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3); doc.rect(cx2+0.4,pB-cH,3.3,cH,'FD');
+    doc.setFont('helvetica','normal'); doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+    doc.text(String(i2+1),cx2,pB+3.1,{align:'center'});
+  }
+  doc.setFontSize(6.2);
+  doc.text(fmtK(pMax),pL2-2,pT+2,{align:'right'});
+  doc.text('$0',pL2-2,pB+1,{align:'right'});
+  y=pB+6.5;
+
+  /* plain english + the customer math — one merged section */
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('PLAIN ENGLISH — AND THE MATH',L,y,{charSpace:.8});
+  y+=4.8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  doc.splitTextToSize(document.getElementById('o-summary').textContent,W).slice(0,3).forEach(ln=>{doc.text(ln,L,y); y+=4.1;});
+  y+=1;
+  doc.setFontSize(8.3);
+  const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
+    +'  =  '+crP.v+' new customers'+crP.unit;
+  doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  const math2=crP.monthly
+    ? '~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
+      +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
+      +'/yr by month 12 (before attribution).'
+    : crP.v+' customers/yr × '+fmt$(q.yearlyValue)+' each = '+fmtK(q.newCust*12*q.yearlyValue)
+      +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12 (before attribution).';
+  doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  y+=1;
+  doc.setFontSize(7.3); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  const basisTxt='Share basis: when our work provably wins a new customer, we earn '+n.share+'% of their first-year value — billed that month, only on growth above today\'s baseline. (est.)/(benchmark)/(modeled) figures are re-verified in the '+q.windowDays+'-day review window.';
+  doc.splitTextToSize(basisTxt,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=3.2;});
 
   /* inputs for reference */
   y+=5;
@@ -2002,13 +2053,9 @@ function buildPDF(mode){
     ['Engagement intensity', q.intensityLabel
         + (q.seoIntensity?'  · SEO '+q.seoIntensity.label:'')
         + (q.geoIntensity?'  · GEO '+q.geoIntensity.label:'')],
-    ['Data basis', 'Estimated from research'],
-    ['Revenue basis', 'New net revenue (above baseline)'],
-    ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')'],
-    ['Rev share starts', 'Month '+n.rampMonth],
-    ['Review window', q.windowDays+' days — re-quote with live data']
+    ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')']
   ];
-  const half=Math.ceil(rows.length/2), rowH=5.6, colW=(W+6)/2;
+  const half=Math.ceil(rows.length/2), rowH=5.2, colW=(W+6)/2;
   rows.forEach((r2,i)=>{
     const col=i<half?0:1, idx=col?i-half:i, x=L+col*colW, ry=y+idx*rowH;
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
@@ -2016,28 +2063,7 @@ function buildPDF(mode){
     doc.setFont('helvetica','bold'); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
     doc.text(String(r2[1]),x+colW-9,ry,{align:'right'});
   });
-  y+=half*rowH+4.5;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('THE CUSTOMER MATH',L,y,{charSpace:.8});
-  y+=4.5;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
-    +'  =  '+crP.v+' new customers'+crP.unit;
-  doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
-  const math2=crP.monthly
-    ? '~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
-      +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
-      +'/yr by month 12 (before attribution).'
-    : crP.v+' customers/yr × '+fmt$(q.yearlyValue)+' each = '+fmtK(q.newCust*12*q.yearlyValue)
-      +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12 (before attribution).';
-  doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
-  y+=2.5;
-  doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  const noteTxt='Months 1–'+(n.rampMonth-1)+' bill the full fixed fee while we build (no share). From month '+n.rampMonth+', the fixed drops to '+fmt$(n.series.perfPrice)+'/mo and the share begins: when our work wins a new customer, we earn '+n.share+'% of their first-year value — billed that month, only on growth above today\'s baseline. (est.)/(benchmark)/(modeled) values are verified in the review window.';
-  const noteLines=doc.splitTextToSize(noteTxt,W);
-  noteLines.forEach(function(ln){doc.text(ln,L,y); y+=3.4;});
+  y+=half*rowH+3;
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
      ad-equivalent spend exceeds the fee, and it never showed in the reverse case). */
 
@@ -2156,7 +2182,7 @@ function buildPDF(mode){
     ['"What if it doesn\'t deliver?"',
      'The fixed fee only ever covers real, visible work: pages built, content published, listings fixed, authority earned. The share is pure performance — no proven wins, no share. And at the review window the whole program is re-quoted from live data; if the numbers don\'t support it, we say so first.'],
     ['"Are you taking a percentage of my whole business?"',
-     'No. Your baseline revenue is measured before we start and is permanently off-limits. The share applies only to NEW customers this program provably wins — '+n.share+'% of a new customer\'s first-year value, billed once, in the month the win lands. Your existing customers, referrals, and repeat business are never touched.'],
+     'No. Your baseline revenue is measured before we start and is permanently off-limits. The share applies only to NEW customers this program provably wins — '+n.share+'% of a new customer\'s first-year value, billed once, in the month the win lands. Your existing customers, referrals, and repeat business are never touched. Even at the extreme: a 2% share on a $500,000 custom home is $10,000 — on a home that made the builder about $90,000 in gross profit they wouldn\'t otherwise have. They keep roughly $80,000 of new profit, plus every repeat customer and referral, forever.'],
     ['"How do you prove a win actually came from you?"',
      '100% verifiable attribution, or nothing: tracked phone numbers, forms, and booking links tied to your search and AI visibility. Every win is tracked, so every win is provable — a win is a win, there is no in-between. If a customer cannot be proven to have come from this program, we do not take a dime of share on them. Period.'],
     ['"Why not just run Google Ads?"',
@@ -2164,13 +2190,25 @@ function buildPDF(mode){
     ['"I already do some SEO. Why add AEO/GEO?"',
      'Because buyers now ask ChatGPT, Gemini, Perplexity, and Google\'s AI Overviews — and those engines recommend businesses they can verify. The channels feed each other: search visibility earns AI citations, and AI answers reinforce search trust.'],
     ['"How fast will I see results?"',
-     'Honestly: the first '+(n.rampMonth-1)+' months are the build, billed as exactly that. Wins ramp from month '+n.rampMonth+', and SEO/GEO keeps compounding through months 12–24. Anyone promising page one in two weeks is selling something else.'],
+     'Technical and trust fixes land in the first few weeks — you see what shipped from day one. The first '+(n.rampMonth-1)+' months are the build, billed as exactly that; wins ramp from month '+n.rampMonth+', and SEO/GEO keeps compounding through months 12–24. Anyone promising page one in two weeks is selling something else.'],
     ['"I\'ve been burned by an agency before."',
      'Most owners have — which is why this proposal shows every input, every formula, and every assumption, prices inside published 2026 market rates, and bills the share only on provable wins. Nothing here asks for faith.'],
     ['"Why this price?"',
-     'It is the researched cost of delivering this exact scope in this exact market, verified against published 2026 SEO and AEO/GEO rates — never a number pulled from the air. And it steps DOWN once the revenue share begins, because from then on we get paid the way you do: on results.'],
+     'It is the researched cost of delivering this exact scope in this exact market, verified against published 2026 SEO and AEO/GEO rates — never a number pulled from the air. It steps DOWN once the revenue share begins, because from then on we get paid the way you do: on results. If we don\'t move the number, we don\'t earn the share.'],
     ['"What happens at the review window?"',
-     'At day '+q.windowDays+', the estimates in this proposal are replaced with your live tracking data, and the terms are re-confirmed or adjusted to match reality. It is your built-in checkpoint — and ours.']
+     'At day '+q.windowDays+', the estimates in this proposal are replaced with your live tracking data, and the terms are re-confirmed or adjusted to match reality. It is your built-in checkpoint — and ours.'],
+    ['"What exactly does New Reward do?"',
+     'We score how you show up in Google and AI answers, fix what holds you back, and show you weekly improvements — one path from gap to growth.'],
+    ['"What\'s the difference between SEO and GEO?"',
+     'SEO earns rankings in classic Google search. GEO — generative-engine optimization, also called AEO — shapes how AI systems like ChatGPT, Perplexity, Gemini, Claude, and Google\'s AI Overviews describe and cite your brand. This program runs both together.'],
+    ['"Do you guarantee #1 rankings?"',
+     'No honest partner can guarantee a specific rank or AI citation — Google and the AI models decide that. We improve your eligibility and show you what improved. What we do set up front: a growth target calibrated to your market — in revenue, not leads — and we claim results only where your data supports it.'],
+    ['"Do I have to sign a long contract?"',
+     'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway to show up. You stay because it works, not because paper says so.'],
+    ['"What do you need from me to start?"',
+     'Access to your site, analytics, and the profiles we\'ll work on (Google Business, listings, review platforms). We confirm each connection before claiming anything is live, and you approve work before it ships.'],
+    ['"Can we start with one thing instead of everything?"',
+     'Yes. We recommend the services that fit — and steer you away from the ones that don\'t — based on your needs, budget, market, and industry, then expand as results come in.']
   ];
   const fColW=(W-8)/2;
   let fqx=L, fqy=33;
