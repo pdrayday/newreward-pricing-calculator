@@ -1371,27 +1371,22 @@ function renderChart(q,n){
   if(n.price==null){ el.innerHTML=''; chartSeries=null; return; }
   const {months,mrr,invoice}=n.series;
   chartSeries={mrr:mrr.slice(), invoice:invoice.slice()};
-  /* dual scales: revenue on the LEFT axis, cost on its own RIGHT axis — otherwise revenue
-     (often 5–10× larger) squashes the cost bars into unreadable slivers */
-  const maxRev=Math.max(...mrr,1), maxCost=Math.max(...invoice,1);
-  const revTop=maxRev*1.05, costTop=maxCost*1.35;
-  const X0=46,X1=322,Y0=12,Y1=112,gw=(X1-X0)/12;
+  /* ONE shared scale, on purpose: the cost bars look small next to revenue because they ARE
+     small — that visual gap is the honest story. Hover gives exact figures for both. */
+  const maxV=Math.max(...mrr,...invoice,1)*1.05;
+  const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/12;
   let g='';
   [0.25,0.5,0.75,1].forEach(f=>{const gy=Y1-f*(Y1-Y0);
     g+='<line x1="'+X0+'" y1="'+gy+'" x2="'+X1+'" y2="'+gy+'" stroke="rgba(212,162,74,.10)" stroke-dasharray="3 4"/>';});
   months.forEach((m,i)=>{
     const cx=X0+i*gw+gw/2;
-    const rh=mrr[i]/revTop*(Y1-Y0), ch=invoice[i]/costTop*(Y1-Y0);
+    const rh=mrr[i]/maxV*(Y1-Y0), ch=Math.max(invoice[i]/maxV*(Y1-Y0),2);   // min 2px so cost bars stay visible/hoverable
     g+='<rect class="bar-rev" data-m="'+m+'" x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"></rect>';
     g+='<rect class="bar-cost" data-m="'+m+'" x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"></rect>';
     g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>';
   });
-  g+='<text x="'+(X0-7)+'" y="'+(Y0-2)+'" text-anchor="end" font-size="7">revenue</text>';
-  g+='<text x="'+(X0-7)+'" y="'+(Y0+6)+'" text-anchor="end">'+fmtK(revTop)+'</text>';
+  g+='<text x="'+(X0-7)+'" y="'+(Y0+4)+'" text-anchor="end">'+fmtK(maxV)+'</text>';
   g+='<text x="'+(X0-7)+'" y="'+(Y1+3)+'" text-anchor="end">$0</text>';
-  g+='<text x="'+(X1+6)+'" y="'+(Y0-2)+'" text-anchor="start" font-size="7">cost</text>';
-  g+='<text x="'+(X1+6)+'" y="'+(Y0+6)+'" text-anchor="start">'+fmtK(costTop)+'</text>';
-  g+='<text x="'+(X1+6)+'" y="'+(Y1+3)+'" text-anchor="start">$0</text>';
   g+='<text x="'+((X0+X1)/2)+'" y="'+(Y1+24)+'" text-anchor="middle" font-size="8.5">month</text>';
   el.innerHTML='<svg viewBox="0 0 360 142" xmlns="http://www.w3.org/2000/svg">'
     +'<defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eec77c"/><stop offset="1" stop-color="#a87c2e"/></linearGradient></defs>'
@@ -1698,7 +1693,7 @@ function render(){
     '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
     +(n.rampMonth>2?' <b>Months 2–'+(n.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
     +' <b>Month '+n.rampMonth+'+</b> — revenue share begins: each month, the share is billed on the new customers our work won that month. No new wins, no share.'
-    +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Cost bars show the total (fixed fee + revenue share) on their own right-hand scale so they stay readable beside much larger revenue — hover any bar for exact figures.</span>';
+    +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Revenue and cost share one scale — the cost bars look small next to the revenue because they are. Hover any bar for exact figures.</span>';
 
   /* revenue-share math — full transparency, live numbers */
   const smEl=document.getElementById('share-math');
