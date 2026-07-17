@@ -1853,6 +1853,8 @@ function researchWithAI(){
     +'- industry: "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
     +'- footprint: a business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
+    +'- volume: the COMBINED phrase-cluster demand across ALL locations/service lines counted in units — a 2-location business serving two cities needs both cities\' demand added together.\n'
+    +'- convrate: for everyday and med-spa-style local services use a realistic 3-6; reserve sub-1 rates for ultra-high-ticket contracts only.\n'
     +'- compstr: default "moderate". Use "weak" only if the niche/town is clearly uncompetitive; "strong" or "dominant" only with clear evidence that national brands or very high-authority sites dominate the top results.\n'
     +'- seoScore (0–100) and geoScore (0–100): how visible they are TODAY. Most local businesses are SEO 25–40 and GEO 5–20; only score higher with clear evidence of strong rankings or AI mentions.\n'
     +'- rank: their rough average Google position for money phrases (1–100). cpc: typical Google Ads cost-per-click ($2–6 everyday local, $8–25 medical/legal/SaaS).\n'
@@ -2058,7 +2060,7 @@ function buildPDF(mode){
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'floor to modeled — backed by 2026 SEO/GEO benchmarks':'select a service', DGOLD, true, true);
-  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then runs at full pace':'', DARK, true);
+  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?(roi>=1?'the build year — pays for itself, then runs at full pace':'the investment year — the ongoing run-rate carries it from the ramp'):'', DARK, true);
   box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
       n.price!=null?fmt$(n.price)+'/mo':'—',
       discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
@@ -2510,6 +2512,19 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
     render();
   });
   volEl.addEventListener('input',function(){ volScaleNote=''; });
+  /* units changed with a manual volume: cost now covers more locations/service lines,
+     but the entered demand was NOT changed — flag it so they stay in sync */
+  const unitsEl=document.getElementById('units');
+  let prevUnits=parseInt(unitsEl.value,10)||1;
+  unitsEl.addEventListener('change',function(){
+    const nu=parseInt(unitsEl.value,10)||1;
+    const v=parseFloat(volEl.value);
+    if(v>0 && nu!==prevUnits && nu>1){
+      volScaleNote='The price now covers <b>'+nu+' locations / service lines</b> — make sure this volume is the <b>combined</b> phrase demand across all of them (it was not changed automatically).';
+    }
+    prevUnits=nu;
+    render();
+  });
 })();
 document.getElementById('o-price-edit').addEventListener('input', ()=>{ priceDirty=true; render(); });
 document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDirty=true; render(); });
