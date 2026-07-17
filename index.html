@@ -2063,7 +2063,7 @@ function buildPDF(mode){
   box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
   box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — potential, before attribution', DARK);
 
-  y+=h2+8;
+  y+=h2+6;
 
   /* plain english + the customer math — one merged section */
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
@@ -2123,7 +2123,7 @@ function buildPDF(mode){
         + (q.geoIntensity?'  · GEO '+q.geoIntensity.label:'')],
     ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')']
   ];
-  const half=Math.ceil(rows.length/2), rowH=5.2, colW=(W+6)/2;
+  const half=Math.ceil(rows.length/2), rowH=4.9, colW=(W+6)/2;
   rows.forEach((r2,i)=>{
     const col=i<half?0:1, idx=col?i-half:i, x=L+col*colW, ry=y+idx*rowH;
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
@@ -2132,6 +2132,28 @@ function buildPDF(mode){
     doc.text(String(r2[1]),x+colW-9,ry,{align:'right'});
   });
   y+=half*rowH+3;
+
+  /* ---- the pricing principle + ranking primer — one compact box on the proposal page ---- */
+  y+=6;
+  const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every figure derives from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work genuinely requires — a price that only works when it works for both sides.';
+  const RANKING='Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines like ChatGPT, Gemini, Perplexity, and AI Overviews recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.';
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
+  const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
+  const rkLines=doc.splitTextToSize(RANKING,W-12);
+  const bxH=5.9+prLines.length*2.68+4.8+rkLines.length*2.68+2.6;
+  doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
+  doc.roundedRect(L,y,W,bxH,2,2,'FD');
+  let by=y+5.5;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,by,{charSpace:.6}); by+=3.9;
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  prLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=2.68; });
+  by+=2.2;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,by,{charSpace:.6}); by+=3.9;
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  rkLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=2.68; });
+  y+=bxH;
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
      ad-equivalent spend exceeds the fee, and it never showed in the reverse case). */
 
@@ -2255,31 +2277,7 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('A plain-English glossary of every term used in this proposal and calculator.',L,17.5);
 
-  /* ---- the principle behind the pricing — the calculator's purpose, stated plainly ---- */
-  const PRINCIPLE='This calculator exists to do two things at once: show every client exactly how their price is built — openly and honestly, with nothing hidden — and keep our own pricing disciplined. Every figure is derived from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work genuinely requires — low enough to keep the client competitive in their industry and market, sound enough to deliver the program properly. A price that only works when it works for both sides.';
-  doc.setFontSize(7.6);
-  const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
-  const prH=8+prLines.length*3.1+4;
-  doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
-  doc.roundedRect(L,29,W,prH,2,2,'FD');
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,35.5,{charSpace:.6});
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  prLines.forEach(function(ln,i){ doc.text(ln,L+6,40.5+i*3.1); });
-
-  /* ---- how ranking works — a short primer, since the whole model hangs on it ---- */
-  const RANKING='Google ranks results by relevance and authority: how well a page answers the search, how much the site has earned trust (helpful content, links from reputable sites, reviews, consistency over time), and — for local searches — proximity and the strength of the Google Business Profile. AI engines (ChatGPT, Gemini, Perplexity, Google AI Overviews) recommend businesses they can verify across those same signals: search visibility, authoritative mentions, and clear, citable content. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.';
-  const rkTop=29+prH+5;
-  doc.setFontSize(7.3);
-  const rkLines=doc.splitTextToSize(RANKING,W-12);
-  const rkH=8+rkLines.length*3.0+3;
-  doc.setFillColor(255,255,255); doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.4);
-  doc.roundedRect(L,rkTop,W,rkH,2,2,'FD');
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,rkTop+6.5,{charSpace:.6});
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.3); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  rkLines.forEach(function(ln,i){ doc.text(ln,L+6,rkTop+11.2+i*3.0); });
-  const gTop=rkTop+rkH+6;
+  const gTop=29;
 
   const GLOSS=[
     ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
