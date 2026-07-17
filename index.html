@@ -1867,16 +1867,16 @@ function researchWithAI(){
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
-    if(isMobile){
-      /* Open the Claude app (already signed in) rather than forcing a Safari login; fall back to the web only if the app isn't installed. */
-      const fb=setTimeout(()=>{ window.location.href='https://claude.ai/new'; },1500);
-      document.addEventListener('visibilitychange',function h(){ if(document.hidden){ clearTimeout(fb); document.removeEventListener('visibilitychange',h); } });
-      window.location.href='claude://code/new?q='+encodeURIComponent(prompt);
-    } else { window.open('https://claude.ai/new','_blank'); }
+    /* Plain NEW CHAT, never Claude Code: the claude.ai/new universal link opens a fresh chat in
+       the Claude app when installed (else mobile web), and ?q= prefills the prompt so most of
+       the time it's just "send". The prompt is also on the clipboard as a fallback. */
+    const target='https://claude.ai/new?q='+encodeURIComponent(prompt);
+    if(isMobile){ window.location.href=target; }
+    else { window.open(target,'_blank'); }
   };
   const done=()=>{ note.innerHTML = isMobile
-    ? '&#9989; <b style="color:var(--gold-bright)">Prompt copied — opening the Claude app.</b> If the chat box is empty, paste &amp; send. Then tap the link it returns to auto-fill every field.'
-    : '&#9989; <b style="color:var(--gold-bright)">Prompt copied & AI opened.</b> Paste it into the chat, then click the link it returns to auto-fill every field.'; };
+    ? '&#9989; <b style="color:var(--gold-bright)">Prompt copied — opening a new Claude chat.</b> If the chat box is empty, paste &amp; send. Then tap the link it returns to auto-fill every field.'
+    : '&#9989; <b style="color:var(--gold-bright)">Prompt copied & a new Claude chat opened.</b> If the chat box is empty, paste it in — then click the link it returns to auto-fill every field.'; };
   try{ navigator.clipboard.writeText(prompt).then(()=>{ openChat(); done(); })
        .catch(()=>{ openChat(); if(!isMobile) window.prompt('Copy this research prompt, paste it into the AI:', prompt); done(); }); }
   catch(e){ window.prompt('Copy this research prompt, paste it into the AI:', prompt); }
