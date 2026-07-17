@@ -2144,13 +2144,13 @@ function buildPDF(mode){
     }
     use.forEach(function(ln){doc.text(ln,L,y); y+=4.1;});
   })();
-  y+=1;
+  y+=3.5;   /* centered between the summary above and the disclosure below */
   doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap')
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
-  doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  doc.splitTextToSize(math1,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   const math2=crP.monthly
     ? '~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
       +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
