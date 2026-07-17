@@ -1858,6 +1858,7 @@ function researchWithAI(){
     +'- industry: "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
     +'- footprint: a business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
+    +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets) and size the volume across all of them; units>1 with footprint=local is only correct when every location shares ONE market.\n'
     +'- volume: the COMBINED phrase-cluster demand across ALL locations/service lines counted in units — a 2-location business serving two cities needs both cities\' demand added together.\n'
     +'- convrate: for everyday and med-spa-style local services use a realistic 3-6; reserve sub-1 rates for ultra-high-ticket contracts only.\n'
     +'- compstr: default "moderate". Use "weak" only if the niche/town is clearly uncompetitive; "strong" or "dominant" only with clear evidence that national brands or very high-authority sites dominate the top results.\n'
@@ -2524,8 +2525,12 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
   unitsEl.addEventListener('change',function(){
     const nu=parseInt(unitsEl.value,10)||1;
     const v=parseFloat(volEl.value);
-    if(v>0 && nu!==prevUnits && nu>1){
-      volScaleNote='The price now covers <b>'+nu+' locations / service lines</b> — make sure this volume is the <b>combined</b> phrase demand across all of them (it was not changed automatically).';
+    if(nu!==prevUnits && nu>1){
+      const fpNow=document.getElementById('footprint').value;
+      volScaleNote=(v>0?'The price now covers <b>'+nu+' locations / service lines</b> — make sure this volume is the <b>combined</b> phrase demand across all of them (it was not changed automatically).':'');
+      if(fpNow==='local'){
+        volScaleNote+=(volScaleNote?' ':'')+'<b>'+nu+' locations with a one-local-market footprint:</b> if they serve <b>different</b> cities/areas, switch the footprint to 2–5 markets — demand scales with the footprint, and the volume will rescale with it. If they share one market, keep it local.';
+      }
     }
     prevUnits=nu;
     render();
