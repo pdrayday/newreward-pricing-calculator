@@ -1994,11 +1994,11 @@ function buildPDF(mode){
   for(let i2=0;i2<12;i2++){
     const cx2=pL2+i2*pgw+pgw/2;
     const rH=n.series.mrr[i2]/pMax*(pB-pT), cH=Math.max(n.series.invoice[i2]/pMax*(pB-pT),0.8);
-    doc.setFillColor(212,162,74); doc.rect(cx2-3.7,pB-rH,3.3,rH,'F');
-    doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3); doc.rect(cx2+0.4,pB-cH,3.3,cH,'FD');
-    doc.setFont('helvetica','normal'); doc.setFontSize(3.6);
-    if(n.series.mrr[i2]>0){ doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.text(fmtK(n.series.mrr[i2]),cx2-2.05,pB-rH-0.7,{align:'center'}); }
-    if(n.series.invoice[i2]>0){ doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.text(fmtK(n.series.invoice[i2]),cx2+2.05,pB-cH-0.7,{align:'center'}); }
+    doc.setFillColor(212,162,74); doc.rect(cx2-5.6,pB-rH,5.2,rH,'F');
+    doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3); doc.rect(cx2+0.4,pB-cH,5.2,cH,'FD');
+    doc.setFont('helvetica','normal'); doc.setFontSize(4.5);
+    if(n.series.mrr[i2]>0){ doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.text(fmtK(n.series.mrr[i2]),cx2-3,pB-rH-0.7,{align:'center'}); }
+    if(n.series.invoice[i2]>0){ doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.text(fmtK(n.series.invoice[i2]),cx2+3,pB-cH-0.7,{align:'center'}); }
     doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
     doc.text(String(i2+1),cx2,pB+3.1,{align:'center'});
   }
