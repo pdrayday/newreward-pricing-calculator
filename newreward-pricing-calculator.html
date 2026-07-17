@@ -1791,7 +1791,7 @@ function render(){
           ? 'At the modeled pace ('+crM.txt+'), the share averages &asymp;'+fmt$(shareMo)+'/mo once ramped &mdash; &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo all-in</span>. '
           : 'At the modeled pace ('+crM.txt+'), most months bill only the fixed '+fmt$(n.series.perfPrice)+' &mdash; the projection spreads the occasional win-month share into a smooth average (&asymp;'+fmt$(shareMo)+'/mo of share, &asymp;'+fmt$(n.series.ongoingCost)+'/mo all-in) so the trend reads clearly; the running total is exact either way. ')
         +'Year-one total: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>'
-        +(hasRamp?' &mdash; a bit under full pace &times; 12 because the share ramps in over months '+n.rampMonth+'&ndash;'+rampEnd+'.':'.')
+        +(hasRamp?(rampEnd>n.rampMonth?' &mdash; a bit under full pace &times; 12 because the share ramps in over months '+n.rampMonth+'&ndash;'+rampEnd+'.':' &mdash; a bit under full pace &times; 12 because the share ramps in during month '+n.rampMonth+'.'):'.')
         +' No proven wins in a month = no share that month.</p>';
       })();
   }
@@ -2256,10 +2256,23 @@ function buildPDF(mode){
   doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('HOW TO READ THIS',L,hy,{charSpace:.8}); hy+=6.4;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  const pdCr=custRate(q.newCust);
+  const pdPerWin=fmt$(q.yearlyValue*n.share/100);
+  const pdShareMo=fmt$(n.share/100*q.newCust*q.yearlyValue);
+  let pdRampEnd=n.rampMonth-1;
+  n.series.invoice.forEach(function(v,i2){ if(i2+1>=n.rampMonth && v<n.series.ongoingCost-0.5) pdRampEnd=i2+1; });
+  const pdRampTxt=pdRampEnd>=n.rampMonth
+    ? (pdRampEnd>n.rampMonth ? ' — a bit under full pace × 12 because the share ramps in over months '+n.rampMonth+'–'+pdRampEnd+'.'
+                             : ' — a bit under full pace × 12 because the share ramps in during month '+n.rampMonth+'.')
+    : '.';
   [
     'The gold area is every dollar of new revenue the program has won to date. The white wedge is everything paid to date — the fixed fee, plus the revenue share as wins land.',
     'Where the gold curve crosses the white line, the program has paid for itself'+(pBe>=0?' — modeled here at month '+(pBe+1)+'.':' — not yet reached inside this window at the modeled pace.'),
-    'Months 1–'+(n.rampMonth-1)+' are the build, billed as the fixed fee only; the revenue share starts month '+n.rampMonth+'. A month with no proven wins bills no share at all.',
+    'The white cost line, in exact dollars: months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice, and a month with no wins bills just the fixed fee. '
+      +(pdCr.monthly
+        ? 'At the modeled pace ('+pdCr.txt+'), the share averages ~'+pdShareMo+'/mo once ramped — ~'+fmt$(n.series.ongoingCost)+'/mo all-in. '
+        : 'At the modeled pace ('+pdCr.txt+'), most months bill only the fixed '+fmt$(n.series.perfPrice)+' — the projection spreads the occasional win-month share into a smooth average (~'+pdShareMo+'/mo of share, ~'+fmt$(n.series.ongoingCost)+'/mo all-in) so the trend reads clearly; the running total is exact either way. ')
+      +'Year-one total: '+fmt$(n.series.year1Cost)+pdRampTxt+' No proven wins in a month = no share that month.',
     'This projection never compounds — the visibility asset does, but these numbers bank none of that. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.'
   ].forEach(function(t){
     doc.splitTextToSize(t,W).forEach(function(ln){ doc.text(ln,L,hy); hy+=4.7; });
