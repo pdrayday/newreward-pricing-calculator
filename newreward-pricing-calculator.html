@@ -2036,7 +2036,7 @@ function buildPDF(mode){
     doc.setFontSize(big?(hero?19:18):13); doc.setTextColor(valC[0],valC[1],valC[2]);
     doc.text(String(val),x+5,y+(strike?18:(big?16:14.5)));
     if(note){ doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(noteC[0],noteC[1],noteC[2]);
-      doc.splitTextToSize(note,w-10).slice(0,2).forEach((ln,i)=>doc.text(ln,x+5,y+(strike?22.7:(big?21.5:19.5))+i*3.3)); }
+      doc.splitTextToSize(note,w-10).slice(0,2).forEach((ln,i)=>doc.text(ln,x+5,y+(strike?22.7:(big?21.5:18.3))+i*3.3)); }
   };
   const h1=28;
   const fxr=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
@@ -2057,16 +2057,16 @@ function buildPDF(mode){
       DARK, true, discS, discS?q.share+'%':null);
 
   y+=h1+4;
-  const h2=23;
+  const h2=25;
   const crP = custRate(q.newCust);
   box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'modeled signings once ramped'+(crP.monthly?'':' — a realistic pace for this business'), DARK);
   box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
   box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — potential, before attribution', DARK);
 
-  y+=h2+6;
+  y+=h2+5;
 
   /* ---- the pricing principle + ranking primer — one compact box on the proposal page ---- */
-  y+=2;
+  y+=1;
   const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every figure derives from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work genuinely requires — a price that only works when it works for both sides.';
   const RANKING='Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines like ChatGPT, Gemini, Perplexity, and AI Overviews recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.';
   doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
