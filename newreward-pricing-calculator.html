@@ -1765,7 +1765,7 @@ function render(){
       tCeil=q.newCust*q.mrrPC/tChurn;
       let ca=0, cb=0;
       for(let i=0;i<12;i++){ ca+=n.series.mrr[i]; cb+=n.series.invoice[i]; if(beM<0&&ca>0&&ca>=cb) beM=i+1; }
-      let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-tChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*tCeil){ tSteady=m; break; } }
+      let c2=0; for(let m=1;m<=120;m++){ const f=m<n.rampMonth?0:Math.min(1,(m-n.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-tChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*tCeil){ tSteady=m; break; } }
     }
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
       '<b>The gold curve</b> is every dollar of new revenue this program has won to date. <b>The white line</b> is everything paid to date — the fixed fee, plus the share as wins land.'
@@ -1961,7 +1961,10 @@ document.addEventListener('mousemove',function(e){
     const m=parseInt(t.getAttribute('data-m'),10);
     const net=chartSeries.cumR[m-1]-chartSeries.cumC[m-1];
     const inSmall=!!t.closest('#o-chart');
-    tip.innerHTML='<b>Month '+m+'</b><br>New revenue won so far: <b>'+fmt$(chartSeries.cumR[m-1])+'</b><br>Paid so far (fixed + share): <b>'+fmt$(chartSeries.cumC[m-1])+'</b><br>Net: <b>'+(net>=0?'+':'&minus;')+fmt$(Math.abs(net))+'</b>'
+    tip.innerHTML='<b>Month '+m+'</b>'
+      +'<br>This month &mdash; billed: <b>'+fmt$(chartSeries.invoice[m-1])+'</b> &middot; new revenue: <b>'+fmt$(chartSeries.mrr[m-1])+'</b>'
+      +'<br>Running total &mdash; paid: <b>'+fmt$(chartSeries.cumC[m-1])+'</b> &middot; won: <b>'+fmt$(chartSeries.cumR[m-1])+'</b>'
+      +'<br>Net so far: <b>'+(net>=0?'+':'&minus;')+fmt$(Math.abs(net))+'</b>'
       +(inSmall?'<br><span style="opacity:.65">&#10530; Click to enlarge</span>':'');
     tip.hidden=false;
     const pad=14; tip.style.left='0px'; tip.style.top='0px';
@@ -2196,7 +2199,7 @@ function buildPDF(mode){
   (function(){ let a2=0,b2=0; for(let i2=0;i2<12;i2++){ a2+=n.series.mrr[i2]; b2+=n.series.invoice[i2]; pCumR.push(a2); pCumC.push(b2); } })();
   const pChurn=1/(q.retainYears*12);
   const pCeil=q.newCust*q.mrrPC/pChurn;
-  let pSteady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-pChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*pCeil){ pSteady=m; break; } } })();
+  let pSteady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<n.rampMonth?0:Math.min(1,(m-n.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-pChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*pCeil){ pSteady=m; break; } } })();
   const pBe=pCumR.findIndex(function(v,i2){return v>0&&v>=pCumC[i2];});
 
   /* legend */
