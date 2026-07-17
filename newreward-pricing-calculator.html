@@ -872,7 +872,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Typical retention
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How many years a customer usually stays. Sets churn in the 12-month projection — shorter retention flattens the compounding. Leave blank to use the industry typical (local/high-ticket ~3 yrs, B2B/SaaS ~4, e-commerce ~2).</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How many years a customer usually stays. Sets churn in the 12-month projection — shorter retention flattens the growth curve. Leave blank to use the industry typical (local/high-ticket ~3 yrs, B2B/SaaS ~4, e-commerce ~2).</span></button>
         </label>
         <div class="fwrap"><input type="number" id="years" class="has-suffix" placeholder="auto" min="1" max="20"><span class="suffix">years</span></div>
         <div class="auto-note" id="note-yrs"></div>
@@ -1617,7 +1617,7 @@ function render(){
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
       ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmt$(n.series.exitMRR)+'/mo attributable vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
-        +'Year 1 is the ramp at '+fx(y1)+'× while the program builds, then it compounds. Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
+        +'Year 1 is the ramp at '+fx(y1)+'× while the program builds; from there it runs at full pace. Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
@@ -2055,7 +2055,7 @@ function buildPDF(mode){
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'floor to modeled — backed by 2026 SEO/GEO benchmarks':'select a service', DGOLD, true, true);
-  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then compounds':'', DARK, true);
+  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?'the build year — pays for itself, then runs at full pace':'', DARK, true);
   box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
       n.price!=null?fmt$(n.price)+'/mo':'—',
       discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
@@ -2331,7 +2331,7 @@ function buildPDF(mode){
     ['Acquisition budget','The share of revenue the client will spend to win a new customer. 10-20% is healthy for growth-mode businesses.'],
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
     ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the full ongoing cost, shown from conservative floor to modeled. It is the number that proves the program keeps paying for itself after the build.'],
-    ['Year-1 ROI','The ramp year: attributable revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — SEO/GEO compounds.'],
+    ['Year-1 ROI','The ramp year: attributable revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — the build happens first, the results follow.'],
     ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20% once the revenue share starts.'],
     ['Revenue share — and the baseline','When our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed in the month the win lands. The baseline is the revenue the client already generates before the program starts: only tracked growth ABOVE that line counts, and existing business is never touched. "Net" means revenue the client actually keeps after refunds — not profit; fairness to margin is built into the rate itself, so lower-margin businesses are quoted a lower percentage, and acquisition budget, existing commissions, and deal size pull it down further. No new wins, no share.'],
     ['Attribution (attributable)','One hundred percent verifiable proof, or no share: every win is tracked — calls, forms, and bookings — so every win is provable. A win is a win; there is no in-between. If a customer cannot be proven to have come from this program, they are not a win, and we do not take a dime.'],
@@ -2405,7 +2405,7 @@ function buildPDF(mode){
     ['"I already do some SEO. Why add AEO/GEO?"',
      'Because buyers now ask ChatGPT, Gemini, Perplexity, and Google\'s AI Overviews — and those engines recommend businesses they can verify. The channels feed each other: search visibility earns AI citations, and AI answers reinforce search trust.'],
     ['"How fast will I see results?"',
-     'Technical and trust fixes land in the first few weeks — you see what shipped from day one. The first '+(n.rampMonth-1)+' months are the build, billed as exactly that; wins ramp from month '+n.rampMonth+', and SEO/GEO keeps compounding through months 12–24. Anyone promising page one in two weeks is selling something else.'],
+     'Technical and trust fixes land in the first few weeks — you see what shipped from day one. The first '+(n.rampMonth-1)+' months are the build, billed as exactly that; wins ramp from month '+n.rampMonth+', and the visibility asset keeps strengthening through months 12–24. Anyone promising page one in two weeks is selling something else.'],
     ['"I\'ve been burned by an agency before."',
      'Most owners have — which is why this proposal shows every input, every formula, and every assumption, prices inside published 2026 market rates, and bills the share only on provable wins. Nothing here asks for faith.'],
     ['"Why this price?"',
