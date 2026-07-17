@@ -2318,15 +2318,22 @@ function buildPDF(mode){
     ['Growth ceiling — why nothing compounds','The projection never turns wins into more wins: the pace is capped by real market demand, and customer turnover pulls monthly recurring revenue toward a natural ceiling where new wins roughly equal customers lost. Growth is front-loaded by the ramp, then levels to a steady pace — markets with faster turnover (e-commerce, national) level out sooner.'],
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
-  const gColW=(W-8)/2, gAvail=279-gTop;
-  /* auto-fit: the glossary must fill exactly two columns — if it has outgrown them, step the
-     type down until it fits, and never reset column 2 (that overprints its own top) */
-  let gm=[6.9,6.25,2.42,1.6];
-  [[6.9,6.25,2.42,1.6],[6.6,6.0,2.28,1.3],[6.3,5.75,2.16,1.1],[6.1,5.55,2.06,0.95]].some(function(p){
+  const gColW=(W-8)/2;
+  /* auto-MAX fit: simulate the exact two-column packing at each type size, largest first,
+     and use the biggest that fills the page without overflowing */
+  const gPresets=[[9.4,8.6,3.34,2.5],[9.0,8.2,3.18,2.35],[8.6,7.8,3.03,2.2],[8.2,7.4,2.87,2.05],[7.9,7.15,2.77,1.95],[7.6,6.9,2.68,1.85],[7.3,6.6,2.56,1.7],[6.9,6.25,2.42,1.6],[6.6,6.0,2.28,1.3],[6.3,5.75,2.16,1.1],[6.1,5.55,2.06,0.95]];
+  let gm=gPresets[gPresets.length-1];
+  gPresets.some(function(p){
     doc.setFont('helvetica','normal'); doc.setFontSize(p[1]);
-    let tot=0;
-    GLOSS.forEach(function(g){ tot+=3.1*(p[0]/6.9)+doc.splitTextToSize(g[1],gColW).length*p[2]+p[3]; });
-    gm=p; return tot<=2*gAvail;
+    let yy=gTop, col=0, ok=true;
+    for(let gi=0; gi<GLOSS.length; gi++){
+      const h=3.1*(p[0]/6.9)+doc.splitTextToSize(GLOSS[gi][1],gColW).length*p[2]+p[3];
+      if(yy+h>279){ if(col===0){ col=1; yy=gTop; } else { ok=false; break; } }
+      if(yy+h>279){ ok=false; break; }
+      yy+=h;
+    }
+    if(ok){ gm=p; return true; }
+    return false;
   });
   const gHead=gm[0], gBody=gm[1], gLh=gm[2], gGap=gm[3], gOff=3.1*(gHead/6.9);
   let gx=L, gy=gTop, gCol2=false;
@@ -2395,17 +2402,38 @@ function buildPDF(mode){
      'Yes. We recommend the services that fit — and steer you away from the ones that don\'t — based on your needs, budget, market, and industry, then expand as results come in.']
   ];
   const fColW=(W-8)/2;
-  let fqx=L, fqy=33;
-  FAQ.forEach(function(f,fi){
-    doc.setFontSize(6.7);
-    const lines=doc.splitTextToSize(f[1],fColW);
-    const fh=3.6+lines.length*2.6+3.2;
-    if(fi===Math.ceil(FAQ.length/2)){ fqx=L+fColW+8; fqy=33; }   // balanced two-column split
-    doc.setFont('helvetica','bold'); doc.setFontSize(7.6); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-    doc.text(f[0],fqx,fqy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(6.7); doc.setTextColor(70,63,52);
-    lines.forEach(function(ln,i){ doc.text(ln,fqx,fqy+3.6+i*2.6); });
-    fqy+=fh;
+  /* auto-MAX fit: largest type that packs all questions into two columns without overflow.
+     p = [question pt, answer pt, answer line height, question->answer offset, gap after entry] */
+  const fPresets=[[10.4,9.2,3.6,4.9,4.4],[10.0,8.8,3.45,4.7,4.2],[9.5,8.4,3.3,4.5,4.0],[9.0,8.0,3.14,4.3,3.8],[8.6,7.6,2.99,4.1,3.6],[8.1,7.2,2.83,3.9,3.4],[7.6,6.7,2.6,3.6,3.2]];
+  const fMeasure=function(p,f){
+    doc.setFont('helvetica','bold'); doc.setFontSize(p[0]);
+    const qL=doc.splitTextToSize(f[0],fColW);
+    doc.setFont('helvetica','normal'); doc.setFontSize(p[1]);
+    const aL=doc.splitTextToSize(f[1],fColW);
+    const qLh=p[2]+0.4;
+    return {qL:qL, aL:aL, qLh:qLh, h:(qL.length-1)*qLh+p[3]+aL.length*p[2]+p[4]};
+  };
+  let fm=fPresets[fPresets.length-1];
+  fPresets.some(function(p){
+    let yy=33, col=0, ok=true;
+    for(let fi2=0; fi2<FAQ.length; fi2++){
+      const h=fMeasure(p,FAQ[fi2]).h;
+      if(yy+h>278){ if(col===0){ col=1; yy=33; } else { ok=false; break; } }
+      if(yy+h>278){ ok=false; break; }
+      yy+=h;
+    }
+    if(ok){ fm=p; return true; }
+    return false;
+  });
+  let fqx=L, fqy=33, fCol2=false;
+  FAQ.forEach(function(f){
+    const m=fMeasure(fm,f);
+    if(!fCol2 && fqy+m.h>278){ fqx=L+fColW+8; fqy=33; fCol2=true; }   // flow into column 2 — once
+    doc.setFont('helvetica','bold'); doc.setFontSize(fm[0]); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    m.qL.forEach(function(ln,i){ doc.text(ln,fqx,fqy+i*m.qLh); });
+    doc.setFont('helvetica','normal'); doc.setFontSize(fm[1]); doc.setTextColor(70,63,52);
+    m.aL.forEach(function(ln,i){ doc.text(ln,fqx,fqy+(m.qL.length-1)*m.qLh+fm[3]+i*fm[2]); });
+    fqy+=m.h;
   });
   /* footer band — page 3 */
   doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
