@@ -85,6 +85,7 @@
 [data-theme="ivory"] .diffbar{background:#e9e3d5}
 /* chart: gold revenue bars as in dark mode; cost bars white with a black outline */
 [data-theme="ivory"] #o-chart .bar-cost,[data-theme="ivory"] .cz-body .bar-cost{fill:#ffffff!important;stroke:#14100a!important;stroke-width:1.5!important}
+[data-theme="ivory"] #o-chart .be-label,[data-theme="ivory"] .cz-body .be-label{fill:#8a6520}
 [data-theme="ivory"] .proj-key .k-cost{background:#ffffff;border-color:#14100a}
 /* below-target figure + panel outline: strong red, no glow */
 [data-theme="ivory"] .o-price.roi-below{color:#c81e10;-webkit-text-stroke:0;text-stroke:0;text-shadow:none}
@@ -635,7 +636,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   box-shadow:0 10px 28px rgba(0,0,0,.5);white-space:nowrap}
 .bar-tip b{color:#eec77c}
 .bar-tip[hidden]{display:none}
-#o-chart rect,.cz-body rect{cursor:crosshair}
+#o-chart rect,.cz-body rect,#o-chart path,.cz-body path{cursor:crosshair}
+#o-chart .be-label,.cz-body .be-label{fill:#eec77c}
 /* cost bars: white fill + bold black outline in BOTH themes so they never blend with revenue */
 #o-chart .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
 .o-timeline{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.65}
@@ -963,7 +965,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="o-proj">
       <div class="o-diff-top">
         <span class="o-diff-label">12-Month Projection</span>
-        <span class="proj-key"><i class="kk k-rev"></i>New revenue<i class="kk k-cost"></i>Total cost (fixed + share)</span>
+        <span class="proj-key"><i class="kk k-rev"></i>Total new revenue won<i class="kk k-cost"></i>Total paid (fixed + share)</span>
       </div>
       <div id="o-chart" onclick="openChartZoom()"></div>
       <div class="o-timeline" id="o-timeline"></div>
@@ -1034,7 +1036,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <div class="chart-zoom no-print" id="chart-zoom" hidden>
   <div class="cz-inner">
     <div class="cz-bar">
-      <span class="cz-title">12-Month Projection — new revenue vs total monthly cost (fixed + revenue share)</span>
+      <span class="cz-title">12-Month Projection — total new revenue won vs total paid, month by month (running totals)</span>
       <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
     </div>
     <div class="cz-body" id="cz-body"></div>
@@ -1352,7 +1354,7 @@ function readState(){
 }
 
 const CONF_TEXT = {verified:'Verified', estimated:'Estimated', unknown:'Unknown'};
-const fmtK = v => v>=1000 ? '$'+(v/1000).toFixed(v>=10000?0:1)+'k' : '$'+Math.round(v);
+const fmtK = v => v>=1e6 ? '$'+(v/1e6).toFixed(v>=1e7?0:1)+'M' : v>=1000 ? '$'+(v/1000).toFixed(v>=10000?0:1)+'k' : '$'+Math.round(v);
 const fmtBig = v => v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : fmt$(v);
 
 /* negotiation overrides: outputs are editable live; recompute downstream numbers */
@@ -1382,26 +1384,47 @@ function resetNeg(kind){
   render(); return false;
 }
 
-let chartSeries=null;   // month-by-month values behind the bars, for the hover tooltip (small chart AND zoom)
+let chartSeries=null;   // running totals behind the curves, for the hover/tap tooltip (small chart AND zoom)
 function renderChart(q,n){
   const el=document.getElementById('o-chart');
   if(n.price==null){ el.innerHTML=''; chartSeries=null; return; }
   const {months,mrr,invoice}=n.series;
-  chartSeries={mrr:mrr.slice(), invoice:invoice.slice()};
-  /* ONE shared scale, on purpose: the cost bars look small next to revenue because they ARE
-     small — that visual gap is the honest story. Hover gives exact figures for both. */
-  const maxV=Math.max(...mrr,...invoice,1)*1.05;
-  const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/12;
+  /* RUNNING TOTALS — every dollar won to date (gold mountain) vs every dollar paid to date
+     (thin white wedge). Running totals stay exact even for businesses that win customers in
+     occasional lumps rather than every month, the crossing point tells the one story every
+     prospect understands — "the program has paid for itself" — and the end-of-year gap IS
+     the Year-1 ROI shown in the headline. */
+  const cumR=[],cumC=[]; let _a=0,_b=0;
+  for(let i=0;i<12;i++){ _a+=mrr[i]; _b+=invoice[i]; cumR.push(_a); cumC.push(_b); }
+  chartSeries={cumR:cumR, cumC:cumC, mrr:mrr.slice(), invoice:invoice.slice()};
+  const maxV=Math.max(cumR[11],cumC[11],1)*1.06;
+  const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/11;
+  const px=i=>X0+i*gw, py=v=>Y1-v/maxV*(Y1-Y0);
   let g='';
   [0.25,0.5,0.75,1].forEach(f=>{const gy=Y1-f*(Y1-Y0);
     g+='<line x1="'+X0+'" y1="'+gy+'" x2="'+X1+'" y2="'+gy+'" stroke="rgba(212,162,74,.10)" stroke-dasharray="3 4"/>';});
-  months.forEach((m,i)=>{
-    const cx=X0+i*gw+gw/2;
-    const rh=mrr[i]/maxV*(Y1-Y0), ch=Math.max(invoice[i]/maxV*(Y1-Y0),2);   // min 2px so cost bars stay visible/hoverable
-    g+='<rect class="bar-rev" data-m="'+m+'" x="'+(cx-10.5)+'" y="'+(Y1-rh)+'" width="9.5" height="'+rh+'" rx="2" fill="url(#gg)"></rect>';
-    g+='<rect class="bar-cost" data-m="'+m+'" x="'+(cx+1)+'" y="'+(Y1-ch)+'" width="9.5" height="'+ch+'" rx="2" fill="#241f17" stroke="rgba(212,162,74,.45)" stroke-width="1"></rect>';
-    g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>';
-  });
+  /* gold mountain: cumulative new revenue won */
+  let dR='M'+X0+','+Y1; cumR.forEach((v,i)=>{dR+=' L'+px(i).toFixed(1)+','+py(v).toFixed(1);}); dR+=' L'+X1+','+Y1+' Z';
+  g+='<path d="'+dR+'" fill="url(#gg)" opacity="0.92"></path>';
+  let sR='M'+px(0).toFixed(1)+','+py(cumR[0]).toFixed(1);
+  for(let i=1;i<12;i++) sR+=' L'+px(i).toFixed(1)+','+py(cumR[i]).toFixed(1);
+  g+='<path d="'+sR+'" fill="none" stroke="#eec77c" stroke-width="2"></path>';
+  /* white wedge: cumulative total paid (fixed fee + share as wins land) */
+  let dC='M'+X0+','+Y1; cumC.forEach((v,i)=>{dC+=' L'+px(i).toFixed(1)+','+py(v).toFixed(1);}); dC+=' L'+X1+','+Y1+' Z';
+  g+='<path class="bar-cost" d="'+dC+'"></path>';
+  /* break-even: the month the gold curve clears everything paid to date */
+  const be=cumR.findIndex((v,i)=>v>0&&v>=cumC[i]);
+  if(be>=0){
+    g+='<line x1="'+px(be).toFixed(1)+'" y1="'+(Y0-1)+'" x2="'+px(be).toFixed(1)+'" y2="'+Y1+'" stroke="rgba(238,199,124,.7)" stroke-width="1.2" stroke-dasharray="4 3"/>';
+    const anch=be>8?'end':(be<2?'start':'middle');
+    g+='<text class="be-label" x="'+px(be).toFixed(1)+'" y="'+(Y0-3)+'" text-anchor="'+anch+'" font-size="9.5" font-weight="700">pays for itself &mdash; month '+(be+1)+'</text>';
+  }
+  months.forEach((m,i)=>{ g+='<text x="'+px(i).toFixed(1)+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>'; });
+  /* invisible hover/tap strips — one per month, covering the full plot height */
+  for(let i=0;i<12;i++){
+    const sx=i===0?X0:px(i)-gw/2, ex=i===11?X1:px(i)+gw/2;
+    g+='<rect class="mcol" data-m="'+(i+1)+'" x="'+sx.toFixed(1)+'" y="'+(Y0-4)+'" width="'+(ex-sx).toFixed(1)+'" height="'+(Y1-Y0+4)+'" fill="transparent"></rect>';
+  }
   g+='<text x="'+(X0-7)+'" y="'+(Y0+4)+'" text-anchor="end">'+fmtK(maxV)+'</text>';
   g+='<text x="'+(X0-7)+'" y="'+(Y1+3)+'" text-anchor="end">$0</text>';
   g+='<text x="'+((X0+X1)/2)+'" y="'+(Y1+24)+'" text-anchor="middle" font-size="8.5">month</text>';
@@ -1709,11 +1732,16 @@ function render(){
 
   /* projection chart + timeline */
   renderChart(q,n);
-  document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
-    '<b>Month 1</b> — onboarding, tracking, and visibility sprint (fixed fee only).'
-    +(n.rampMonth>2?' <b>Months 2–'+(n.rampMonth-1)+'</b> — rankings and AI presence build (still fixed only).':'')
-    +' <b>Month '+n.rampMonth+'+</b> — revenue share begins: each month, the share is billed on the new customers our work won that month. No new wins, no share.'
-    +' <span style="color:var(--muted2)">These are modeled projections from your inputs — potential, not a guarantee. Revenue and cost share one scale — the cost bars look small next to the revenue because they are. Hover or tap any bar for exact figures.</span>';
+  (function(){
+    let beM=-1;
+    if(q.price!=null){ let ca=0,cb=0; for(let i=0;i<12;i++){ ca+=n.series.mrr[i]; cb+=n.series.invoice[i]; if(beM<0&&ca>0&&ca>=cb) beM=i+1; } }
+    document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
+      '<b>The gold curve</b> is every dollar of new revenue this program has won to date. <b>The white line</b> is everything paid to date — the fixed fee, plus the share as wins land.'
+      +' Where the gold curve crosses the white line, the program has paid for itself'+(beM>0?' — modeled here at <b>month '+beM+'</b>.':'.')
+      +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
+      +'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
+      +' <span style="color:var(--muted2)">Modeled projections from your inputs — potential, not a guarantee. Hover or tap the chart for exact running totals.</span>';
+  })();
 
   /* revenue-share math — full transparency, live numbers */
   const smEl=document.getElementById('share-math');
@@ -1730,7 +1758,18 @@ function render(){
       +'<p><b>100% verifiable proof, or nothing.</b> A win only counts when it can be <span class="sm-big">proven</span> to have come from this program — tracked calls, forms, and bookings. If we can\'t prove we won it, we don\'t take a dime of share on it. Period.</p>'
       +'<p><b>One proven win, in exact dollars:</b> a new customer worth '+fmt$(q.yearlyValue)+' in first-year value &times; '+n.share+'% share = <span class="sm-big">'+fmt$(q.yearlyValue*n.share/100)+'</span>, billed once, in the month the win lands. The client keeps the other '+fmt$(q.yearlyValue*(1-n.share/100))+' — and 100% of every repeat purchase after year one. The share is on revenue, not profit — and the rate is already sized to the client\'s margin ('+(s.margin??IND[s.industry].margin)+'% here), so lower-margin businesses pay a lower percentage.</p>'
       +'<p><b>The profit math on a single win — in the client\'s favor, every time.</b> A '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+fmt$(perWin)+' — a customer who brings &asymp;<span class="sm-big">'+fmt$(grossWin)+' in gross profit</span> (at their '+mgnPct+'% margin) they wouldn\'t otherwise have. They keep &asymp;'+fmt$(keepWin)+' of new profit, plus <span class="sm-big">every repeat customer and referral, forever</span>.</p>'
-      +'<p><b>The white bars on the chart (projected total monthly cost):</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+': '+fmt$(n.series.perfPrice)+' reduced fixed + the share on that month\'s wins. At the modeled pace ('+crM.txt+'), that\'s &asymp;'+fmt$(shareMo)+'/mo in share, &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo total</span>. Year-one total cost: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>. No proven wins in a month = no share that month.</p>';
+      +(function(){
+        let rampEnd=n.rampMonth-1;
+        n.series.invoice.forEach(function(v,i){ if(i+1>=n.rampMonth && v<n.series.ongoingCost-0.5) rampEnd=i+1; });
+        const hasRamp=rampEnd>=n.rampMonth;
+        return '<p><b>The white cost line on the chart (everything billed, as a running total):</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins &mdash; billed only when a win lands: one proven win adds '+fmt$(perWin)+' ('+n.share+'% &times; '+fmt$(q.yearlyValue)+') to that month\'s invoice, and a month with no wins bills just the fixed fee. '
+        +(crM.monthly
+          ? 'At the modeled pace ('+crM.txt+'), the share averages &asymp;'+fmt$(shareMo)+'/mo once ramped &mdash; &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo all-in</span>. '
+          : 'At the modeled pace ('+crM.txt+'), most months bill only the fixed '+fmt$(n.series.perfPrice)+' &mdash; the projection spreads the occasional win-month share into a smooth average (&asymp;'+fmt$(shareMo)+'/mo of share, &asymp;'+fmt$(n.series.ongoingCost)+'/mo all-in) so the trend reads clearly; the running total is exact either way. ')
+        +'Year-one total: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>'
+        +(hasRamp?' &mdash; a bit under full pace &times; 12 because the share ramps in over months '+n.rampMonth+'&ndash;'+rampEnd+'.':'.')
+        +' No proven wins in a month = no share that month.</p>';
+      })();
   }
 
   /* summary */
@@ -1878,15 +1917,18 @@ function closeChartZoom(){
   document.body.style.overflow='';
 }
 
-/* hover tooltip on the chart bars — shows BOTH values for the month, in the small chart and the zoom */
+/* hover/tap tooltip on the chart — running totals for the month, in the small chart and the zoom */
 document.addEventListener('mousemove',function(e){
   const tip=document.getElementById('bar-tip'); if(!tip) return;
   const t=e.target;
-  const isBar=t && t.classList && (t.classList.contains('bar-rev')||t.classList.contains('bar-cost'));
+  const isBar=t && t.classList && t.classList.contains('mcol');
   const inSmallChart=!isBar && t && t.closest && t.closest('#o-chart');
   if(isBar && chartSeries){
     const m=parseInt(t.getAttribute('data-m'),10);
-    tip.innerHTML='<b>Month '+m+'</b><br>New revenue: <b>'+fmt$(chartSeries.mrr[m-1])+'</b><br>Total cost (fixed + share): <b>'+fmt$(chartSeries.invoice[m-1])+'</b>';
+    const net=chartSeries.cumR[m-1]-chartSeries.cumC[m-1];
+    const inSmall=!!t.closest('#o-chart');
+    tip.innerHTML='<b>Month '+m+'</b><br>New revenue won so far: <b>'+fmt$(chartSeries.cumR[m-1])+'</b><br>Paid so far (fixed + share): <b>'+fmt$(chartSeries.cumC[m-1])+'</b><br>Net: <b>'+(net>=0?'+':'&minus;')+fmt$(Math.abs(net))+'</b>'
+      +(inSmall?'<br><span style="opacity:.65">&#10530; Click to enlarge</span>':'');
     tip.hidden=false;
     const pad=14; tip.style.left='0px'; tip.style.top='0px';
     const r=tip.getBoundingClientRect();
@@ -2000,29 +2042,67 @@ function buildPDF(mode){
   /* 12-month projection chart — same series as the calculator's chart, shared scale */
   y+=h2+6;
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('12-MONTH PROJECTION',L,y,{charSpace:.8});
-  doc.setFillColor(212,162,74); doc.rect(R-92,y-2.6,3.2,3.2,'F');
+  doc.text('12-MONTH PROJECTION — RUNNING TOTALS',L,y,{charSpace:.8});
+  doc.setFillColor(212,162,74); doc.rect(R-88,y-2.6,3.2,3.2,'F');
   doc.setFont('helvetica','normal'); doc.setFontSize(6.4); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('New revenue',R-87.5,y);
-  doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.35); doc.rect(R-62,y-2.6,3.2,3.2,'FD');
-  doc.text('Total cost (fixed + share)',R-57.5,y);
+  doc.text('Total new revenue',R-83.5,y);
+  doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.35); doc.rect(R-52,y-2.6,3.2,3.2,'FD');
+  doc.text('Total paid (fixed + share)',R-47.5,y);
   y+=3.5;
-  const pT=y, pB=y+19, pL2=L+13, pR2=R-2, pgw=(pR2-pL2)/12;
-  const pMax=Math.max.apply(null,n.series.mrr.concat(n.series.invoice,[1]))*1.22;
+  const pT=y, pB=y+21, pL2=L+13, pR2=R-2;
+  const pCumR=[],pCumC=[];
+  (function(){ let a2=0,b2=0; for(let i2=0;i2<12;i2++){ a2+=n.series.mrr[i2]; b2+=n.series.invoice[i2]; pCumR.push(a2); pCumC.push(b2); } })();
+  const pMax=Math.max(pCumR[11],pCumC[11],1)*1.18;
+  const pxX=function(i2){return pL2+i2*(pR2-pL2)/11;}, pyY=function(v){return pB-v/pMax*(pB-pT);};
   doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.25);
   [0.25,0.5,0.75,1].forEach(function(f){const gy=pB-f*(pB-pT); doc.line(pL2,gy,pR2,gy);});
   doc.line(pL2,pB,pR2,pB);
-  for(let i2=0;i2<12;i2++){
-    const cx2=pL2+i2*pgw+pgw/2;
-    const rH=n.series.mrr[i2]/pMax*(pB-pT), cH=Math.max(n.series.invoice[i2]/pMax*(pB-pT),0.8);
-    doc.setFillColor(212,162,74); doc.rect(cx2-5.6,pB-rH,5.2,rH,'F');
-    doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3); doc.rect(cx2+0.4,pB-cH,5.2,cH,'FD');
-    doc.setFont('helvetica','normal'); doc.setFontSize(4.5);
-    if(n.series.mrr[i2]>0){ doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.text(fmtK(n.series.mrr[i2]),cx2-3,pB-rH-0.7,{align:'center'}); }
-    if(n.series.invoice[i2]>0){ doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.text(fmtK(n.series.invoice[i2]),cx2+3,pB-cH-0.7,{align:'center'}); }
-    doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text(String(i2+1),cx2,pB+3.1,{align:'center'});
+  /* gold mountain: cumulative revenue won */
+  (function(){
+    const pts=[[pxX(0),pB]]; for(let i2=0;i2<12;i2++) pts.push([pxX(i2),pyY(pCumR[i2])]); pts.push([pxX(11),pB]);
+    const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
+    doc.setFillColor(212,162,74); doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'F', true);
+  })();
+  /* white wedge: cumulative total paid */
+  (function(){
+    const pts=[[pxX(0),pB]]; for(let i2=0;i2<12;i2++) pts.push([pxX(i2),pyY(pCumC[i2])]); pts.push([pxX(11),pB]);
+    const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
+    doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3);
+    doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'FD', true);
+  })();
+  /* break-even marker */
+  const pBe=pCumR.findIndex(function(v,i2){return v>0&&v>=pCumC[i2];});
+  if(pBe>=0){
+    doc.setDrawColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.setLineWidth(.3); doc.setLineDashPattern([1.2,1],0);
+    doc.line(pxX(pBe),pT-0.6,pxX(pBe),pB); doc.setLineDashPattern([],0);
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.4); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    doc.text('pays for itself — month '+(pBe+1), pxX(pBe)+(pBe>8?-1.2:(pBe<2?1.2:0)), pT-1.2, {align:pBe>8?'right':(pBe<2?'left':'center')});
   }
+  /* tiny running totals — alternate months (revenue odd, cost even) so labels never share an x,
+     and only draw where there's room, so nothing piles up on the baseline */
+  doc.setFont('helvetica','normal'); doc.setFontSize(4.2);
+  let costLabeled=false;
+  for(let i2=0;i2<12;i2++){
+    const lifted=(pB-pyY(pCumR[i2]))>=3;
+    const clearOfCostLine=pCumR[i2]>=pCumC[i2] || (pyY(pCumR[i2])-pyY(pCumC[i2]))>=2.6;
+    if((i2%2===0||i2===11) && pCumR[i2]>0 && lifted && clearOfCostLine){
+      doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+      doc.text(fmtK(pCumR[i2]),pxX(i2),pyY(pCumR[i2])-0.9,{align:i2===0?'left':(i2===11?'right':'center')});
+    }
+    const wedgeTall=(pB-pyY(pCumC[i2]))>=3.4;
+    const endGapOK=i2!==11 || Math.abs(pyY(pCumC[11])-pyY(pCumR[11]))>=4.5;
+    if(i2%2===1 && wedgeTall && endGapOK){
+      doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+      doc.text(fmtK(pCumC[i2]),pxX(i2),pyY(pCumC[i2])+2.3,{align:i2===11?'right':'center'});
+      costLabeled=true;
+    }
+  }
+  if(!costLabeled){   /* wedge too thin everywhere — still show the year-end total, above the line */
+    doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+    doc.text(fmtK(pCumC[11]),pR2-1,pyY(pCumC[11])-0.9,{align:'right'});
+  }
+  doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  for(let i2=0;i2<12;i2++) doc.text(String(i2+1),pxX(i2),pB+3.1,{align:'center'});
   doc.setFontSize(6.2);
   doc.text(fmtK(pMax),pL2-2,pT+2,{align:'right'});
   doc.text('$0',pL2-2,pB+1,{align:'right'});
@@ -2033,7 +2113,15 @@ function buildPDF(mode){
   doc.text('PLAIN ENGLISH — AND THE MATH',L,y,{charSpace:.8});
   y+=4.8;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  doc.splitTextToSize(document.getElementById('o-summary').textContent,W).slice(0,3).forEach(ln=>{doc.text(ln,L,y); y+=4.1;});
+  (function(){
+    const all=doc.splitTextToSize(document.getElementById('o-summary').textContent,W);
+    let use=all.slice(0,3);
+    if(all.length>3){   /* never cut mid-sentence — trim back to the last complete one */
+      const j=use.join(' '); const cut=j.lastIndexOf('. ');
+      if(cut>60) use=doc.splitTextToSize(j.slice(0,cut+1),W);
+    }
+    use.forEach(function(ln){doc.text(ln,L,y); y+=4.1;});
+  })();
   y+=1;
   doc.setFontSize(8.3);
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
@@ -2172,17 +2260,27 @@ function buildPDF(mode){
     ['Market-rate check','The quote is verified against published 2026 SEO and AEO/GEO retainer benchmarks for the same scope, industry, and footprint.'],
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
-  const gColW=(W-8)/2;
-  let gx=L, gy=gTop;
+  const gColW=(W-8)/2, gAvail=279-gTop;
+  /* auto-fit: the glossary must fill exactly two columns — if it has outgrown them, step the
+     type down until it fits, and never reset column 2 (that overprints its own top) */
+  let gm=[6.9,6.25,2.42,1.6];
+  [[6.9,6.25,2.42,1.6],[6.6,6.0,2.28,1.3],[6.3,5.75,2.16,1.1],[6.1,5.55,2.06,0.95]].some(function(p){
+    doc.setFont('helvetica','normal'); doc.setFontSize(p[1]);
+    let tot=0;
+    GLOSS.forEach(function(g){ tot+=3.1*(p[0]/6.9)+doc.splitTextToSize(g[1],gColW).length*p[2]+p[3]; });
+    gm=p; return tot<=2*gAvail;
+  });
+  const gHead=gm[0], gBody=gm[1], gLh=gm[2], gGap=gm[3], gOff=3.1*(gHead/6.9);
+  let gx=L, gy=gTop, gCol2=false;
   GLOSS.forEach(function(g){
-    doc.setFontSize(6.25);
+    doc.setFont('helvetica','normal'); doc.setFontSize(gBody);
     const lines=doc.splitTextToSize(g[1],gColW);
-    const h=3.1+lines.length*2.42+1.6;
-    if(gy+h>279){ gx=L+gColW+8; gy=gTop; }                    // flow into column 2
-    doc.setFont('helvetica','bold'); doc.setFontSize(6.9); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    const h=gOff+lines.length*gLh+gGap;
+    if(!gCol2 && gy+h>279){ gx=L+gColW+8; gy=gTop; gCol2=true; }   // flow into column 2 — once
+    doc.setFont('helvetica','bold'); doc.setFontSize(gHead); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
     doc.text(g[0],gx,gy);
-    doc.setFont('helvetica','normal'); doc.setFontSize(6.25); doc.setTextColor(70,63,52);
-    lines.forEach(function(ln,i){ doc.text(ln,gx,gy+3.1+i*2.42); });
+    doc.setFont('helvetica','normal'); doc.setFontSize(gBody); doc.setTextColor(70,63,52);
+    lines.forEach(function(ln,i){ doc.text(ln,gx,gy+gOff+i*gLh); });
     gy+=h;
   });
   /* footer band — page 2 */
