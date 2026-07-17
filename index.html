@@ -504,8 +504,8 @@ select option{background:#171410;color:var(--text)}
 }
 .o-summary .s-kick{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px}
 
-.o-assume{margin-top:18px;font-size:11.5px;color:var(--muted2);line-height:1.7}
-.o-assume b{color:var(--muted);font-weight:600}
+.o-assume{margin-top:18px;font-size:11.5px;color:var(--gold);line-height:1.7}
+.o-assume b{color:var(--gold-bright);font-weight:600}
 .o-foot{
   margin-top:20px;padding-top:16px;border-top:1px solid var(--gold-line-soft);
   display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -964,7 +964,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-proj">
       <div class="o-diff-top">
-        <span class="o-diff-label">12-Month Projection</span>
+        <span class="o-diff-label">24-Month Projection</span>
         <span class="proj-key"><i class="kk k-rev"></i>Total new revenue won<i class="kk k-cost"></i>Total paid (fixed + share)</span>
       </div>
       <div id="o-chart" onclick="openChartZoom()"></div>
@@ -1036,7 +1036,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <div class="chart-zoom no-print" id="chart-zoom" hidden>
   <div class="cz-inner">
     <div class="cz-bar">
-      <span class="cz-title">12-Month Projection — total new revenue won vs total paid, month by month (running totals)</span>
+      <span class="cz-title">24-Month Projection — total new revenue won vs total paid, month by month (running totals)</span>
       <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
     </div>
     <div class="cz-body" id="cz-body"></div>
@@ -1394,11 +1394,23 @@ function renderChart(q,n){
      occasional lumps rather than every month, the crossing point tells the one story every
      prospect understands — "the program has paid for itself" — and the end-of-year gap IS
      the Year-1 ROI shown in the headline. */
+  /* extend to 24 months with the SAME non-compounding rules: constant win pace (capped by
+     market demand), churn from retention — months 13-24 are the steady program, no ramp.
+     This is where the curve visibly stops "going up exponentially": nothing compounds, and
+     turnover levels the monthly pace toward a hard ceiling of newCust ÷ churn. */
+  const churn=1/(q.retainYears*12);
+  const mrrX=mrr.slice(), invX=invoice.slice();
+  let cumu=n.series.exitCust;
+  for(let m=13;m<=24;m++){ cumu=cumu*(1-churn)+q.newCust; mrrX.push(cumu*q.mrrPC); invX.push(n.series.ongoingCost); }
+  const N=24;
   const cumR=[],cumC=[]; let _a=0,_b=0;
-  for(let i=0;i<12;i++){ _a+=mrr[i]; _b+=invoice[i]; cumR.push(_a); cumC.push(_b); }
-  chartSeries={cumR:cumR, cumC:cumC, mrr:mrr.slice(), invoice:invoice.slice()};
-  const maxV=Math.max(cumR[11],cumC[11],1)*1.06;
-  const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/11;
+  for(let i=0;i<N;i++){ _a+=mrrX[i]; _b+=invX[i]; cumR.push(_a); cumC.push(_b); }
+  chartSeries={cumR:cumR, cumC:cumC, mrr:mrrX, invoice:invX};
+  /* ceiling + the month the monthly pace levels off (90% of ceiling) */
+  const ceilMRR=q.newCust*q.mrrPC/churn;
+  let steady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-churn)+q.newCust*f; if(c2*q.mrrPC>=0.9*ceilMRR){ steady=m; break; } } })();
+  const maxV=Math.max(cumR[N-1],cumC[N-1],1)*1.06;
+  const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/(N-1);
   const px=i=>X0+i*gw, py=v=>Y1-v/maxV*(Y1-Y0);
   let g='';
   [0.25,0.5,0.75,1].forEach(f=>{const gy=Y1-f*(Y1-Y0);
@@ -1407,7 +1419,7 @@ function renderChart(q,n){
   let dR='M'+X0+','+Y1; cumR.forEach((v,i)=>{dR+=' L'+px(i).toFixed(1)+','+py(v).toFixed(1);}); dR+=' L'+X1+','+Y1+' Z';
   g+='<path d="'+dR+'" fill="url(#gg)" opacity="0.92"></path>';
   let sR='M'+px(0).toFixed(1)+','+py(cumR[0]).toFixed(1);
-  for(let i=1;i<12;i++) sR+=' L'+px(i).toFixed(1)+','+py(cumR[i]).toFixed(1);
+  for(let i=1;i<N;i++) sR+=' L'+px(i).toFixed(1)+','+py(cumR[i]).toFixed(1);
   g+='<path d="'+sR+'" fill="none" stroke="#eec77c" stroke-width="2"></path>';
   /* white wedge: cumulative total paid (fixed fee + share as wins land) */
   let dC='M'+X0+','+Y1; cumC.forEach((v,i)=>{dC+=' L'+px(i).toFixed(1)+','+py(v).toFixed(1);}); dC+=' L'+X1+','+Y1+' Z';
@@ -1416,13 +1428,18 @@ function renderChart(q,n){
   const be=cumR.findIndex((v,i)=>v>0&&v>=cumC[i]);
   if(be>=0){
     g+='<line x1="'+px(be).toFixed(1)+'" y1="'+(Y0-1)+'" x2="'+px(be).toFixed(1)+'" y2="'+Y1+'" stroke="rgba(238,199,124,.7)" stroke-width="1.2" stroke-dasharray="4 3"/>';
-    const anch=be>8?'end':(be<2?'start':'middle');
+    const anch=be>19?'end':(be<3?'start':'middle');
     g+='<text class="be-label" x="'+px(be).toFixed(1)+'" y="'+(Y0-3)+'" text-anchor="'+anch+'" font-size="9.5" font-weight="700">pays for itself &mdash; month '+(be+1)+'</text>';
   }
-  months.forEach((m,i)=>{ g+='<text x="'+px(i).toFixed(1)+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+m+'</text>'; });
+  /* steady-pace marker: where turnover starts offsetting new wins (the plateau) */
+  if(steady!=null && steady<=N && (be<0 || Math.abs(px(steady-1)-px(be))>62)){
+    g+='<line x1="'+px(steady-1).toFixed(1)+'" y1="'+(Y0-1)+'" x2="'+px(steady-1).toFixed(1)+'" y2="'+Y1+'" stroke="rgba(160,150,132,.55)" stroke-width="1.2" stroke-dasharray="2 3"/>';
+    g+='<text x="'+px(steady-1).toFixed(1)+'" y="'+(Y0-3)+'" text-anchor="'+(steady>20?'end':'middle')+'" font-size="9">levels to steady pace</text>';
+  }
+  for(let i=0;i<N;i++){ if(i===0||(i+1)%2===0) g+='<text x="'+px(i).toFixed(1)+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+(i+1)+'</text>'; }
   /* invisible hover/tap strips — one per month, covering the full plot height */
-  for(let i=0;i<12;i++){
-    const sx=i===0?X0:px(i)-gw/2, ex=i===11?X1:px(i)+gw/2;
+  for(let i=0;i<N;i++){
+    const sx=i===0?X0:px(i)-gw/2, ex=i===N-1?X1:px(i)+gw/2;
     g+='<rect class="mcol" data-m="'+(i+1)+'" x="'+sx.toFixed(1)+'" y="'+(Y0-4)+'" width="'+(ex-sx).toFixed(1)+'" height="'+(Y1-Y0+4)+'" fill="transparent"></rect>';
   }
   g+='<text x="'+(X0-7)+'" y="'+(Y0+4)+'" text-anchor="end">'+fmtK(maxV)+'</text>';
@@ -1733,13 +1750,23 @@ function render(){
   /* projection chart + timeline */
   renderChart(q,n);
   (function(){
-    let beM=-1;
-    if(q.price!=null){ let ca=0,cb=0; for(let i=0;i<12;i++){ ca+=n.series.mrr[i]; cb+=n.series.invoice[i]; if(beM<0&&ca>0&&ca>=cb) beM=i+1; } }
+    let beM=-1, tCeil=0, tSteady=null;
+    if(q.price!=null){
+      const tChurn=1/(q.retainYears*12);
+      tCeil=q.newCust*q.mrrPC/tChurn;
+      let cc=n.series.exitCust, ca=0, cb=0;
+      const mX=n.series.mrr.slice(), iX=n.series.invoice.slice();
+      for(let m=13;m<=24;m++){ cc=cc*(1-tChurn)+q.newCust; mX.push(cc*q.mrrPC); iX.push(n.series.ongoingCost); }
+      for(let i=0;i<24;i++){ ca+=mX[i]; cb+=iX[i]; if(beM<0&&ca>0&&ca>=cb) beM=i+1; }
+      let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-tChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*tCeil){ tSteady=m; break; } }
+    }
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
       '<b>The gold curve</b> is every dollar of new revenue this program has won to date. <b>The white line</b> is everything paid to date — the fixed fee, plus the share as wins land.'
       +' Where the gold curve crosses the white line, the program has paid for itself'+(beM>0?' — modeled here at <b>month '+beM+'</b>.':'.')
       +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
       +'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
+      +' <b>And growth is not exponential</b> — nothing here compounds: the win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ≈'+fmtK(tCeil)+'/mo'
+      +(tSteady!=null&&tSteady<=24?', with the flattening modeled around <b>month '+tSteady+'</b>.':(tSteady!=null?' — the curve is already decelerating; the pace levels off around month '+tSteady+', beyond this window.':'.'))
       +' <span style="color:var(--muted2)">Modeled projections from your inputs — potential, not a guarantee. Hover or tap the chart for exact running totals.</span>';
   })();
 
@@ -2042,7 +2069,7 @@ function buildPDF(mode){
   /* 12-month projection chart — same series as the calculator's chart, shared scale */
   y+=h2+6;
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('12-MONTH PROJECTION — RUNNING TOTALS',L,y,{charSpace:.8});
+  doc.text('24-MONTH PROJECTION — RUNNING TOTALS',L,y,{charSpace:.8});
   doc.setFillColor(212,162,74); doc.rect(R-88,y-2.6,3.2,3.2,'F');
   doc.setFont('helvetica','normal'); doc.setFontSize(6.4); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('Total new revenue',R-83.5,y);
@@ -2050,22 +2077,29 @@ function buildPDF(mode){
   doc.text('Total paid (fixed + share)',R-47.5,y);
   y+=3.5;
   const pT=y, pB=y+21, pL2=L+13, pR2=R-2;
+  /* extend to 24 months — same non-compounding rules: constant win pace, churn from retention */
+  const pChurn=1/(q.retainYears*12);
+  const pMrr=n.series.mrr.slice(), pInv=n.series.invoice.slice();
+  (function(){ let cc=n.series.exitCust; for(let m=13;m<=24;m++){ cc=cc*(1-pChurn)+q.newCust; pMrr.push(cc*q.mrrPC); pInv.push(n.series.ongoingCost); } })();
+  const pN=24;
   const pCumR=[],pCumC=[];
-  (function(){ let a2=0,b2=0; for(let i2=0;i2<12;i2++){ a2+=n.series.mrr[i2]; b2+=n.series.invoice[i2]; pCumR.push(a2); pCumC.push(b2); } })();
-  const pMax=Math.max(pCumR[11],pCumC[11],1)*1.18;
-  const pxX=function(i2){return pL2+i2*(pR2-pL2)/11;}, pyY=function(v){return pB-v/pMax*(pB-pT);};
+  (function(){ let a2=0,b2=0; for(let i2=0;i2<pN;i2++){ a2+=pMrr[i2]; b2+=pInv[i2]; pCumR.push(a2); pCumC.push(b2); } })();
+  const pCeil=q.newCust*q.mrrPC/pChurn;
+  let pSteady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-pChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*pCeil){ pSteady=m; break; } } })();
+  const pMax=Math.max(pCumR[pN-1],pCumC[pN-1],1)*1.18;
+  const pxX=function(i2){return pL2+i2*(pR2-pL2)/(pN-1);}, pyY=function(v){return pB-v/pMax*(pB-pT);};
   doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.25);
   [0.25,0.5,0.75,1].forEach(function(f){const gy=pB-f*(pB-pT); doc.line(pL2,gy,pR2,gy);});
   doc.line(pL2,pB,pR2,pB);
   /* gold mountain: cumulative revenue won */
   (function(){
-    const pts=[[pxX(0),pB]]; for(let i2=0;i2<12;i2++) pts.push([pxX(i2),pyY(pCumR[i2])]); pts.push([pxX(11),pB]);
+    const pts=[[pxX(0),pB]]; for(let i2=0;i2<pN;i2++) pts.push([pxX(i2),pyY(pCumR[i2])]); pts.push([pxX(pN-1),pB]);
     const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
     doc.setFillColor(212,162,74); doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'F', true);
   })();
   /* white wedge: cumulative total paid */
   (function(){
-    const pts=[[pxX(0),pB]]; for(let i2=0;i2<12;i2++) pts.push([pxX(i2),pyY(pCumC[i2])]); pts.push([pxX(11),pB]);
+    const pts=[[pxX(0),pB]]; for(let i2=0;i2<pN;i2++) pts.push([pxX(i2),pyY(pCumC[i2])]); pts.push([pxX(pN-1),pB]);
     const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
     doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3);
     doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'FD', true);
@@ -2076,37 +2110,49 @@ function buildPDF(mode){
     doc.setDrawColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.setLineWidth(.3); doc.setLineDashPattern([1.2,1],0);
     doc.line(pxX(pBe),pT-0.6,pxX(pBe),pB); doc.setLineDashPattern([],0);
     doc.setFont('helvetica','bold'); doc.setFontSize(5.4); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-    doc.text('pays for itself — month '+(pBe+1), pxX(pBe)+(pBe>8?-1.2:(pBe<2?1.2:0)), pT-1.2, {align:pBe>8?'right':(pBe<2?'left':'center')});
+    doc.text('pays for itself — month '+(pBe+1), pxX(pBe)+(pBe>18?-1.2:(pBe<3?1.2:0)), pT-1.2, {align:pBe>18?'right':(pBe<3?'left':'center')});
   }
-  /* tiny running totals — alternate months (revenue odd, cost even) so labels never share an x,
-     and only draw where there's room, so nothing piles up on the baseline */
+  /* steady-pace marker — where turnover starts offsetting new wins */
+  if(pSteady!=null && pSteady<=pN && (pBe<0 || Math.abs(pxX(pSteady-1)-pxX(pBe))>26)){
+    doc.setDrawColor(GRAY[0],GRAY[1],GRAY[2]); doc.setLineWidth(.25); doc.setLineDashPattern([0.8,1.1],0);
+    doc.line(pxX(pSteady-1),pT-0.6,pxX(pSteady-1),pB); doc.setLineDashPattern([],0);
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.4); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+    doc.text('levels to steady pace', pxX(pSteady-1), pT-1.2, {align:pSteady>20?'right':'center'});
+  }
+  /* tiny running totals — staggered months (revenue vs cost never share an x),
+     and only drawn where there's room, so nothing piles up on the baseline */
   doc.setFont('helvetica','normal'); doc.setFontSize(4.2);
   let costLabeled=false;
-  for(let i2=0;i2<12;i2++){
+  for(let i2=0;i2<pN;i2++){
     const lifted=(pB-pyY(pCumR[i2]))>=3;
     const clearOfCostLine=pCumR[i2]>=pCumC[i2] || (pyY(pCumR[i2])-pyY(pCumC[i2]))>=2.6;
-    if((i2%2===0||i2===11) && pCumR[i2]>0 && lifted && clearOfCostLine){
+    if((i2%4===2||i2===pN-1) && pCumR[i2]>0 && lifted && clearOfCostLine){
       doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-      doc.text(fmtK(pCumR[i2]),pxX(i2),pyY(pCumR[i2])-0.9,{align:i2===0?'left':(i2===11?'right':'center')});
+      doc.text(fmtK(pCumR[i2]),pxX(i2),pyY(pCumR[i2])-0.9,{align:i2===pN-1?'right':'center'});
     }
     const wedgeTall=(pB-pyY(pCumC[i2]))>=3.4;
-    const endGapOK=i2!==11 || Math.abs(pyY(pCumC[11])-pyY(pCumR[11]))>=4.5;
-    if(i2%2===1 && wedgeTall && endGapOK){
+    const endGapOK=i2!==pN-1 || Math.abs(pyY(pCumC[pN-1])-pyY(pCumR[pN-1]))>=4.5;
+    if((i2%4===0&&i2>0||i2===pN-1&&endGapOK) && wedgeTall && (i2!==pN-1||endGapOK)){
       doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-      doc.text(fmtK(pCumC[i2]),pxX(i2),pyY(pCumC[i2])+2.3,{align:i2===11?'right':'center'});
+      doc.text(fmtK(pCumC[i2]),pxX(i2),pyY(pCumC[i2])+2.3,{align:i2===pN-1?'right':'center'});
       costLabeled=true;
     }
   }
-  if(!costLabeled){   /* wedge too thin everywhere — still show the year-end total, above the line */
+  if(!costLabeled){   /* wedge too thin everywhere — still show the end total, above the line */
     doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-    doc.text(fmtK(pCumC[11]),pR2-1,pyY(pCumC[11])-0.9,{align:'right'});
+    doc.text(fmtK(pCumC[pN-1]),pR2-1,pyY(pCumC[pN-1])-0.9,{align:'right'});
   }
   doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  for(let i2=0;i2<12;i2++) doc.text(String(i2+1),pxX(i2),pB+3.1,{align:'center'});
+  for(let i2=0;i2<pN;i2++){ if(i2===0||(i2+1)%2===0) doc.text(String(i2+1),pxX(i2),pB+3.1,{align:'center'}); }
   doc.setFontSize(6.2);
   doc.text(fmtK(pMax),pL2-2,pT+2,{align:'right'});
   doc.text('$0',pL2-2,pB+1,{align:'right'});
-  y=pB+6.5;
+  /* the honest growth story, in one line */
+  doc.setFont('helvetica','italic'); doc.setFontSize(6.2); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  doc.text('Nothing compounds: the win pace is capped by market demand, and customer turnover levels the monthly pace toward ~'+fmtK(pCeil)+'/mo'
+    +(pSteady!=null&&pSteady<=pN?' — the flattening near month '+pSteady+'.':(pSteady!=null?' (levels off around month '+pSteady+', beyond this window).':'.')), L, pB+6.6);
+  doc.setFont('helvetica','normal');
+  y=pB+9.4;
 
   /* plain english + the customer math — one merged section */
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
@@ -2123,7 +2169,7 @@ function buildPDF(mode){
     use.forEach(function(ln){doc.text(ln,L,y); y+=4.1;});
   })();
   y+=1;
-  doc.setFontSize(8.3);
+  doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
     +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
@@ -2245,19 +2291,18 @@ function buildPDF(mode){
     ['Gross margin','What the client keeps from each sale after direct costs. Higher margins support a higher revenue share.'],
     ['Acquisition budget','The share of revenue the client will spend to win a new customer. 10-20% is healthy for growth-mode businesses.'],
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
-    ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the full ongoing cost, shown from conservative floor to modeled — every figure grounded in published 2026 SEO/GEO industry benchmarks, not guesses. Why it matters: it is the number that proves the program keeps paying for itself after the build.'],
+    ['Ongoing (run-rate) return','The headline ROI band: month-12 attributable revenue vs the full ongoing cost, shown from conservative floor to modeled. It is the number that proves the program keeps paying for itself after the build.'],
     ['Year-1 ROI','The ramp year: attributable revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — SEO/GEO compounds.'],
     ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20% once the revenue share starts.'],
-    ['Revenue share','In plain terms: when our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed in the month the win lands. Only NEW customers above the pre-program baseline count; existing business is never touched. No new wins, no share — we only grow when the client grows. The percentage is calculated from the client\'s margin, acquisition budget, existing commissions, and deal size, so it stays fair to both sides.'],
-    ['New net revenue / baseline','The baseline is the revenue the client already generates before the program starts; only tracked growth ABOVE that line counts toward the share. "Net" means revenue the client actually keeps after refunds or cancellations — it does NOT mean profit. The share is a percentage of revenue, and fairness to margin is built into the rate itself: lower-margin businesses are quoted a lower percentage.'],
+    ['Revenue share — and the baseline','When our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed in the month the win lands. The baseline is the revenue the client already generates before the program starts: only tracked growth ABOVE that line counts, and existing business is never touched. "Net" means revenue the client actually keeps after refunds — not profit; fairness to margin is built into the rate itself, so lower-margin businesses are quoted a lower percentage, and acquisition budget, existing commissions, and deal size pull it down further. No new wins, no share.'],
     ['Attribution (attributable)','One hundred percent verifiable proof, or no share: every win is tracked — calls, forms, and bookings — so every win is provable. A win is a win; there is no in-between. If a customer cannot be proven to have come from this program, they are not a win, and we do not take a dime.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
     ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
     ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built. From the start month, the fixed fee drops and the share begins — billed monthly on the new customers won. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
-    ['LTV — lifetime value','Yearly customer value times retention years — the full worth of one customer over their lifetime. It is shown deliberately UNUSED: LTV is the number most agencies project on to inflate ROI, and this model refuses to — every projection runs on the smaller one-year value, with retention entering the math only as churn. If the program pays for itself on year-one value alone, the lifetime value is pure upside on top.'],
+    ['LTV — lifetime value','Yearly value × retention years — the full worth of one customer. Shown deliberately UNUSED: every projection runs on the smaller one-year value (retention enters only as churn), so if the program pays for itself on year-one value alone, the lifetime value is pure upside on top.'],
     ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets.'],
-    ['Market-rate check','The quote is verified against published 2026 SEO and AEO/GEO retainer benchmarks for the same scope, industry, and footprint.'],
+    ['Growth ceiling — why nothing compounds','The projection never turns wins into more wins: the pace is capped by real market demand, and customer turnover pulls monthly recurring revenue toward a natural ceiling where new wins roughly equal customers lost. Growth is front-loaded by the ramp, then levels to a steady pace — markets with faster turnover (e-commerce, national) level out sooner.'],
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
   const gColW=(W-8)/2, gAvail=279-gTop;
@@ -2325,6 +2370,8 @@ function buildPDF(mode){
      'We score how you show up in Google and AI answers, fix what holds you back, and show you weekly improvements — one path from gap to growth.'],
     ['"What\'s the difference between SEO and GEO?"',
      'SEO earns rankings in classic Google search. GEO — generative-engine optimization, also called AEO — shapes how AI systems like ChatGPT, Perplexity, Gemini, Claude, and Google\'s AI Overviews describe and cite your brand. This program runs both together.'],
+    ['"Does the projected growth just climb forever?"',
+     'No — nothing in this model compounds. The win pace is capped by real market demand (monthly searches × a capped share of clicks), and customer turnover pulls the monthly pace toward a natural ceiling where new wins roughly equal customers lost. Growth is front-loaded by the ramp, then levels to a steady pace: the chart\'s running total keeps rising, but the pace behind it flattens. Markets with faster turnover — e-commerce, national — level out sooner; geo-bound businesses hold a local ceiling.'],
     ['"Do you guarantee #1 rankings?"',
      'No honest partner can guarantee a specific rank or AI citation — Google and the AI models decide that. We improve your eligibility and show you what improved. What we do set up front: a growth target calibrated to your market — in revenue, not leads — and we claim results only where your data supports it.'],
     ['"Do I have to sign a long contract?"',
