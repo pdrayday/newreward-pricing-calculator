@@ -1762,7 +1762,7 @@ function render(){
       +' Where the gold curve crosses the white line, the program has paid for itself'+(beM>0?' — modeled here at <b>month '+beM+'</b>.':'.')
       +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
       +'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
-      +' <b>And growth is not exponential</b> — nothing here compounds: the win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ≈'+fmtK(tCeil)+'/mo'
+      +' <b>And this projection never compounds</b> — the asset does (authority and AI presence keep strengthening), but the model banks none of it: the win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ≈'+fmtK(tCeil)+'/mo'
       +(tSteady!=null&&tSteady<=12?', with the flattening modeled around <b>month '+tSteady+'</b>.':(tSteady!=null?' — the curve is already decelerating; the pace levels off around month '+tSteady+', beyond this 12-month window.':'.'))
       +' <span style="color:var(--muted2)">Modeled projections from your inputs — potential, not a guarantee. Hover or tap the chart for exact running totals.</span>';
   })();
@@ -2260,7 +2260,7 @@ function buildPDF(mode){
     'The gold area is every dollar of new revenue the program has won to date. The white wedge is everything paid to date — the fixed fee, plus the revenue share as wins land.',
     'Where the gold curve crosses the white line, the program has paid for itself'+(pBe>=0?' — modeled here at month '+(pBe+1)+'.':' — not yet reached inside this window at the modeled pace.'),
     'Months 1–'+(n.rampMonth-1)+' are the build, billed as the fixed fee only; the revenue share starts month '+n.rampMonth+'. A month with no proven wins bills no share at all.',
-    'Growth is not exponential — nothing compounds. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')
+    'This projection never compounds — the visibility asset does, but these numbers bank none of that. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.'
   ].forEach(function(t){
     doc.splitTextToSize(t,W).forEach(function(ln){ doc.text(ln,L,hy); hy+=4.7; });
     hy+=2.2;
@@ -2319,7 +2319,7 @@ function buildPDF(mode){
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
     ['LTV — lifetime value','Yearly value × retention years — the full worth of one customer. Shown deliberately UNUSED: every projection runs on the smaller one-year value (retention enters only as churn), so if the program pays for itself on year-one value alone, the lifetime value is pure upside on top.'],
     ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets.'],
-    ['Growth ceiling — why nothing compounds','The projection never turns wins into more wins: the pace is capped by real market demand, and customer turnover pulls monthly recurring revenue toward a natural ceiling where new wins roughly equal customers lost. Growth is front-loaded by the ramp, then levels to a steady pace — markets with faster turnover (e-commerce, national) level out sooner.'],
+    ['Growth ceiling — why the projection never compounds','The visibility asset compounds in real life — authority, content, and AI presence keep strengthening — but the projection banks none of it: the modeled pace is capped by real market demand, and customer turnover pulls monthly recurring revenue toward a natural ceiling where new wins roughly equal customers lost. Any real-world compounding is upside on top of these numbers. Faster-turnover markets (e-commerce, national) level out sooner.'],
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
   const gColW=(W-8)/2;
@@ -2395,7 +2395,7 @@ function buildPDF(mode){
     ['"What\'s the difference between SEO and GEO?"',
      'SEO earns rankings in classic Google search. GEO — generative-engine optimization, also called AEO — shapes how AI systems like ChatGPT, Perplexity, Gemini, Claude, and Google\'s AI Overviews describe and cite your brand. This program runs both together.'],
     ['"Does the projected growth just climb forever?"',
-     'No — nothing in this model compounds. The win pace is capped by real market demand (monthly searches × a capped share of clicks), and customer turnover pulls the monthly pace toward a natural ceiling where new wins roughly equal customers lost. Growth is front-loaded by the ramp, then levels to a steady pace: the chart\'s running total keeps rising, but the pace behind it flattens. Markets with faster turnover — e-commerce, national — level out sooner; geo-bound businesses hold a local ceiling.'],
+     'No. The visibility asset itself does compound — authority, content, and AI presence keep strengthening over time — but this projection deliberately banks none of that. The modeled win pace is capped by real market demand (monthly searches × a capped share of clicks), and customer turnover pulls the monthly pace toward a natural ceiling where new wins roughly equal customers lost. Growth is front-loaded by the ramp, then levels to a steady pace — so any real-world compounding is pure upside on top of these numbers. Markets with faster turnover — e-commerce, national — level out sooner; geo-bound businesses hold a local ceiling.'],
     ['"Do you guarantee #1 rankings?"',
      'No honest partner can guarantee a specific rank or AI citation — Google and the AI models decide that. We improve your eligibility and show you what improved. What we do set up front: a growth target calibrated to your market — in revenue, not leads — and we claim results only where your data supports it.'],
     ['"Do I have to sign a long contract?"',
