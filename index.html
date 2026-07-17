@@ -1482,7 +1482,12 @@ function evalRoiGuardrail(s,q,n){
   if(rr>=ROI_TARGET){
     ok.classList.add('show');
     ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the conservative ongoing return is <b>'+fx(rr*ROI_LO)
-      +'×</b> (modeled '+rrTxt+'×; year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.';
+      +'×</b> (modeled '+rrTxt+'×; year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.'
+      /* second rail: published 2026 benchmarks put SEO break-even at months 5–12, so a year one
+         that never breaks even is usually a sign of UNDERSTATED inputs, not a bad program */
+      +(n.roi<1
+        ? '<br><span style="opacity:.85">&#9888; <b>Year 1 finishes under break-even ('+y1Txt+'×) at these inputs</b> — published 2026 programs typically break even in months 5–12. Before presenting, double-check the phrase volume (combined across all locations), conversion rate, and customer value: understated inputs are the usual cause.</span>'
+        : '');
     return;
   }
 
