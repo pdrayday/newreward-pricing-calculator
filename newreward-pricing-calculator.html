@@ -2065,34 +2065,31 @@ function buildPDF(mode){
 
   y+=h2+6;
 
-  /* plain english + the customer math — one merged section */
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('PLAIN ENGLISH — AND THE MATH',L,y,{charSpace:.8});
-  y+=4.8;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  (function(){
-    const all=doc.splitTextToSize(document.getElementById('o-summary').textContent,W);
-    let use=all.slice(0,3);
-    if(all.length>3){   /* never cut mid-sentence — trim back to the last complete one */
-      const j=use.join(' '); const cut=j.lastIndexOf('. ');
-      if(cut>60) use=doc.splitTextToSize(j.slice(0,cut+1),W);
-    }
-    use.forEach(function(ln){doc.text(ln,L,y); y+=4.1;});
-  })();
-  y+=1;
-  doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
-  const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
-    +'  =  '+crP.v+' new customers'+crP.unit;
-  doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
-  const math2=crP.monthly
-    ? '~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
-      +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
-      +'/yr by month 12 (before attribution).'
-    : crP.v+' customers/yr × '+fmt$(q.yearlyValue)+' each = '+fmtK(q.newCust*12*q.yearlyValue)
-      +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12 (before attribution).';
-  doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  /* ---- the pricing principle + ranking primer — one compact box on the proposal page ---- */
+  y+=2;
+  const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every figure derives from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work genuinely requires — a price that only works when it works for both sides.';
+  const RANKING='Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines like ChatGPT, Gemini, Perplexity, and AI Overviews recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.';
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
+  const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
+  const rkLines=doc.splitTextToSize(RANKING,W-12);
+  /* the principle first, then the ranking primer — with symmetric padding so the content
+     sits vertically centered in the gold box */
+  const bxPadTop=5.6, bxPadBot=3.4, bxHead=3.85, bxLh=2.68, bxGap=2.2;
+  const bxH=bxPadTop+bxHead+rkLines.length*bxLh+bxGap+bxHead+prLines.length*bxLh-bxLh+bxPadBot;
+  doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
+  doc.roundedRect(L,y,W,bxH,2,2,'FD');
+  let by=y+bxPadTop;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,by,{charSpace:.6}); by+=bxHead;
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  prLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
+  by+=bxGap;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,by,{charSpace:.6}); by+=bxHead;
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  rkLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
+  y+=bxH;
+
 
   /* inputs for reference */
   y+=5;
@@ -2133,30 +2130,37 @@ function buildPDF(mode){
   });
   y+=half*rowH+3;
 
-  /* ---- the pricing principle + ranking primer — one compact box on the proposal page ---- */
-  y+=6;
-  const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every figure derives from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work genuinely requires — a price that only works when it works for both sides.';
-  const RANKING='Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines like ChatGPT, Gemini, Perplexity, and AI Overviews recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.';
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
-  const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
-  const rkLines=doc.splitTextToSize(RANKING,W-12);
-  /* ranking primer first, then the principle — with symmetric padding so the content
-     sits vertically centered in the gold box */
-  const bxPadTop=5.6, bxPadBot=3.4, bxHead=3.85, bxLh=2.68, bxGap=2.2;
-  const bxH=bxPadTop+bxHead+rkLines.length*bxLh+bxGap+bxHead+prLines.length*bxLh-bxLh+bxPadBot;
-  doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
-  doc.roundedRect(L,y,W,bxH,2,2,'FD');
-  let by=y+bxPadTop;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,by,{charSpace:.6}); by+=bxHead;
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  rkLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
-  by+=bxGap;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,by,{charSpace:.6}); by+=bxHead;
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  prLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
-  y+=bxH;
+  y+=4;
+  /* plain english + the customer math — one merged section */
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('PLAIN ENGLISH — AND THE MATH',L,y,{charSpace:.8});
+  y+=4.8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  (function(){
+    const all=doc.splitTextToSize(document.getElementById('o-summary').textContent,W);
+    let use=all.slice(0,3);
+    if(all.length>3){   /* never cut mid-sentence — trim back to the last complete one */
+      const j=use.join(' '); const cut=j.lastIndexOf('. ');
+      if(cut>60) use=doc.splitTextToSize(j.slice(0,cut+1),W);
+    }
+    use.forEach(function(ln){doc.text(ln,L,y); y+=4.1;});
+  })();
+  y+=1;
+  doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
+  const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% gap'
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source':'')
+    +'  =  '+crP.v+' new customers'+crP.unit;
+  doc.splitTextToSize(math1,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  const math2=crP.monthly
+    ? '~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
+      +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
+      +'/yr by month 12 (before attribution).'
+    : crP.v+' customers/yr × '+fmt$(q.yearlyValue)+' each = '+fmtK(q.newCust*12*q.yearlyValue)
+      +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12 (before attribution).';
+  doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+
+
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
      ad-equivalent spend exceeds the fee, and it never showed in the reverse case). */
 
