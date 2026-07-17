@@ -2280,6 +2280,9 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   const pdCr=custRate(q.newCust);
   const pdPerWin=fmt$(q.yearlyValue*n.share/100);
+  const pdMgn=s.margin??IND[s.industry].margin;
+  const pdGross=q.yearlyValue*pdMgn/100;
+  const pdKeep=pdGross-q.yearlyValue*n.share/100;
   const pdShareMo=fmt$(n.share/100*q.newCust*q.yearlyValue);
   let pdRampEnd=n.rampMonth-1;
   n.series.invoice.forEach(function(v,i2){ if(i2+1>=n.rampMonth && v<n.series.ongoingCost-0.5) pdRampEnd=i2+1; });
@@ -2295,6 +2298,7 @@ function buildPDF(mode){
         ? 'At the modeled pace ('+pdCr.txt+'), the share averages ~'+pdShareMo+'/mo once ramped — ~'+fmt$(n.series.ongoingCost)+'/mo all-in. '
         : 'At the modeled pace ('+pdCr.txt+'), most months bill only the fixed '+fmt$(n.series.perfPrice)+' — the projection spreads the occasional win-month share into a smooth average (~'+pdShareMo+'/mo of share, ~'+fmt$(n.series.ongoingCost)+'/mo all-in) so the trend reads clearly; the running total is exact either way. ')
       +'Year-one total: '+fmt$(n.series.year1Cost)+pdRampTxt+' No proven wins in a month = no share that month.',
+    'The profit math on a single win — in the client\'s favor, every time: a '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+pdPerWin+' — a customer who brings ~'+fmt$(pdGross)+' in gross profit (at their '+pdMgn+'% margin) they wouldn\'t otherwise have. They keep ~'+fmt$(pdKeep)+' of that first-year profit, and the share never touches anything after year one: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.'),
     'This projection never compounds — the visibility asset does, but these numbers bank none of that. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.'
   ].forEach(function(t){
     doc.splitTextToSize(t,W).forEach(function(ln){ doc.text(ln,L,hy); hy+=4.7; });
