@@ -948,7 +948,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="roi-ok" id="o-roi-ok"></div>
 
     <div class="o-share">
-      <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><span class="cur">$</span><input id="o-price-edit" type="number" min="0" step="50" aria-label="Negotiated fixed monthly price"></div>
+      <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><span class="cur">$</span><input id="o-price-edit" type="text" inputmode="numeric" autocomplete="off" aria-label="Negotiated fixed monthly price"></div>
       <div class="share-desc"><b style="color:var(--text)">Fixed monthly investment</b> <button class="tip tip-left" type="button" aria-label="How this number is built">?<span class="tipbox" id="tip-price-math"></span></button> — <span id="o-price-sub">program fee</span><br><span class="neg-note" id="o-price-note"></span></div>
     </div>
     <div class="neg-warn" id="o-price-warn"></div>
@@ -1372,7 +1372,7 @@ let priceDirty=false, shareDirty=false, rampDirty=false;
 function getNegotiated(q){
   let price=q.price, share=q.share, rampMonth=q.rampMonth;
   if(q.price!=null && priceDirty){
-    const v=parseFloat(document.getElementById('o-price-edit').value);
+    const v=parseFloat((document.getElementById('o-price-edit').value||'').replace(/[^0-9.]/g,''));
     if(v>0) price=Math.round(v);
   }
   if(shareDirty){
@@ -1628,7 +1628,7 @@ function render(){
   /* price + share (editable for live negotiation) */
   const pEdit=document.getElementById('o-price-edit'), shEdit=document.getElementById('o-share-edit'), rEdit=document.getElementById('o-ramp-edit');
   pEdit.disabled = q.price==null;
-  if(!priceDirty) pEdit.value = q.price!=null ? q.price : '';
+  if(!priceDirty) pEdit.value = q.price!=null ? q.price.toLocaleString('en-US') : '';
   if(!shareDirty) shEdit.value = q.share;
   if(!rampDirty) rEdit.value = q.rampMonth;
   set('o-price-sub', q.price!=null
@@ -2543,6 +2543,10 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
   });
 })();
 document.getElementById('o-price-edit').addEventListener('input', ()=>{ priceDirty=true; render(); });
+document.getElementById('o-price-edit').addEventListener('change', function(){
+  const v=parseFloat((this.value||'').replace(/[^0-9.]/g,''));
+  if(v>0) this.value=Math.round(v).toLocaleString('en-US');
+});
 document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDirty=true; render(); });
 document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty=true; render(); });
 
