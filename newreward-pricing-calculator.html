@@ -2140,19 +2140,22 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
   const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
   const rkLines=doc.splitTextToSize(RANKING,W-12);
-  const bxH=5.9+prLines.length*2.68+4.8+rkLines.length*2.68+2.6;
+  /* ranking primer first, then the principle — with symmetric padding so the content
+     sits vertically centered in the gold box */
+  const bxPadTop=5.6, bxPadBot=3.4, bxHead=3.85, bxLh=2.68, bxGap=2.2;
+  const bxH=bxPadTop+bxHead+rkLines.length*bxLh+bxGap+bxHead+prLines.length*bxLh-bxLh+bxPadBot;
   doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
   doc.roundedRect(L,y,W,bxH,2,2,'FD');
-  let by=y+5.5;
+  let by=y+bxPadTop;
   doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,by,{charSpace:.6}); by+=3.9;
+  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,by,{charSpace:.6}); by+=bxHead;
   doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  prLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=2.68; });
-  by+=2.2;
+  rkLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
+  by+=bxGap;
   doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,by,{charSpace:.6}); by+=3.9;
+  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,by,{charSpace:.6}); by+=bxHead;
   doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  rkLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=2.68; });
+  prLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
   y+=bxH;
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
      ad-equivalent spend exceeds the fee, and it never showed in the reverse case). */
