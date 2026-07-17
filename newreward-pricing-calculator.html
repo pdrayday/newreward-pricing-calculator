@@ -829,7 +829,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">Total monthly searches for the target phrase plus its close and more-popular variants, combined — not just the one phrase above. Leave 0 and the calculator estimates it from the industry and footprint.</span></button>
           <span class="flag-pill">▲ demand low</span>
         </label>
-        <div class="fwrap"><input type="number" id="volume" class="has-suffix" value="0" min="0"><span class="suffix">searches/mo</span></div>
+        <div class="fwrap"><input type="text" inputmode="numeric" autocomplete="off" id="volume" class="has-suffix" value="0"><span class="suffix">searches/mo</span></div>
         <div class="auto-note" id="note-vol"></div>
       </div>
       <div class="fgroup">
@@ -867,7 +867,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <label class="flabel">Avg customer value / year
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one customer pays per year (e.g., a $75/mo pest plan = $900/yr). Revenue projections use this yearly number — not lifetime value — so growth is never overstated. Leave blank for an industry benchmark. (For e-commerce, this is replaced by Average order value × Purchases/year.)</span></button>
         </label>
-        <div class="fwrap"><span class="prefix">$</span><input type="number" id="yearly" class="has-prefix" placeholder="Auto-estimated" min="0"></div>
+        <div class="fwrap"><span class="prefix">$</span><input type="text" inputmode="numeric" autocomplete="off" id="yearly" class="has-prefix" placeholder="Auto-estimated"></div>
         <div class="auto-note" id="note-yr"></div>
       </div>
       <div class="fgroup">
@@ -884,7 +884,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <label class="flabel">Average order value
           <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>For e-commerce.</b> What a customer spends per order. With "Purchases / year", it builds the annual customer value above automatically (and overrides it). <b>Subscription?</b> Put the monthly plan price here and 12 in purchases/year (a $75/mo plan × 12 = $900/yr). Leave blank to use the annual value or industry benchmark.</span></button>
         </label>
-        <div class="fwrap"><span class="prefix">$</span><input type="number" id="aov" class="has-prefix" placeholder="optional" min="0"></div>
+        <div class="fwrap"><span class="prefix">$</span><input type="text" inputmode="numeric" autocomplete="off" id="aov" class="has-prefix" placeholder="optional"></div>
       </div>
       <div class="fgroup">
         <label class="flabel">Purchases / year
@@ -1162,7 +1162,7 @@ function custRate(n){
   if(yr>=0.75) return {v:'~'+Math.max(1,Math.round(yr)), unit:'/yr', txt:'~'+Math.max(1,Math.round(yr))+' new customer'+(Math.round(yr)<=1?'':'s')+' a year', monthly:false};
   return {v:'<1', unit:'/yr', txt:'under one new customer a year', monthly:false};
 }
-const num = id => { const v = parseFloat(document.getElementById(id).value); return isNaN(v)?null:v; };
+const num = id => { const v = parseFloat(String(document.getElementById(id).value).replace(/,/g,'')); return isNaN(v)?null:v; };
 const fmt$ = v => '$'+Math.round(v).toLocaleString('en-US');
 
 function computeQuote(s){
@@ -2513,11 +2513,11 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
   const fp=document.getElementById('footprint'), volEl=document.getElementById('volume');
   let prevFoot=fp.value;
   fp.addEventListener('change',function(){
-    const nf=fp.value, v=parseFloat(volEl.value);
+    const nf=fp.value, v=parseFloat(String(volEl.value).replace(/,/g,''));
     if(v>0 && FOOT[prevFoot] && FOOT[nf] && nf!==prevFoot){
       const ratio=FOOT[nf].reach/FOOT[prevFoot].reach;
       const nv=Math.max(10,Math.round(v*ratio/10)*10);
-      volEl.value=nv;
+      volEl.value=nv.toLocaleString('en-US');
       volScaleNote='Estimated demand at this footprint: <b>'+nv.toLocaleString()+' searches/mo</b> — demand grows with a wider footprint. Replace with a researched figure if you have one.';
     }
     prevFoot=nf;
@@ -2543,6 +2543,12 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
   });
 })();
 document.getElementById('o-price-edit').addEventListener('input', ()=>{ priceDirty=true; render(); });
+['volume','yearly','aov'].forEach(function(id){
+  document.getElementById(id).addEventListener('change', function(){
+    const v=parseFloat(String(this.value).replace(/,/g,''));
+    if(!isNaN(v)&&v>0) this.value=Math.round(v).toLocaleString('en-US');
+  });
+});
 document.getElementById('o-price-edit').addEventListener('change', function(){
   const v=parseFloat((this.value||'').replace(/[^0-9.]/g,''));
   if(v>0) this.value=Math.round(v).toLocaleString('en-US');
@@ -2563,7 +2569,10 @@ document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty
     const el = document.getElementById(id);
     if(!el) return; // field no longer exists (e.g. legacy tracking params) — ignore
     if(el.tagName==='SELECT' && ![...el.options].some(o=>o.value===p.get(id))) return; // ignore bad values
-    el.value = p.get(id);
+    if(['volume','yearly','aov'].includes(id)){
+      const nv=parseFloat(String(p.get(id)).replace(/,/g,''));
+      el.value=isNaN(nv)?p.get(id):nv.toLocaleString('en-US');
+    } else el.value = p.get(id);
   });
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
