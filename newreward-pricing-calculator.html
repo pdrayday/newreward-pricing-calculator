@@ -940,14 +940,14 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><span class="cur">$</span><input id="o-price-edit" type="number" min="0" step="50" aria-label="Negotiated fixed monthly price"></div>
-      <div class="share-desc"><b style="color:var(--text)">Fixed monthly investment</b> — <span id="o-price-sub">program fee</span><br><span class="neg-note" id="o-price-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)">Fixed monthly investment</b> <button class="tip tip-left" type="button" aria-label="How this number is built">?<span class="tipbox" id="tip-price-math"></span></button> — <span id="o-price-sub">program fee</span><br><span class="neg-note" id="o-price-note"></span></div>
     </div>
     <div class="neg-warn" id="o-price-warn"></div>
     <div class="o-market" id="o-market"></div>
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow.<br><span class="neg-note" id="o-share-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow.<br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
 
@@ -1633,6 +1633,17 @@ function render(){
       : (n.price<mLo ? 'Below the typical 2026 market rate for this scope and market — above-market value at this fee.'
                      : 'Above the typical 2026 market rate for this scope and market.');
   } else mEl.innerHTML='';
+
+  /* "?" math explainers on the two priced outputs — how each number is built.
+     NOTE: the fee tooltip names the drivers but never prints the band or any floor,
+     so the client can't see negotiation room. */
+  const tpm=document.getElementById('tip-price-math');
+  if(tpm) tpm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
+    'How this number is built: the researched cost to deliver this exact scope — engagement intensity (graded from current visibility), industry model, market footprint, '
+    +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. It drops 20% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins.';
+  const tsm=document.getElementById('tip-share-math');
+  if(tsm) tsm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
+    'How this percentage is built: sized from the client\'s own economics so it stays fair — gross margin (<b>'+(s.margin??IND[s.industry].margin)+'%</b>), acquisition budget (<b>'+(s.acq??15)+'%</b>), existing sales commissions (<b>'+(s.commission??8)+'%</b>), and typical deal size (<b>'+fmt$(q.yearlyValue)+'/yr</b>). Thinner margins, bigger deals, and higher existing commissions all pull it <b>down</b>; it is bounded 2–10% in 0.5% steps. Applied only to a proven new customer\'s first-year value: <b>'+n.share+'% × '+fmt$(q.yearlyValue)+' = '+fmt$(q.yearlyValue*n.share/100)+'</b> per win, billed in the month the win lands.';
 
   /* engagement intensity — graded from the SEO/GEO visibility scores */
   const igEl=document.getElementById('o-intensity');
