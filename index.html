@@ -293,7 +293,9 @@ a.wordmark:hover span{color:var(--gold-bright)}
   /* keep tooltips on-screen */
   .tip .tipbox{width:min(240px,82vw)}
   /* comfortable tap targets */
-  input[type=text],input[type=number],input[type=url],select{font-size:16px;padding:13px 14px}
+  /* 16px minimum stops iOS Safari from auto-zooming on field focus (and staying zoomed);
+     !important because the base field styles are declared later and would override this */
+  input[type=text],input[type=number],input[type=url],select{font-size:16px!important;padding:13px 14px}
   .toggle-row{padding:14px 16px}
   /* stack the big number + description rows so the text gets full width */
   .o-share{flex-direction:column;gap:8px}
