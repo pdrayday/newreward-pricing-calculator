@@ -405,6 +405,15 @@ select option{background:#171410;color:var(--text)}
 .tip.tip-left .tipbox{left:auto;right:-10px;transform:translateY(4px)}
 .tip.tip-left .tipbox::after{left:auto;right:14px;transform:none}
 .tip.tip-left:hover .tipbox,.tip.tip-left:focus .tipbox{transform:translateY(0)}
+/* narrow screens: anchor the output-row tooltips to the row itself, spanning the panel,
+   so the bubble can never slide off the left (or right) edge of the viewport */
+@media(max-width:1020px){
+  .o-share{position:relative}
+  .o-share .tip{position:static}
+  .o-share .tip .tipbox{left:0;right:auto;bottom:calc(100% + 8px);width:min(340px,100%);transform:translateY(4px)}
+  .o-share .tip:hover .tipbox,.o-share .tip:focus .tipbox{transform:translateY(0)}
+  .o-share .tip .tipbox::after{display:none}
+}
 
 .auto-note{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.5}
 .research-btn{margin-top:9px;display:inline-flex;align-items:center;gap:7px;font-family:var(--font);
@@ -2492,7 +2501,7 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
       const ratio=FOOT[nf].reach/FOOT[prevFoot].reach;
       const nv=Math.max(10,Math.round(v*ratio/10)*10);
       volEl.value=nv;
-      volScaleNote='Volume scaled <b>×'+(ratio>=1?ratio.toFixed(1):ratio.toFixed(2))+'</b> with the footprint change ('+v.toLocaleString()+' &rarr; <b>'+nv.toLocaleString()+' searches/mo</b>) — demand grows with a wider footprint. Replace with a researched figure if you have one.';
+      volScaleNote='Estimated demand at this footprint: <b>'+nv.toLocaleString()+' searches/mo</b> — demand grows with a wider footprint. Replace with a researched figure if you have one.';
     }
     prevFoot=nf;
     render();
