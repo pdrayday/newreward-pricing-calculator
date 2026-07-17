@@ -1987,7 +1987,7 @@ function buildPDF(mode){
   doc.text('Total cost (fixed + share)',R-57.5,y);
   y+=3.5;
   const pT=y, pB=y+19, pL2=L+13, pR2=R-2, pgw=(pR2-pL2)/12;
-  const pMax=Math.max.apply(null,n.series.mrr.concat(n.series.invoice,[1]))*1.05;
+  const pMax=Math.max.apply(null,n.series.mrr.concat(n.series.invoice,[1]))*1.22;
   doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.25);
   [0.25,0.5,0.75,1].forEach(function(f){const gy=pB-f*(pB-pT); doc.line(pL2,gy,pR2,gy);});
   doc.line(pL2,pB,pR2,pB);
@@ -1996,7 +1996,10 @@ function buildPDF(mode){
     const rH=n.series.mrr[i2]/pMax*(pB-pT), cH=Math.max(n.series.invoice[i2]/pMax*(pB-pT),0.8);
     doc.setFillColor(212,162,74); doc.rect(cx2-3.7,pB-rH,3.3,rH,'F');
     doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3); doc.rect(cx2+0.4,pB-cH,3.3,cH,'FD');
-    doc.setFont('helvetica','normal'); doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+    doc.setFont('helvetica','normal'); doc.setFontSize(3.6);
+    if(n.series.mrr[i2]>0){ doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.text(fmtK(n.series.mrr[i2]),cx2-2.05,pB-rH-0.7,{align:'center'}); }
+    if(n.series.invoice[i2]>0){ doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.text(fmtK(n.series.invoice[i2]),cx2+2.05,pB-cH-0.7,{align:'center'}); }
+    doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
     doc.text(String(i2+1),cx2,pB+3.1,{align:'center'});
   }
   doc.setFontSize(6.2);
@@ -2024,10 +2027,6 @@ function buildPDF(mode){
     : crP.v+' customers/yr × '+fmt$(q.yearlyValue)+' each = '+fmtK(q.newCust*12*q.yearlyValue)
       +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12 (before attribution).';
   doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
-  y+=1;
-  doc.setFontSize(7.3); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  const basisTxt='Share basis: when our work provably wins a new customer, we earn '+n.share+'% of their first-year value — billed that month, only on growth above today\'s baseline. (est.)/(benchmark)/(modeled) figures are re-verified in the '+q.windowDays+'-day review window.';
-  doc.splitTextToSize(basisTxt,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=3.2;});
 
   /* inputs for reference */
   y+=5;
