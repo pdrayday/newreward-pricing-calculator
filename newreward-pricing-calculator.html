@@ -1385,6 +1385,7 @@ function resetNeg(kind){
 }
 
 let chartSeries=null;   // running totals behind the curves, for the hover/tap tooltip (small chart AND zoom)
+let volScaleNote='';    // note under the volume field after a footprint change rescales a manual volume
 function renderChart(q,n){
   const el=document.getElementById('o-chart');
   if(n.price==null){ el.innerHTML=''; chartSeries=null; return; }
@@ -1703,7 +1704,7 @@ function render(){
   /* auto-estimate math notes under blank inputs */
   document.getElementById('note-vol').innerHTML = q.volIsAuto
       ? 'Auto: '+IND[s.industry].name+' baseline '+IND[s.industry].vol.toLocaleString()
-        +' × '+FOOT[s.footprint].reach+'× reach = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : '';
+        +' × '+FOOT[s.footprint].reach+'× reach = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : volScaleNote;
   const isEcom = s.industry==='ecom';
   document.getElementById('row-aov').style.display = isEcom ? '' : 'none';       // AOV × purchases shown only for ecom
   document.getElementById('fg-yearly').style.display = isEcom ? 'none' : '';     // annual-value field hidden for ecom (AOV replaces it)
@@ -2477,6 +2478,27 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
   el.addEventListener('input', render);
   el.addEventListener('change', render);
 });
+
+/* footprint ↔ volume coupling: demand grows with how wide the client wants to win.
+   Auto volume already scales (industry baseline × footprint reach). If a volume was entered
+   MANUALLY, changing the footprint rescales it proportionally by the reach ratio — and flags
+   it under the field so the rep can replace it with a researched figure. */
+(function(){
+  const fp=document.getElementById('footprint'), volEl=document.getElementById('volume');
+  let prevFoot=fp.value;
+  fp.addEventListener('change',function(){
+    const nf=fp.value, v=parseFloat(volEl.value);
+    if(v>0 && FOOT[prevFoot] && FOOT[nf] && nf!==prevFoot){
+      const ratio=FOOT[nf].reach/FOOT[prevFoot].reach;
+      const nv=Math.max(10,Math.round(v*ratio/10)*10);
+      volEl.value=nv;
+      volScaleNote='Volume scaled <b>×'+(ratio>=1?ratio.toFixed(1):ratio.toFixed(2))+'</b> with the footprint change ('+v.toLocaleString()+' &rarr; <b>'+nv.toLocaleString()+' searches/mo</b>) — demand grows with a wider footprint. Replace with a researched figure if you have one.';
+    }
+    prevFoot=nf;
+    render();
+  });
+  volEl.addEventListener('input',function(){ volScaleNote=''; });
+})();
 document.getElementById('o-price-edit').addEventListener('input', ()=>{ priceDirty=true; render(); });
 document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDirty=true; render(); });
 document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty=true; render(); });
