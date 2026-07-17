@@ -964,7 +964,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-proj">
       <div class="o-diff-top">
-        <span class="o-diff-label">24-Month Projection</span>
+        <span class="o-diff-label">12-Month Projection</span>
         <span class="proj-key"><i class="kk k-rev"></i>Total new revenue won<i class="kk k-cost"></i>Total paid (fixed + share)</span>
       </div>
       <div id="o-chart" onclick="openChartZoom()"></div>
@@ -1036,7 +1036,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <div class="chart-zoom no-print" id="chart-zoom" hidden>
   <div class="cz-inner">
     <div class="cz-bar">
-      <span class="cz-title">24-Month Projection — total new revenue won vs total paid, month by month (running totals)</span>
+      <span class="cz-title">12-Month Projection — total new revenue won vs total paid, month by month (running totals)</span>
       <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
     </div>
     <div class="cz-body" id="cz-body"></div>
@@ -1394,21 +1394,14 @@ function renderChart(q,n){
      occasional lumps rather than every month, the crossing point tells the one story every
      prospect understands — "the program has paid for itself" — and the end-of-year gap IS
      the Year-1 ROI shown in the headline. */
-  /* extend to 24 months with the SAME non-compounding rules: constant win pace (capped by
-     market demand), churn from retention — months 13-24 are the steady program, no ramp.
-     This is where the curve visibly stops "going up exponentially": nothing compounds, and
-     turnover levels the monthly pace toward a hard ceiling of newCust ÷ churn. */
-  const churn=1/(q.retainYears*12);
-  const mrrX=mrr.slice(), invX=invoice.slice();
-  let cumu=n.series.exitCust;
-  for(let m=13;m<=24;m++){ cumu=cumu*(1-churn)+q.newCust; mrrX.push(cumu*q.mrrPC); invX.push(n.series.ongoingCost); }
-  const N=24;
+  /* 12 months — the proposal window. The pace does NOT compound: it is capped by market
+     demand and levels toward a natural ceiling; that plateau story is told in the note
+     under the chart (and on the PDF's projection page), where it reads better than a
+     stretched-out axis would. */
+  const N=12;
   const cumR=[],cumC=[]; let _a=0,_b=0;
-  for(let i=0;i<N;i++){ _a+=mrrX[i]; _b+=invX[i]; cumR.push(_a); cumC.push(_b); }
-  chartSeries={cumR:cumR, cumC:cumC, mrr:mrrX, invoice:invX};
-  /* ceiling + the month the monthly pace levels off (90% of ceiling) */
-  const ceilMRR=q.newCust*q.mrrPC/churn;
-  let steady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-churn)+q.newCust*f; if(c2*q.mrrPC>=0.9*ceilMRR){ steady=m; break; } } })();
+  for(let i=0;i<N;i++){ _a+=mrr[i]; _b+=invoice[i]; cumR.push(_a); cumC.push(_b); }
+  chartSeries={cumR:cumR, cumC:cumC, mrr:mrr.slice(), invoice:invoice.slice()};
   const maxV=Math.max(cumR[N-1],cumC[N-1],1)*1.06;
   const X0=46,X1=352,Y0=12,Y1=112,gw=(X1-X0)/(N-1);
   const px=i=>X0+i*gw, py=v=>Y1-v/maxV*(Y1-Y0);
@@ -1428,15 +1421,10 @@ function renderChart(q,n){
   const be=cumR.findIndex((v,i)=>v>0&&v>=cumC[i]);
   if(be>=0){
     g+='<line x1="'+px(be).toFixed(1)+'" y1="'+(Y0-1)+'" x2="'+px(be).toFixed(1)+'" y2="'+Y1+'" stroke="rgba(238,199,124,.7)" stroke-width="1.2" stroke-dasharray="4 3"/>';
-    const anch=be>19?'end':(be<3?'start':'middle');
+    const anch=be>8?'end':(be<2?'start':'middle');
     g+='<text class="be-label" x="'+px(be).toFixed(1)+'" y="'+(Y0-3)+'" text-anchor="'+anch+'" font-size="9.5" font-weight="700">pays for itself &mdash; month '+(be+1)+'</text>';
   }
-  /* steady-pace marker: where turnover starts offsetting new wins (the plateau) */
-  if(steady!=null && steady<=N && (be<0 || Math.abs(px(steady-1)-px(be))>62)){
-    g+='<line x1="'+px(steady-1).toFixed(1)+'" y1="'+(Y0-1)+'" x2="'+px(steady-1).toFixed(1)+'" y2="'+Y1+'" stroke="rgba(160,150,132,.55)" stroke-width="1.2" stroke-dasharray="2 3"/>';
-    g+='<text x="'+px(steady-1).toFixed(1)+'" y="'+(Y0-3)+'" text-anchor="'+(steady>20?'end':'middle')+'" font-size="9">levels to steady pace</text>';
-  }
-  for(let i=0;i<N;i++){ if(i===0||(i+1)%2===0) g+='<text x="'+px(i).toFixed(1)+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+(i+1)+'</text>'; }
+  for(let i=0;i<N;i++){ g+='<text x="'+px(i).toFixed(1)+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+(i+1)+'</text>'; }
   /* invisible hover/tap strips — one per month, covering the full plot height */
   for(let i=0;i<N;i++){
     const sx=i===0?X0:px(i)-gw/2, ex=i===N-1?X1:px(i)+gw/2;
@@ -1754,10 +1742,8 @@ function render(){
     if(q.price!=null){
       const tChurn=1/(q.retainYears*12);
       tCeil=q.newCust*q.mrrPC/tChurn;
-      let cc=n.series.exitCust, ca=0, cb=0;
-      const mX=n.series.mrr.slice(), iX=n.series.invoice.slice();
-      for(let m=13;m<=24;m++){ cc=cc*(1-tChurn)+q.newCust; mX.push(cc*q.mrrPC); iX.push(n.series.ongoingCost); }
-      for(let i=0;i<24;i++){ ca+=mX[i]; cb+=iX[i]; if(beM<0&&ca>0&&ca>=cb) beM=i+1; }
+      let ca=0, cb=0;
+      for(let i=0;i<12;i++){ ca+=n.series.mrr[i]; cb+=n.series.invoice[i]; if(beM<0&&ca>0&&ca>=cb) beM=i+1; }
       let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-tChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*tCeil){ tSteady=m; break; } }
     }
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
@@ -1766,7 +1752,7 @@ function render(){
       +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
       +'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
       +' <b>And growth is not exponential</b> — nothing here compounds: the win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ≈'+fmtK(tCeil)+'/mo'
-      +(tSteady!=null&&tSteady<=24?', with the flattening modeled around <b>month '+tSteady+'</b>.':(tSteady!=null?' — the curve is already decelerating; the pace levels off around month '+tSteady+', beyond this window.':'.'))
+      +(tSteady!=null&&tSteady<=12?', with the flattening modeled around <b>month '+tSteady+'</b>.':(tSteady!=null?' — the curve is already decelerating; the pace levels off around month '+tSteady+', beyond this 12-month window.':'.'))
       +' <span style="color:var(--muted2)">Modeled projections from your inputs — potential, not a guarantee. Hover or tap the chart for exact running totals.</span>';
   })();
 
@@ -2066,93 +2052,7 @@ function buildPDF(mode){
   box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
   box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — potential, before attribution', DARK);
 
-  /* 12-month projection chart — same series as the calculator's chart, shared scale */
-  y+=h2+6;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('24-MONTH PROJECTION — RUNNING TOTALS',L,y,{charSpace:.8});
-  doc.setFillColor(212,162,74); doc.rect(R-88,y-2.6,3.2,3.2,'F');
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.4); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Total new revenue',R-83.5,y);
-  doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.35); doc.rect(R-52,y-2.6,3.2,3.2,'FD');
-  doc.text('Total paid (fixed + share)',R-47.5,y);
-  y+=3.5;
-  const pT=y, pB=y+21, pL2=L+13, pR2=R-2;
-  /* extend to 24 months — same non-compounding rules: constant win pace, churn from retention */
-  const pChurn=1/(q.retainYears*12);
-  const pMrr=n.series.mrr.slice(), pInv=n.series.invoice.slice();
-  (function(){ let cc=n.series.exitCust; for(let m=13;m<=24;m++){ cc=cc*(1-pChurn)+q.newCust; pMrr.push(cc*q.mrrPC); pInv.push(n.series.ongoingCost); } })();
-  const pN=24;
-  const pCumR=[],pCumC=[];
-  (function(){ let a2=0,b2=0; for(let i2=0;i2<pN;i2++){ a2+=pMrr[i2]; b2+=pInv[i2]; pCumR.push(a2); pCumC.push(b2); } })();
-  const pCeil=q.newCust*q.mrrPC/pChurn;
-  let pSteady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-pChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*pCeil){ pSteady=m; break; } } })();
-  const pMax=Math.max(pCumR[pN-1],pCumC[pN-1],1)*1.18;
-  const pxX=function(i2){return pL2+i2*(pR2-pL2)/(pN-1);}, pyY=function(v){return pB-v/pMax*(pB-pT);};
-  doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.25);
-  [0.25,0.5,0.75,1].forEach(function(f){const gy=pB-f*(pB-pT); doc.line(pL2,gy,pR2,gy);});
-  doc.line(pL2,pB,pR2,pB);
-  /* gold mountain: cumulative revenue won */
-  (function(){
-    const pts=[[pxX(0),pB]]; for(let i2=0;i2<pN;i2++) pts.push([pxX(i2),pyY(pCumR[i2])]); pts.push([pxX(pN-1),pB]);
-    const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
-    doc.setFillColor(212,162,74); doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'F', true);
-  })();
-  /* white wedge: cumulative total paid */
-  (function(){
-    const pts=[[pxX(0),pB]]; for(let i2=0;i2<pN;i2++) pts.push([pxX(i2),pyY(pCumC[i2])]); pts.push([pxX(pN-1),pB]);
-    const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
-    doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.3);
-    doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'FD', true);
-  })();
-  /* break-even marker */
-  const pBe=pCumR.findIndex(function(v,i2){return v>0&&v>=pCumC[i2];});
-  if(pBe>=0){
-    doc.setDrawColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.setLineWidth(.3); doc.setLineDashPattern([1.2,1],0);
-    doc.line(pxX(pBe),pT-0.6,pxX(pBe),pB); doc.setLineDashPattern([],0);
-    doc.setFont('helvetica','bold'); doc.setFontSize(5.4); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-    doc.text('pays for itself — month '+(pBe+1), pxX(pBe)+(pBe>18?-1.2:(pBe<3?1.2:0)), pT-1.2, {align:pBe>18?'right':(pBe<3?'left':'center')});
-  }
-  /* steady-pace marker — where turnover starts offsetting new wins */
-  if(pSteady!=null && pSteady<=pN && (pBe<0 || Math.abs(pxX(pSteady-1)-pxX(pBe))>26)){
-    doc.setDrawColor(GRAY[0],GRAY[1],GRAY[2]); doc.setLineWidth(.25); doc.setLineDashPattern([0.8,1.1],0);
-    doc.line(pxX(pSteady-1),pT-0.6,pxX(pSteady-1),pB); doc.setLineDashPattern([],0);
-    doc.setFont('helvetica','bold'); doc.setFontSize(5.4); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text('levels to steady pace', pxX(pSteady-1), pT-1.2, {align:pSteady>20?'right':'center'});
-  }
-  /* tiny running totals — staggered months (revenue vs cost never share an x),
-     and only drawn where there's room, so nothing piles up on the baseline */
-  doc.setFont('helvetica','normal'); doc.setFontSize(4.2);
-  let costLabeled=false;
-  for(let i2=0;i2<pN;i2++){
-    const lifted=(pB-pyY(pCumR[i2]))>=3;
-    const clearOfCostLine=pCumR[i2]>=pCumC[i2] || (pyY(pCumR[i2])-pyY(pCumC[i2]))>=2.6;
-    if((i2%4===2||i2===pN-1) && pCumR[i2]>0 && lifted && clearOfCostLine){
-      doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-      doc.text(fmtK(pCumR[i2]),pxX(i2),pyY(pCumR[i2])-0.9,{align:i2===pN-1?'right':'center'});
-    }
-    const wedgeTall=(pB-pyY(pCumC[i2]))>=3.4;
-    const endGapOK=i2!==pN-1 || Math.abs(pyY(pCumC[pN-1])-pyY(pCumR[pN-1]))>=4.5;
-    if((i2%4===0&&i2>0||i2===pN-1&&endGapOK) && wedgeTall && (i2!==pN-1||endGapOK)){
-      doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-      doc.text(fmtK(pCumC[i2]),pxX(i2),pyY(pCumC[i2])+2.3,{align:i2===pN-1?'right':'center'});
-      costLabeled=true;
-    }
-  }
-  if(!costLabeled){   /* wedge too thin everywhere — still show the end total, above the line */
-    doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-    doc.text(fmtK(pCumC[pN-1]),pR2-1,pyY(pCumC[pN-1])-0.9,{align:'right'});
-  }
-  doc.setFontSize(5.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  for(let i2=0;i2<pN;i2++){ if(i2===0||(i2+1)%2===0) doc.text(String(i2+1),pxX(i2),pB+3.1,{align:'center'}); }
-  doc.setFontSize(6.2);
-  doc.text(fmtK(pMax),pL2-2,pT+2,{align:'right'});
-  doc.text('$0',pL2-2,pB+1,{align:'right'});
-  /* the honest growth story, in one line */
-  doc.setFont('helvetica','italic'); doc.setFontSize(6.2); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Nothing compounds: the win pace is capped by market demand, and customer turnover levels the monthly pace toward ~'+fmtK(pCeil)+'/mo'
-    +(pSteady!=null&&pSteady<=pN?' — the flattening near month '+pSteady+'.':(pSteady!=null?' (levels off around month '+pSteady+', beyond this window).':'.')), L, pB+6.6);
-  doc.setFont('helvetica','normal');
-  y=pB+9.4;
+  y+=h2+8;
 
   /* plain english + the customer math — one merged section */
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
@@ -2235,7 +2135,108 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
 
-  /* ============ PAGE 2 — TERMINOLOGY (plain-English glossary) ============ */
+  /* ============ PAGE 2 — THE PROJECTION (full page, 12 months) ============ */
+  doc.addPage();
+  doc.setFillColor(10,8,6); doc.rect(0,0,210,24,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
+  doc.text('The 12-Month Projection',L,11);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
+  doc.text('Running totals: every dollar of new revenue won vs every dollar paid — month by month.',L,17.5);
+
+  const pCumR=[],pCumC=[];
+  (function(){ let a2=0,b2=0; for(let i2=0;i2<12;i2++){ a2+=n.series.mrr[i2]; b2+=n.series.invoice[i2]; pCumR.push(a2); pCumC.push(b2); } })();
+  const pChurn=1/(q.retainYears*12);
+  const pCeil=q.newCust*q.mrrPC/pChurn;
+  let pSteady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<q.rampMonth?0:Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-pChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*pCeil){ pSteady=m; break; } } })();
+  const pBe=pCumR.findIndex(function(v,i2){return v>0&&v>=pCumC[i2];});
+
+  /* legend */
+  doc.setFillColor(212,162,74); doc.rect(L,32.6,4.4,4.4,'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  doc.text('Total new revenue won',L+6.4,36);
+  doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.4); doc.rect(L+64,32.6,4.4,4.4,'FD');
+  doc.text('Total paid (fixed + share)',L+70.4,36);
+
+  const pT=46, pB=126, pL2=L+18, pR2=R-4;
+  const pMax=Math.max(pCumR[11],pCumC[11],1)*1.14;
+  const pxX=function(i2){return pL2+i2*(pR2-pL2)/11;}, pyY=function(v){return pB-v/pMax*(pB-pT);};
+  doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3);
+  [0.25,0.5,0.75,1].forEach(function(f){const gy=pB-f*(pB-pT); doc.line(pL2,gy,pR2,gy);});
+  doc.line(pL2,pB,pR2,pB);
+  /* gold mountain: cumulative revenue won */
+  (function(){
+    const pts=[[pxX(0),pB]]; for(let i2=0;i2<12;i2++) pts.push([pxX(i2),pyY(pCumR[i2])]); pts.push([pxX(11),pB]);
+    const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
+    doc.setFillColor(212,162,74); doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'F', true);
+  })();
+  /* white wedge: cumulative total paid */
+  (function(){
+    const pts=[[pxX(0),pB]]; for(let i2=0;i2<12;i2++) pts.push([pxX(i2),pyY(pCumC[i2])]); pts.push([pxX(11),pB]);
+    const segs=[]; for(let i2=1;i2<pts.length;i2++) segs.push([pts[i2][0]-pts[i2-1][0], pts[i2][1]-pts[i2-1][1]]);
+    doc.setFillColor(255,255,255); doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.45);
+    doc.lines(segs, pts[0][0], pts[0][1], [1,1], 'FD', true);
+  })();
+  /* break-even marker */
+  if(pBe>=0){
+    doc.setDrawColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.setLineWidth(.4); doc.setLineDashPattern([1.6,1.3],0);
+    doc.line(pxX(pBe),pT-2,pxX(pBe),pB); doc.setLineDashPattern([],0);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    doc.text('pays for itself — month '+(pBe+1), pxX(pBe)+(pBe>8?-1.6:(pBe<2?1.6:0)), pT-3.4, {align:pBe>8?'right':(pBe<2?'left':'center')});
+  }
+  /* running totals — alternate months so labels never collide */
+  doc.setFont('helvetica','normal'); doc.setFontSize(6);
+  let costLabeled=false;
+  for(let i2=0;i2<12;i2++){
+    const lifted=(pB-pyY(pCumR[i2]))>=5;
+    const clearOfCostLine=pCumR[i2]>=pCumC[i2] || (pyY(pCumR[i2])-pyY(pCumC[i2]))>=4;
+    if((i2%2===0||i2===11) && i2!==pBe && pCumR[i2]>0 && lifted && clearOfCostLine){
+      doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+      doc.text(fmtK(pCumR[i2]),pxX(i2),pyY(pCumR[i2])-1.6,{align:i2===11?'right':'center'});
+    }
+    const wedgeTall=(pB-pyY(pCumC[i2]))>=5.4;
+    const endGapOK=i2!==11 || Math.abs(pyY(pCumC[11])-pyY(pCumR[11]))>=7;
+    if(i2%2===1 && wedgeTall && endGapOK){
+      doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+      doc.text(fmtK(pCumC[i2]),pxX(i2),pyY(pCumC[i2])+3.4,{align:i2===11?'right':'center'});
+      costLabeled=true;
+    }
+  }
+  if(!costLabeled){
+    doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+    doc.text(fmtK(pCumC[11]),pR2-1.5,pyY(pCumC[11])-1.6,{align:'right'});
+  }
+  doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  for(let i2=0;i2<12;i2++) doc.text(String(i2+1),pxX(i2),pB+5.4,{align:'center'});
+  doc.text('month',(pL2+pR2)/2,pB+10.2,{align:'center'});
+  doc.text(fmtK(pMax),pL2-3,pT+2.6,{align:'right'});
+  doc.text('$0',pL2-3,pB+1.2,{align:'right'});
+
+  /* how to read this */
+  let hy=pB+20;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('HOW TO READ THIS',L,hy,{charSpace:.8}); hy+=6.4;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  [
+    'The gold area is every dollar of new revenue the program has won to date. The white wedge is everything paid to date — the fixed fee, plus the revenue share as wins land.',
+    'Where the gold curve crosses the white line, the program has paid for itself'+(pBe>=0?' — modeled here at month '+(pBe+1)+'.':' — not yet reached inside this window at the modeled pace.'),
+    'Months 1–'+(n.rampMonth-1)+' are the build, billed as the fixed fee only; the revenue share starts month '+n.rampMonth+'. A month with no proven wins bills no share at all.',
+    'Growth is not exponential — nothing compounds. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')
+  ].forEach(function(t){
+    doc.splitTextToSize(t,W).forEach(function(ln){ doc.text(ln,L,hy); hy+=4.7; });
+    hy+=2.2;
+  });
+  hy+=1;
+  doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+  doc.text('Modeled projections from the inputs on page 1 — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.',L,hy,{maxWidth:W});
+
+  /* footer band */
+  doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
+  doc.text('NEW REWARD',L,291,{charSpace:1});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
+  doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
+
+  /* ============ PAGE 3 — TERMINOLOGY (plain-English glossary) ============ */
   doc.addPage();
   doc.setFillColor(10,8,6); doc.rect(0,0,210,24,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
