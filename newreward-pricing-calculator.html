@@ -2364,9 +2364,11 @@ render();
   const mj=document.getElementById('mjump'), out=document.querySelector('.outputs');
   if(!mj||!out) return;
   mj.addEventListener('click',function(){ out.scrollIntoView({behavior:'smooth',block:'start'}); });
-  if('IntersectionObserver' in window){
-    new IntersectionObserver(function(en){ mj.classList.toggle('hide', en[0].isIntersecting); },{rootMargin:'0px 0px -40% 0px'}).observe(out);
-  } else { mj.classList.remove('hide'); }
+  function upd(){ const r=out.getBoundingClientRect(); mj.classList.toggle('hide', r.top < window.innerHeight*0.6); }
+  window.addEventListener('scroll',upd,{passive:true});
+  window.addEventListener('resize',upd);
+  upd();
+  if(typeof render==='function') render();   /* pill text: first render ran before this button existed */
 })();
 </script>
 </body>
