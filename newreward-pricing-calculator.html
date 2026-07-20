@@ -753,6 +753,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="fwrap"><select id="industry">
           <option value="local">Local service</option>
           <option value="highticket">High-ticket local</option>
+          <option value="ultra">Ultra high-ticket (custom homes, major projects)</option>
           <option value="b2b">B2B / SaaS</option>
           <option value="ecom">E-commerce / National</option>
         </select></div>
@@ -1098,6 +1099,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 const IND = {
   local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, cost:1.00, name:'Local service'},
   highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, cost:1.08, name:'High-ticket local'},
+  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.3, margin:22, cost:1.10, name:'Ultra high-ticket'},
   b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.10, name:'B2B / SaaS'},
   ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.12, name:'E-commerce / National'}
 };
@@ -1129,7 +1131,7 @@ const COMP = {
    ~75% of its ceiling — matching published combined mid-market retainers of $2–8k+. */
 const MARKET_SEO = {local:[1500,3500], multi:[2500,5000], metro:[3000,7500], national:[3500,12000]};
 const MARKET_GEO = {local:[1000,2500], multi:[1500,3500], metro:[2000,5000], national:[2500,8000]};
-const MARKET_IND = {local:1.00, highticket:1.15, b2b:1.20, ecom:1.20};
+const MARKET_IND = {local:1.00, highticket:1.15, ultra:1.15, b2b:1.20, ecom:1.20};
 function marketBand(s,nScopes){
   const adj=MARKET_IND[s.industry]??1, sb=MARKET_SEO[s.footprint], gb=MARKET_GEO[s.footprint];
   if(nScopes===2) return [(sb[0]+0.35*gb[0])*adj, (sb[1]+0.75*gb[1])*adj];
@@ -1858,7 +1860,7 @@ function researchWithAI(){
     +'Business website: '+url+'\n\n'
     +'BE RESEARCHED, DETERMINISTIC, AND REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure — NOT the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Go to the low end only where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'Classification rules — follow exactly:\n'
-    +'- industry: "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
+    +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
     +'- footprint: a business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets) and size the volume across all of them; units>1 with footprint=local is only correct when every location shares ONE market.\n'
@@ -1878,13 +1880,13 @@ function researchWithAI(){
     +'- commission: percent of the gross sale they already pay staff or reps in this vertical (construction/realty-adjacent 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10).\n'
     +'- yearly: the FULL first-year revenue from ONE new customer, including typical repeat visits, packages, or memberships inside year one — a med spa patient is several visits and often a package, not one treatment; use their published prices and typical visit counts.\n'
     +'- LOW-SIDE REALISM CHECK (everyday and med-spa-style local services): sanity-test volume x 0.15 x (convrate/100) x 12. If it implies fewer than roughly 12 new customers a YEAR for an established local service with real demand, your volume, conversion, or footprint is understated — fix the inputs rather than under-selling the business.\n'
-    +'- ULTRA-HIGH-TICKET REALISM CHECK (customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n\n'
+    +'- ULTRA-HIGH-TICKET REALISM CHECK (industry=ultra — customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n\n'
     +'Then give me BOTH of the following:\n\n'
     +'(1) A three-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
     +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
-    +'- industry: local | highticket | b2b | ecom\n'
+    +'- industry: local | highticket | ultra | b2b | ecom\n'
     +'- footprint: local | multi | metro | national\n'
     +'- compstr: weak | moderate | strong | dominant\n'
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool';
@@ -2427,7 +2429,7 @@ function buildPDF(mode){
     ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
     ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
-    ['Industry model','The business type (local service, high-ticket local, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank.'],
+    ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank.'],
     ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, or national. Wider = more demand, competitors, and pages to optimize.'],
     ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — the total cost rises, but the cost per location shrinks.'],
     ['Competitor strength','How strong the businesses already ranking are (site authority, backlinks). The biggest driver of market difficulty.'],
