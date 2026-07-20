@@ -2091,25 +2091,18 @@ function buildPDF(mode){
 
   y+=h2+4.6;
 
-  /* ---- the pricing principle — one compact box on the proposal page ---- */
-  y+=4;
+  /* ---- the pricing principle — full-width section, gold title, no box ---- */
+  y+=5;
   const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every number comes from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work actually requires — a price that only works when it works for both sides.';
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
-  const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
-  const bxPadTop=5.6, bxPadBot=3.4, bxHead=3.85, bxLh=2.68;
-  const bxH=bxPadTop+bxHead+prLines.length*bxLh-bxLh+bxPadBot+2.6;
-  doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
-  doc.roundedRect(L,y,W,bxH,2,2,'FD');
-  let by=y+bxPadTop;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,by,{charSpace:.6}); by+=bxHead;
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  prLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
-  y+=bxH;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('THE PRINCIPLE BEHIND THIS PRICE',L,y,{charSpace:.8});
+  y+=4.8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  doc.splitTextToSize(PRINCIPLE,W).forEach(function(ln){ doc.text(ln,L,y); y+=4.1; });
 
 
   /* inputs for reference */
-  y+=9.5;
+  y+=8;
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('INPUTS & ASSUMPTIONS — FOR REFERENCE',L,y,{charSpace:.8});
   y+=2.5; doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3); doc.line(L,y,R,y);
@@ -2363,7 +2356,7 @@ function buildPDF(mode){
   const fColW=(W-8)/2;
   /* auto-MAX fit: largest type that packs all questions into two columns without overflow.
      p = [question pt, answer pt, answer line height, question->answer offset, gap after entry] */
-  const fPresets=[[12.0,10.6,4.12,5.6,5.0],[11.2,9.9,3.86,5.25,4.7],[10.4,9.2,3.6,4.9,4.4],[10.0,8.8,3.45,4.7,4.2],[9.5,8.4,3.3,4.5,4.0],[9.0,8.0,3.14,4.3,3.8],[8.6,7.6,2.99,4.1,3.6],[8.1,7.2,2.83,3.9,3.4],[7.6,6.7,2.6,3.6,3.2]];
+  const fPresets=[[13.4,11.8,4.6,6.25,5.6],[12.7,11.2,4.36,5.95,5.3],[12.0,10.6,4.12,5.6,5.0],[11.2,9.9,3.86,5.25,4.7],[10.4,9.2,3.6,4.9,4.4],[10.0,8.8,3.45,4.7,4.2],[9.5,8.4,3.3,4.5,4.0],[9.0,8.0,3.14,4.3,3.8],[8.6,7.6,2.99,4.1,3.6],[8.1,7.2,2.83,3.9,3.4],[7.6,6.7,2.6,3.6,3.2]];
   const fMeasure=function(p,f){
     doc.setFont('helvetica','bold'); doc.setFontSize(p[0]);
     const qL=doc.splitTextToSize(f[0],fColW);
@@ -2372,22 +2365,27 @@ function buildPDF(mode){
     const qLh=p[2]+0.4;
     return {qL:qL, aL:aL, qLh:qLh, h:(qL.length-1)*qLh+p[3]+aL.length*p[2]+p[4]};
   };
-  let fm=fPresets[fPresets.length-1];
+  /* pick the LARGEST type where a height-BALANCED two-column split fits the page —
+     balancing the columns (instead of stuffing column 1 first) removes the dead space
+     at the bottom of column 2 and lets the type run one or two sizes bigger */
+  const fAvail=278-33;
+  let fm=fPresets[fPresets.length-1], fSplit=Math.ceil(FAQ.length/2);
   fPresets.some(function(p){
-    let yy=33, col=0, ok=true;
-    for(let fi2=0; fi2<FAQ.length; fi2++){
-      const h=fMeasure(p,FAQ[fi2]).h;
-      if(yy+h>278){ if(col===0){ col=1; yy=33; } else { ok=false; break; } }
-      if(yy+h>278){ ok=false; break; }
-      yy+=h;
+    const hs=FAQ.map(function(f){ return fMeasure(p,f).h; });
+    let best=null, bestIdx=null;
+    for(let k=1;k<FAQ.length;k++){
+      const h1=hs.slice(0,k).reduce(function(a,b){return a+b;},0);
+      const h2=hs.slice(k).reduce(function(a,b){return a+b;},0);
+      const mx=Math.max(h1,h2);
+      if(best===null||mx<best){ best=mx; bestIdx=k; }
     }
-    if(ok){ fm=p; return true; }
+    if(best<=fAvail){ fm=p; fSplit=bestIdx; return true; }
     return false;
   });
-  let fqx=L, fqy=33, fCol2=false;
-  FAQ.forEach(function(f){
+  let fqx=L, fqy=33;
+  FAQ.forEach(function(f,fi2){
     const m=fMeasure(fm,f);
-    if(!fCol2 && fqy+m.h>278){ fqx=L+fColW+8; fqy=33; fCol2=true; }   // flow into column 2 — once
+    if(fi2===fSplit){ fqx=L+fColW+8; fqy=33; }   // balanced two-column split
     doc.setFont('helvetica','bold'); doc.setFontSize(fm[0]); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
     m.qL.forEach(function(ln,i){ doc.text(ln,fqx,fqy+i*m.qLh); });
     doc.setFont('helvetica','normal'); doc.setFontSize(fm[1]); doc.setTextColor(70,63,52);
