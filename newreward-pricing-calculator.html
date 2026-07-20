@@ -294,8 +294,9 @@ a.wordmark:hover span{color:var(--gold-bright)}
   .tip .tipbox{width:min(240px,82vw)}
   /* comfortable tap targets */
   /* 16px minimum stops iOS Safari from auto-zooming on field focus (and staying zoomed);
-     !important because the base field styles are declared later and would override this */
-  input[type=text],input[type=number],input[type=url],select{font-size:16px!important;padding:13px 14px}
+     !important because the base field styles are declared later and would override this.
+     Scoped to the form column so the big editable price/share numbers keep their size. */
+  .inputs input[type=text],.inputs input[type=number],.inputs input[type=url],.inputs select{font-size:16px!important;padding:13px 14px}
   .toggle-row{padding:14px 16px}
   /* stack the big number + description rows so the text gets full width */
   .o-share{flex-direction:column;gap:8px}
@@ -2090,16 +2091,13 @@ function buildPDF(mode){
 
   y+=h2+4.6;
 
-  /* ---- the pricing principle + ranking primer — one compact box on the proposal page ---- */
+  /* ---- the pricing principle — one compact box on the proposal page ---- */
+  y+=2;
   const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every number comes from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work actually requires — a price that only works when it works for both sides.';
-  const RANKING='Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines like ChatGPT, Gemini, Perplexity, and AI Overviews recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.';
   doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
   const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
-  const rkLines=doc.splitTextToSize(RANKING,W-12);
-  /* the principle first, then the ranking primer — with symmetric padding so the content
-     sits vertically centered in the gold box */
-  const bxPadTop=5.6, bxPadBot=3.4, bxHead=3.85, bxLh=2.68, bxGap=2.2;
-  const bxH=bxPadTop+bxHead+rkLines.length*bxLh+bxGap+bxHead+prLines.length*bxLh-bxLh+bxPadBot;
+  const bxPadTop=5.6, bxPadBot=3.4, bxHead=3.85, bxLh=2.68;
+  const bxH=bxPadTop+bxHead+prLines.length*bxLh-bxLh+bxPadBot+2.6;
   doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(GOLD[0],GOLD[1],GOLD[2]); doc.setLineWidth(.5);
   doc.roundedRect(L,y,W,bxH,2,2,'FD');
   let by=y+bxPadTop;
@@ -2107,11 +2105,6 @@ function buildPDF(mode){
   doc.text('THE PRINCIPLE BEHIND THIS PRICE',L+6,by,{charSpace:.6}); by+=bxHead;
   doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   prLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
-  by+=bxGap;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('HOW THINGS GET RANKED — IN SHORT',L+6,by,{charSpace:.6}); by+=bxHead;
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  rkLines.forEach(function(ln){ doc.text(ln,L+6,by); by+=bxLh; });
   y+=bxH;
 
 
@@ -2363,7 +2356,9 @@ function buildPDF(mode){
     ['"What do you need from me to start?"',
      'Access to your site, analytics, and the profiles we\'ll work on (Google Business, listings, review platforms). We confirm each connection before claiming anything is live, and you approve work before it ships.'],
     ['"Can we start with one thing instead of everything?"',
-     'Yes — in two ways. On services: we can begin with SEO only or AEO/GEO only, recommending whichever fits your needs, budget, market, and industry — and steering you away from what you don\'t need yet. On territory: depending on your industry and market footprint, we can start by winning one local area before tackling a 2–5 market or major metro/regional program — a smaller footprint means less demand to chase and less to build, so the monthly fee is lower. Start where the math is tightest, then expand as results come in.']
+     'Yes — in two ways. On services: we can begin with SEO only or AEO/GEO only, recommending whichever fits your needs, budget, market, and industry — and steering you away from what you don\'t need yet. On territory: depending on your industry and market footprint, we can start by winning one local area before tackling a 2–5 market or major metro/regional program — a smaller footprint means less demand to chase and less to build, so the monthly fee is lower. Start where the math is tightest, then expand as results come in.'],
+    ['"How do things actually get ranked?"',
+     'Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines like ChatGPT, Gemini, Perplexity, and AI Overviews recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.']
   ];
   const fColW=(W-8)/2;
   /* auto-MAX fit: largest type that packs all questions into two columns without overflow.
