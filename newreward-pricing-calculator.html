@@ -1863,6 +1863,7 @@ function researchWithAI(){
     +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
     +'- footprint: a business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
+    +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
     +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets) and size the volume across all of them; units>1 with footprint=local is only correct when every location shares ONE market.\n'
     +'- volume: the COMBINED phrase-cluster demand across ALL locations/service lines counted in units — a 2-location business serving two cities needs both cities\' demand added together.\n'
     +'- convrate: for everyday and med-spa-style local services use a realistic 3-6; reserve sub-1 rates for ultra-high-ticket contracts only.\n'
@@ -2523,6 +2524,10 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
 (function(){
   const fp=document.getElementById('footprint'), volEl=document.getElementById('volume');
   let prevFoot=fp.value;
+  /* capture the real pre-change value on focus — URL-prefilled pages set the select AFTER
+     this script runs, so the load-time snapshot can be stale and flip the ratio backwards */
+  fp.addEventListener('focus',function(){ prevFoot=fp.value; });
+  fp.addEventListener('pointerdown',function(){ prevFoot=fp.value; });
   fp.addEventListener('change',function(){
     const nf=fp.value, v=parseFloat(String(volEl.value).replace(/,/g,''));
     if(v>0 && FOOT[prevFoot] && FOOT[nf] && nf!==prevFoot){
@@ -2539,6 +2544,8 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
      but the entered demand was NOT changed — flag it so they stay in sync */
   const unitsEl=document.getElementById('units');
   let prevUnits=parseInt(unitsEl.value,10)||1;
+  unitsEl.addEventListener('focus',function(){ prevUnits=parseInt(unitsEl.value,10)||1; });
+  unitsEl.addEventListener('pointerdown',function(){ prevUnits=parseInt(unitsEl.value,10)||1; });
   unitsEl.addEventListener('change',function(){
     const nu=parseInt(unitsEl.value,10)||1;
     const v=parseFloat(volEl.value);
