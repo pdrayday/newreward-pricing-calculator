@@ -2092,7 +2092,7 @@ function buildPDF(mode){
   y+=h2+4.6;
 
   /* ---- the pricing principle — one compact box on the proposal page ---- */
-  y+=2;
+  y+=4;
   const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every number comes from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work actually requires — a price that only works when it works for both sides.';
   doc.setFont('helvetica','normal'); doc.setFontSize(6.9);
   const prLines=doc.splitTextToSize(PRINCIPLE,W-12);
@@ -2109,7 +2109,7 @@ function buildPDF(mode){
 
 
   /* inputs for reference */
-  y+=6.4;
+  y+=9.5;
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('INPUTS & ASSUMPTIONS — FOR REFERENCE',L,y,{charSpace:.8});
   y+=2.5; doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3); doc.line(L,y,R,y);
@@ -2147,7 +2147,7 @@ function buildPDF(mode){
   });
   y+=half*rowH+3;
 
-  y+=4;
+  y+=6;
   /* plain english + the customer math — one merged section */
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('PLAIN ENGLISH — AND THE MATH',L,y,{charSpace:.8});
@@ -2363,7 +2363,7 @@ function buildPDF(mode){
   const fColW=(W-8)/2;
   /* auto-MAX fit: largest type that packs all questions into two columns without overflow.
      p = [question pt, answer pt, answer line height, question->answer offset, gap after entry] */
-  const fPresets=[[10.4,9.2,3.6,4.9,4.4],[10.0,8.8,3.45,4.7,4.2],[9.5,8.4,3.3,4.5,4.0],[9.0,8.0,3.14,4.3,3.8],[8.6,7.6,2.99,4.1,3.6],[8.1,7.2,2.83,3.9,3.4],[7.6,6.7,2.6,3.6,3.2]];
+  const fPresets=[[12.0,10.6,4.12,5.6,5.0],[11.2,9.9,3.86,5.25,4.7],[10.4,9.2,3.6,4.9,4.4],[10.0,8.8,3.45,4.7,4.2],[9.5,8.4,3.3,4.5,4.0],[9.0,8.0,3.14,4.3,3.8],[8.6,7.6,2.99,4.1,3.6],[8.1,7.2,2.83,3.9,3.4],[7.6,6.7,2.6,3.6,3.2]];
   const fMeasure=function(p,f){
     doc.setFont('helvetica','bold'); doc.setFontSize(p[0]);
     const qL=doc.splitTextToSize(f[0],fColW);
@@ -2450,7 +2450,7 @@ function buildPDF(mode){
   const gColW=(W-8)/2;
   /* auto-MAX fit: simulate the exact two-column packing at each type size, largest first,
      and use the biggest that fills the page without overflowing */
-  const gPresets=[[9.4,8.6,3.34,2.5],[9.0,8.2,3.18,2.35],[8.6,7.8,3.03,2.2],[8.2,7.4,2.87,2.05],[7.9,7.15,2.77,1.95],[7.6,6.9,2.68,1.85],[7.3,6.6,2.56,1.7],[6.9,6.25,2.42,1.6],[6.6,6.0,2.28,1.3],[6.3,5.75,2.16,1.1],[6.1,5.55,2.06,0.95]];
+  const gPresets=[[10.6,9.7,3.75,2.85],[10.0,9.1,3.55,2.65],[9.4,8.6,3.34,2.5],[9.0,8.2,3.18,2.35],[8.6,7.8,3.03,2.2],[8.2,7.4,2.87,2.05],[7.9,7.15,2.77,1.95],[7.6,6.9,2.68,1.85],[7.3,6.6,2.56,1.7],[6.9,6.25,2.42,1.6],[6.6,6.0,2.28,1.3],[6.3,5.75,2.16,1.1],[6.1,5.55,2.06,0.95]];
   let gm=gPresets[gPresets.length-1];
   gPresets.some(function(p){
     doc.setFont('helvetica','normal'); doc.setFontSize(p[1]);
