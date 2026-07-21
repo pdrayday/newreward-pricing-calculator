@@ -2736,9 +2736,9 @@ document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty
 
 /* ---- URL prefill: open the calculator with ?client=...&industry=highticket&volume=1200...
    and every matching input is filled. Used by researched demo-prep links. ---- */
-(function applyParams(){
-  const p = new URLSearchParams(location.search);
-  if(![...p.keys()].length) return;
+function applyPrefill(qs){
+  const p = new URLSearchParams(qs);
+  if(![...p.keys()].length) return false;
   const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc',
                   'rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin',
                   'acq','commission'];
@@ -2754,6 +2754,61 @@ document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty
   });
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
+  return true;
+}
+
+/* ---- TAB HANDOFF: if the calculator is already open in another tab, a freshly opened
+   prefilled link sends its inputs to THAT tab and closes itself — no tab pile-up.
+   Same-origin only (BroadcastChannel); falls back to filling this tab normally when no
+   other tab answers within 350ms, when the browser blocks the close, or with &stay=1. ---- */
+const nrChan = ('BroadcastChannel' in window) ? new BroadcastChannel('nr-calc') : null;
+let nrProbing = false;
+function nrToast(msg){
+  const d=document.createElement('div');
+  d.className='no-print';
+  d.style.cssText='position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9999;background:#181410;color:#eee6d6;border:1px solid #d4a24a;border-radius:10px;padding:12px 18px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.55);max-width:92vw;text-align:center;transition:opacity .6s';
+  d.innerHTML=msg;
+  document.body.appendChild(d);
+  setTimeout(function(){ d.style.opacity='0'; setTimeout(function(){ d.remove(); },700); },4500);
+  return d;
+}
+if(nrChan){
+  nrChan.onmessage=function(e){
+    const d=e.data||{};
+    if(nrProbing) return;                              // a probing (handing-off) tab is not a primary
+    if(d.t==='probe'){ nrChan.postMessage({t:'here'}); }
+    else if(d.t==='prefill'){
+      priceDirty=false; shareDirty=false; rampDirty=false;   // fresh research replaces any negotiation state
+      applyPrefill(d.qs); render();
+      nrToast('&#9989; <b style="color:#eec77c">Inputs loaded</b> — filled from the research link you just opened.');
+    }
+  };
+}
+(function(){
+  const qs=location.search;
+  const p=new URLSearchParams(qs);
+  const hasParams=[...p.keys()].some(function(k){ return k!=='cb' && k!=='stay'; });
+  if(!hasParams) return;
+  if(!nrChan || p.has('stay')){ applyPrefill(qs); return; }
+  nrProbing=true;
+  let heard=false;
+  const onMsg=function(e){ if((e.data||{}).t==='here') heard=true; };
+  nrChan.addEventListener('message', onMsg);
+  nrChan.postMessage({t:'probe'});
+  setTimeout(function(){
+    nrChan.removeEventListener('message', onMsg);
+    if(heard){
+      nrChan.postMessage({t:'prefill', qs:qs});
+      const ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(8,6,4,.96);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px';
+      ov.innerHTML='<div style="color:#eee6d6;font-size:16px;line-height:1.6;max-width:480px">&#9989; <b style="color:#eec77c">Inputs sent to your open calculator tab.</b><br>Closing this tab&hellip;<br><br><a href="'+location.pathname+qs+(qs?'&':'?')+'stay=1" style="color:#d4a24a;font-size:13px">or click here to fill this tab instead</a><span style="display:block;margin-top:6px;font-size:12.5px;color:#9a9082">(if this tab stays open, your browser blocked auto-close — just close it)</span></div>';
+      document.body.appendChild(ov);
+      setTimeout(function(){ window.close(); }, 900);
+    } else {
+      nrProbing=false;
+      applyPrefill(qs); render();
+    }
+  }, 350);
 })();
 render();
 
