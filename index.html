@@ -627,8 +627,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 .proj-key .kk{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 5px 0 10px}
 .proj-key .k-rev{background:linear-gradient(180deg,#eec77c,#a87c2e)}
 .proj-key .k-cost{background:#ffffff;border:1px solid #0c0a08}
-.proj-key .k-flat{background:transparent;border:none;border-top:2px dashed #b9a884;height:0;border-radius:0;align-self:center}
-[data-theme="ivory"] .proj-key .k-flat{border-top-color:#8a6520}
 #o-chart{margin-top:10px}
 #o-chart svg{width:100%;display:block}
 #o-chart text,.cz-body text{fill:var(--muted2);font-size:9.5px;font-family:var(--font)}
@@ -653,9 +651,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 #o-chart rect,.cz-body rect,#o-chart path,.cz-body path{cursor:crosshair}
 #o-chart .be-label,.cz-body .be-label{fill:#eec77c}
 #o-chart .cost-line,.cz-body .cost-line{stroke:#ffffff}
-#o-chart .cost-flat,.cz-body .cost-flat{stroke:#b9a884}
 [data-theme="ivory"] #o-chart .cost-line,[data-theme="ivory"] .cz-body .cost-line{stroke:#14100a}
-[data-theme="ivory"] #o-chart .cost-flat,[data-theme="ivory"] .cz-body .cost-flat{stroke:#8a6520}
 /* cost bars: white fill + bold black outline in BOTH themes so they never blend with revenue */
 #o-chart .bar-cost,.cz-body .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
 .o-timeline{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.65}
@@ -985,7 +981,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="o-proj">
       <div class="o-diff-top">
         <span class="o-diff-label">12-Month Projection</span>
-        <span class="proj-key"><i class="kk k-rev"></i>New revenue / mo<i class="kk k-cost"></i>With rev share<i class="kk k-flat"></i>Fixed-only option</span>
+        <span class="proj-key"><i class="kk k-rev"></i>New revenue / mo<i class="kk k-cost"></i>Total cost (fixed + share)</span>
       </div>
       <div id="o-chart" onclick="openChartZoom()"></div>
       <div class="o-timeline" id="o-timeline"></div>
@@ -1056,7 +1052,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <div class="chart-zoom no-print" id="chart-zoom" hidden>
   <div class="cz-inner">
     <div class="cz-bar">
-      <span class="cz-title">12-Month Projection — new revenue each month vs both cost options (with rev share, and fixed-only)</span>
+      <span class="cz-title">12-Month Projection — new revenue each month vs the total monthly cost (fixed + share)</span>
       <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
     </div>
     <div class="cz-body" id="cz-body"></div>
@@ -1425,9 +1421,8 @@ function renderChart(q,n){
      the rev-share structure (fixed while we build, reduced fee + share as wins land) and the
      FIXED-ONLY option (the full fee, flat, no share ever). The month the bar clears the lines
      is the month the program starts paying for itself month-over-month. */
-  const flat=[]; for(let i=0;i<12;i++) flat.push(n.price);
-  chartSeries={mrr:mrr.slice(), invA:invoice.slice(), invB:flat};
-  const maxV=Math.max.apply(null, mrr.concat(invoice,[n.price,1]))*1.10;
+  chartSeries={mrr:mrr.slice(), invA:invoice.slice()};
+  const maxV=Math.max.apply(null, mrr.concat(invoice,[1]))*1.10;
   const X0=46,X1=352,Y0=16,Y1=112,gw=(X1-X0)/12;
   const py=v=>Y1-v/maxV*(Y1-Y0);
   let g='';
@@ -1440,8 +1435,6 @@ function renderChart(q,n){
     if(rh>0) g+='<rect class="bar-rev" x="'+(cx-7.5)+'" y="'+(Y1-rh).toFixed(1)+'" width="15" height="'+rh.toFixed(1)+'" rx="2" fill="url(#gg)"></rect>';
     g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+(i+1)+'</text>';
   }
-  /* fixed-only option: the full fee, flat, no share — dashed */
-  g+='<line class="cost-flat" x1="'+X0+'" y1="'+py(n.price).toFixed(1)+'" x2="'+X1+'" y2="'+py(n.price).toFixed(1)+'" stroke-dasharray="6 4" stroke-width="1.8" fill="none"/>';
   /* rev-share billing line */
   let dA='M'+(X0+gw/2).toFixed(1)+','+py(invoice[0]).toFixed(1);
   for(let i=1;i<12;i++) dA+=' L'+(X0+i*gw+gw/2).toFixed(1)+','+py(invoice[i]).toFixed(1);
@@ -1791,7 +1784,7 @@ function render(){
       let c2=0; for(let m=1;m<=120;m++){ const f=m<n.rampMonth?0:Math.min(1,(m-n.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-tChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*tCeil){ tSteady=m; break; } }
     }
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
-      '<b>The gold bars</b> are the new revenue the program wins each month. <b>The white line</b> is your bill with the revenue share — the fixed fee while we build, then the reduced fee plus the share as wins land. <b>The dashed line</b> is the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, no share ever.'
+      '<b>The gold bars</b> are the new revenue the program wins each month. <b>The white line</b> is your bill with the revenue share — the fixed fee while we build, then the reduced fee plus the share as wins land.'
       +(mPos>0?' The program starts <b>earning more each month than it costs</b> around <b>month '+mPos+'</b> — where the bars clear the lines'+(beM>0?' — and has fully repaid the build months by <b>month '+beM+'</b>.':'.'):'')
       +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
       +'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
@@ -1825,7 +1818,7 @@ function render(){
           : 'At the modeled pace ('+crM.txt+'), most months bill only the fixed '+fmt$(n.series.perfPrice)+' &mdash; the projection spreads the occasional win-month share into a smooth average (&asymp;'+fmt$(shareMo)+'/mo of share, &asymp;'+fmt$(n.series.ongoingCost)+'/mo all-in) so the trend reads clearly; the running total is exact either way. ')
         +'Year-one total: <span class="sm-big">'+fmt$(n.series.year1Cost)+'</span>'
         +(hasRamp?(rampEnd>n.rampMonth?' &mdash; a bit under full pace &times; 12 because the share ramps in over months '+n.rampMonth+'&ndash;'+rampEnd+'.':' &mdash; a bit under full pace &times; 12 because the share ramps in during month '+n.rampMonth+'.'):'.')
-        +' No proven wins in a month = no share that month. Prefer no share at all? <span class=\"sm-big\">The fixed-only option</span> keeps the full '+fmt$(n.price)+'/mo — flat, every month, 0% share.</p>';
+        +' No proven wins in a month = no share that month.</p>';
       })();
   }
 
@@ -1988,12 +1981,11 @@ document.addEventListener('mousemove',function(e){
   const inSmallChart=!isBar && t && t.closest && t.closest('#o-chart');
   if(isBar && chartSeries){
     const m=parseInt(t.getAttribute('data-m'),10);
-    const rev=chartSeries.mrr[m-1], cA=chartSeries.invA[m-1], cB=chartSeries.invB[m-1];
+    const rev=chartSeries.mrr[m-1], cA=chartSeries.invA[m-1];
     const rx=(r,c)=>r>0?((r/c)>=10?Math.round(r/c):(r/c).toFixed(1))+'&times; this month':'&mdash;';
     const inSmall=!!t.closest('#o-chart');
     tip.innerHTML='<b>Month '+m+'</b><br>New revenue: <b>'+fmt$(rev)+'</b>'
-      +'<br>With rev share: <b>'+fmt$(cA)+'</b> billed &middot; <b>'+rx(rev,cA)+'</b>'
-      +'<br>Fixed-only: <b>'+fmt$(cB)+'</b> billed &middot; <b>'+rx(rev,cB)+'</b>'
+      +'<br>Billed (fixed + share): <b>'+fmt$(cA)+'</b> &middot; <b>'+rx(rev,cA)+'</b>'
       +(inSmall?'<br><span style="opacity:.65">&#10530; Click to enlarge</span>':'');
     tip.hidden=false;
     const pad=14; tip.style.left='0px'; tip.style.top='0px';
@@ -2208,7 +2200,7 @@ function buildPDF(mode){
   doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
   doc.text('The 12-Month Projection',L,11);
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
-  doc.text('New revenue each month, against both cost options — with the revenue share, and fixed-only.',L,17.5);
+  doc.text('New revenue each month, against the total monthly cost — fixed fee plus the share as wins land.',L,17.5);
 
   const pCumR=[],pCumC=[];
   (function(){ let a2=0,b2=0; for(let i2=0;i2<12;i2++){ a2+=n.series.mrr[i2]; b2+=n.series.invoice[i2]; pCumR.push(a2); pCumC.push(b2); } })();
@@ -2223,12 +2215,10 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(8.6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('New revenue / month',L+6.4,36);
   doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.7); doc.line(L+58,34.4,L+64,34.4);
-  doc.text('With rev share',L+66.4,36);
-  doc.setDrawColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.setLineWidth(.6); doc.setLineDashPattern([1.6,1.2],0); doc.line(L+102,34.4,L+108,34.4); doc.setLineDashPattern([],0);
-  doc.text('Fixed-only option',L+110.4,36);
+  doc.text('Total cost (fixed + share)',L+66.4,36);
 
   const pT=46, pB=126, pL2=L+18, pR2=R-4, pgw=(pR2-pL2)/12;
-  const pMax=Math.max.apply(null, n.series.mrr.concat(n.series.invoice,[n.price,1]))*1.14;
+  const pMax=Math.max.apply(null, n.series.mrr.concat(n.series.invoice,[1]))*1.14;
   const pyY=function(v){return pB-v/pMax*(pB-pT);};
   doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3);
   [0.25,0.5,0.75,1].forEach(function(f){const gy=pB-f*(pB-pT); doc.line(pL2,gy,pR2,gy);});
@@ -2243,19 +2233,13 @@ function buildPDF(mode){
     doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
     doc.text(String(i2+1),cx,pB+5.4,{align:'center'});
   }
-  /* fixed-only dashed line (full fee) */
-  doc.setDrawColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.setLineWidth(.55); doc.setLineDashPattern([1.8,1.4],0);
-  doc.line(pL2,pyY(n.price),pR2,pyY(n.price)); doc.setLineDashPattern([],0);
-  const pFixAbove = n.price >= n.series.invoice[11];
-  doc.setFontSize(5.6); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text(fmt$(n.price)+'/mo fixed-only',pR2-1,pyY(n.price)+(pFixAbove?-1.4:3.1),{align:'right'});
   /* rev-share billing line */
   doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.75);
   for(let i2=1;i2<12;i2++){
     doc.line(pL2+(i2-1)*pgw+pgw/2,pyY(n.series.invoice[i2-1]),pL2+i2*pgw+pgw/2,pyY(n.series.invoice[i2]));
   }
   doc.setFontSize(5.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  doc.text(fmt$(n.series.invoice[11])+'/mo w/ share',pR2-1,pyY(n.series.invoice[11])+(pFixAbove?3.1:-1.4),{align:'right'});
+  doc.text(fmt$(n.series.invoice[11])+'/mo total',pR2-1,pyY(n.series.invoice[11])-1.4,{align:'right'});
   /* the month the bars clear the lines */
   if(pPos>=0){
     const cx=pL2+pPos*pgw+pgw/2;
@@ -2305,7 +2289,7 @@ function buildPDF(mode){
     hy+=2.2;
   };
   pdDraw('The gold bars','are the new revenue the program wins each month.');
-  pdDraw('The solid line','is your bill with the revenue share — the fixed fee while we build, then the reduced fee plus the share as wins land. The dashed line is the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, no share ever.');
+  pdDraw('The cost line','is your total monthly bill — the fixed fee while we build, then the reduced fee plus the share as wins land.');
   pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   pdDraw('The cost lines, in exact dollars:','months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases), and a month with no wins bills just the fixed fee. '
     +(pdCr.monthly
@@ -2369,7 +2353,7 @@ function buildPDF(mode){
     ['"What happens if these projections turn out to be wrong?"',
      'Then we feel it with you — that\'s the point of the structure. The share is billed only on wins that actually happen, so if the model was too optimistic, your cost drops automatically: the projection is a bet we co-sign, not a sales number. The chart shows the conservative floor, not just the modeled pace, and at the review window every estimate is replaced with your live data and the terms adjust to match reality. We commit to the work and the transparency — Google decides the rest, which is why nothing here is ever a guarantee.'],
     ['"Can I skip the revenue share and just pay a flat fee?"',
-     'Yes. The fixed-only option keeps the full monthly fee — no 20% drop, and 0% share, ever. Most clients still choose the share version: the fee steps down once wins start, and we only earn more when you provably do. Both options are drawn on the projection chart so you can compare them month by month.'],
+     'Yes. The fixed-only option keeps the full monthly fee — no 20% drop, and 0% share, ever. Nearly every client chooses the share version, and it is the one we recommend: the fee steps down once wins start, and we only earn more when you provably do — it is the structure built to scale when you scale.'],
     ['"Do I have to sign a long contract?"',
      'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway to show up. You stay because it works, not because paper says so.'],
     ['"What do you need from me to start?"',
