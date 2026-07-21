@@ -1772,8 +1772,8 @@ function render(){
     scopeWarn.classList.add('show');
     scopeWarn.innerHTML = '<b>Recommend the full bundle.</b> '
       +(localSeg
-        ? 'For local businesses, AI answers pull from the map pack, Business Profile, and reviews — classic local SEO. At an SEO score of '+seoSc+'/100, GEO-only has little to stand on here.'
-        : 'AI engines draw heavily on search rankings and site authority — at an SEO score of '+seoSc+'/100, a GEO-only program hits a ceiling. Add SEO so the AI work has a foundation to cite.');
+        ? 'For local businesses, AI answers pull from the map pack, Business Profile, and reviews — classic local SEO. This SEO score is '+seoSc+'/100, below the <b>'+bundleBar+'/100</b> mark where we recommend adding SEO — GEO-only has little to stand on here.'
+        : 'AI engines draw heavily on search rankings and site authority. This SEO score is '+seoSc+'/100, below the <b>'+bundleBar+'/100</b> mark where we recommend adding SEO — a GEO-only program hits a ceiling without a foundation to cite.');
   } else scopeWarn.classList.remove('show');
 
   /* difficulty */
