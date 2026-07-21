@@ -1328,10 +1328,15 @@ function buildSeries(q, price, share){
   const perfPrice = price!=null ? Math.round(price*PERF_DISCOUNT(price)/50)*50 : null;   // reduced fixed once share starts
   const months=[]; const mrr=[]; const invoice=[]; let cum=0;
   const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
+  /* wins start DURING the build — technical and trust fixes land in the first weeks, so from
+     month 2 the win pace trickles up to full speed (the same curve the win chart uses). The
+     share never touches a build-month win: revenue shows from month 2, share bills only on
+     wins landed from the ramp month on. */
+  const span=(q.rampSpan||3);
+  const fW = m => m===1 ? 0 : Math.min(1,(m-1)/(q.rampMonth+span-2));
   for(let m=1;m<=12;m++){
     months.push(m);
-    const f = m<q.rampMonth ? 0 : Math.min(1,(m-q.rampMonth+1)/(q.rampSpan||3));
-    cum = cum*(1-churn) + q.newCust*f;
+    cum = cum*(1-churn) + q.newCust*fW(m);
     const rev = cum*q.mrrPC;
     mrr.push(rev);
     if(price!=null){
@@ -1339,8 +1344,8 @@ function buildSeries(q, price, share){
       const fixedM = inShare ? perfPrice : price;              // fixed drops (tiered) when the share begins
       /* BOOKED BASIS: the share is taken on the attributable new net revenue WON in the period —
          new customers signed × their first-year value × attribution — accrued monthly here for
-         the chart, billed in the month each win lands. */
-      const sc = inShare ? share/100*(q.newCust*f*q.yearlyValue*q.attribFactor) : 0;
+         the chart, billed in the month each win lands. Build-phase wins bill NO share, ever. */
+      const sc = inShare ? share/100*(q.newCust*fW(m)*q.yearlyValue*q.attribFactor) : 0;
       invoice.push(fixedM+sc);
     } else invoice.push(null);
   }
@@ -1897,12 +1902,12 @@ function render(){
       let ca=0, cb=0;
       for(let i=0;i<12;i++){ ca+=n.series.mrr[i]; cb+=n.series.invoice[i]; if(beM<0&&ca>0&&ca>=cb) beM=i+1; if(mPos<0&&n.series.mrr[i]>0&&n.series.mrr[i]>=n.series.invoice[i]) mPos=i+1; }
       caT=ca; cbT=cb;
-      let c2=0; for(let m=1;m<=120;m++){ const f=m<n.rampMonth?0:Math.min(1,(m-n.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-tChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*tCeil){ tSteady=m; break; } }
+      let c2=0; for(let m=1;m<=120;m++){ const f=m===1?0:Math.min(1,(m-1)/(n.rampMonth+(q.rampSpan||3)-2)); c2=c2*(1-tChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*tCeil){ tSteady=m; break; } }
     }
     const epT=eventPlan(q,n);
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
       (custRate(q.newCust).monthly
-      ? '<b>The gold bars</b> are the revenue actually collected each month from the customers this program has won — nothing is booked as a lump sum at signing: a customer\'s value arrives across their purchases, so the bars climb as the <b>'+epT.winsYr+' modeled wins this year</b> stack up, reaching &asymp;'+fmtK(n.series.mrr[11])+' collected in month 12. <b>The white line</b> is the actual bill: the full fee during the build — <b>any build-month wins are share-free</b> — then the reduced fee plus '+n.share+'% of the revenue the program provably drove that month. Year one: <b>'+fmtK(caT)+' collected</b> against <b>'+fmt$(cbT)+' billed</b>.'
+      ? '<b>The gold bars</b> are the revenue actually collected each month from the customers this program has won — nothing is booked as a lump sum at signing: a customer\'s value arrives across their purchases, so the bars climb as the <b>'+epT.winsYr+' modeled wins this year</b> stack up — the first wins land <b>share-free during the build</b> — reaching &asymp;'+fmtK(n.series.mrr[11])+' collected in month 12. <b>The white line</b> is the actual bill: the full fee during the build — <b>any build-month wins are share-free</b> — then the reduced fee plus '+n.share+'% of the revenue the program provably drove that month. Year one: <b>'+fmtK(caT)+' collected</b> against <b>'+fmt$(cbT)+' billed</b>.'
       : '<b>The gold bars</b> are the contracts this program is modeled to win — <b>'+epT.winsYr+' new customer'+(epT.winsYr>1?'s':'')+' this year</b>, each worth '+fmt$(q.yearlyValue)+', spread out across the year for illustration (the count is modeled; the exact timing will vary). <b>The white line</b> is the actual bill: a no-win month bills just '+fmt$(n.series.perfPrice)
         +(epT.feeWaive
           ? ' — and in a month we sign you a customer, <b>the fixed fee is waived</b>: that month bills only the '+fmt$(epT.perWin)+' share against the contract signed.'
@@ -2117,10 +2122,10 @@ document.addEventListener('mousemove',function(e){
     } else if(chartSeries.mode==='accr'){
       const wins=chartSeries.wins[m-1], rev=chartSeries.mrr[m-1], cA=chartSeries.invA[m-1];
       body=(m<chartSeries.ramp
-          ? '<b>Build month</b> — any wins landed here are share-free<br>(revenue counted from month '+chartSeries.ramp+', conservatively)<br>'
-          : (wins>0?'<b>'+wins+' new customer'+(wins>1?'s':'')+' won</b> this month<br>':'No new wins modeled this month<br>')
-            +'Collected from all wins so far: <b>'+fmt$(rev)+'</b><br>')
-        +'Billed (fixed + share): <b>'+fmt$(cA)+'</b>'+(m>=chartSeries.ramp?' &middot; <b>'+rx(rev,cA)+'</b>':'');
+          ? (wins>0?'<b>'+wins+' new customer'+(wins>1?'s':'')+' won</b> — build phase, share-free<br>':'<b>Build month</b> — any wins land share-free<br>')
+          : (wins>0?'<b>'+wins+' new customer'+(wins>1?'s':'')+' won</b> this month<br>':'No new wins modeled this month<br>'))
+        +'Collected from all wins so far: <b>'+fmt$(rev)+'</b>'
+        +'<br>Billed'+(m<chartSeries.ramp?' (full fee, no share)':' (fixed + share)')+': <b>'+fmt$(cA)+'</b>'+(m>=chartSeries.ramp?' &middot; <b>'+rx(rev,cA)+'</b>':'');
     } else {
       const rev=chartSeries.mrr[m-1], cA=chartSeries.invA[m-1];
       body='New revenue: <b>'+fmt$(rev)+'</b>'
@@ -2347,7 +2352,7 @@ function buildPDF(mode){
   (function(){ let a2=0,b2=0; for(let i2=0;i2<12;i2++){ a2+=n.series.mrr[i2]; b2+=n.series.invoice[i2]; pCumR.push(a2); pCumC.push(b2); } })();
   const pChurn=1/(q.retainYears*12);
   const pCeil=q.newCust*q.mrrPC/pChurn;
-  let pSteady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m<n.rampMonth?0:Math.min(1,(m-n.rampMonth+1)/(q.rampSpan||3)); c2=c2*(1-pChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*pCeil){ pSteady=m; break; } } })();
+  let pSteady=null; (function(){ let c2=0; for(let m=1;m<=120;m++){ const f=m===1?0:Math.min(1,(m-1)/(n.rampMonth+(q.rampSpan||3)-2)); c2=c2*(1-pChurn)+q.newCust*f; if(c2*q.mrrPC>=0.9*pCeil){ pSteady=m; break; } } })();
   const pBe=pCumR.findIndex(function(v,i2){return v>0&&v>=pCumC[i2];});
   let pPos=-1; for(let i2=0;i2<12;i2++){ if(n.series.mrr[i2]>0&&n.series.mrr[i2]>=n.series.invoice[i2]){ pPos=i2; break; } }
 
