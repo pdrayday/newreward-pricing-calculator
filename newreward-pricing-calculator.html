@@ -2770,7 +2770,7 @@ function applyPrefill(qs){
    prefilled link sends its inputs to THAT tab and closes itself — no tab pile-up.
    Same-origin only (BroadcastChannel); falls back to filling this tab normally when no
    other tab answers within 350ms, when the browser blocks the close, or with &stay=1. ---- */
-const nrChan = ('BroadcastChannel' in window) ? new BroadcastChannel('nr-calc') : null;
+const nrChan = ('BroadcastChannel' in window) ? new BroadcastChannel('nr-calc-v2') : null;   // v2: versioned so old unguarded pages never answer
 let nrProbing = false;
 function nrToast(msg){
   const d=document.createElement('div');
