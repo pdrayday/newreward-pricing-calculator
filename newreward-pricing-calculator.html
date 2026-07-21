@@ -1236,11 +1236,17 @@ function computeQuote(s){
   const closeRate = clamp(s.convrate??ind.conv, 0.1, 100)/100;   // decimals allowed: a $750k custom home converts at 0.1–0.5%, not 1%+
   // only the demand a channel isn't already capturing counts as NEW revenue:
   // a 13/100 channel has 87% of its upside left; a 57/100 channel only 43%.
-  // both channels compound (sum × 0.8 overlap) and never model below the best single
+  // ONE demand pool, TWO discovery surfaces — classic search results and AI answers
+  // (AI Overviews + assistants). 2026 benchmarks: AI Overviews on ~48% of queries
+  // (BrightEdge), 35-42% of consumers start brand research in AI — modeled at a
+  // conservative 35% AI / 65% classic search. The winnable share is each surface's
+  // visibility gap weighted by that mix; a channel not in scope leaves its surface's
+  // demand on the table (which is exactly why the bundle wins).
   const gapSeo = 1 - seoEff/100;   // rank-blended: a top-3 site has little SEO upside left, whatever score was typed
   const gapGeo = 1 - clamp(s.geoScore??22,0,100)/100;
-  const chFactor = Math.min(1, nScopes===2 ? Math.max(gapSeo, gapGeo, (gapSeo+gapGeo)*0.8)
-                 : s.seo ? gapSeo : s.geo ? gapGeo : 0);   // capped at 100% — we never model winning more than the available demand
+  const W_AI = 0.35, W_SEARCH = 0.65;
+  const chFactor = clamp(nScopes===2 ? W_SEARCH*gapSeo + W_AI*gapGeo
+                 : s.seo ? W_SEARCH*gapSeo : s.geo ? W_AI*gapGeo : 0, 0, 1);
   const volQ = VOLQ[s.volsource] ?? 1;
   /* AEO/GEO widens the funnel: buyers who ask AI assistants directly are demand Google's
      counters never see — modeled at a conservative +8% whenever GEO is in scope, and it
