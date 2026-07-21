@@ -1511,14 +1511,24 @@ function renderEventChart(q,n,ep,el){
     }
     g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+(i+1)+'</text>';
   }
-  let dA='M'+(X0+gw/2).toFixed(1)+','+py(ep.inv[0]).toFixed(1);
-  for(let i=1;i<12;i++) dA+=' L'+(X0+i*gw+gw/2).toFixed(1)+','+py(ep.inv[i]).toFixed(1);
+  /* the bill line: always visible, and it STEPS UP with every win — the step is drawn at a
+     minimum visible size at big-contract scales (exact figures are on the chart and tooltip) */
+  const isMonthly=custRate(q.newCust).monthly;
+  const yPts=[];
+  for(let i=0;i<12;i++){
+    const feeOnly=(i+1)<n.rampMonth?n.price:n.series.perfPrice;
+    const yBase=Math.min(py(feeOnly), Y1-2.5);
+    yPts.push(ep.wins[i]>0 ? Math.min(py(ep.inv[i]), yBase-3.5) : yBase);
+  }
+  let dA='M'+(X0+gw/2).toFixed(1)+','+yPts[0].toFixed(1);
+  for(let i=1;i<12;i++) dA+=' L'+(X0+i*gw+gw/2).toFixed(1)+','+yPts[i].toFixed(1);
   g+='<path class="cost-line" d="'+dA+'" fill="none" stroke-width="2.2"></path>';
-  const first=ep.first;
-  if(first){
-    const cx=X0+(first-1)*gw+gw/2;
-    g+='<line x1="'+cx.toFixed(1)+'" y1="'+(Y0-2)+'" x2="'+cx.toFixed(1)+'" y2="'+Y1+'" stroke="rgba(238,199,124,.7)" stroke-width="1.2" stroke-dasharray="4 3"/>';
-    g+='<text class="be-label" x="'+cx.toFixed(1)+'" y="'+(Y0-4)+'" text-anchor="'+(first>9?'end':(first<3?'start':'middle'))+'" font-size="9.5" font-weight="700">'+(custRate(q.newCust).monthly?'wins begin':'first modeled win')+' &mdash; month '+first+'</text>';
+  /* on sparse charts, print the bill right at each win so the step is unmistakable */
+  if(!isMonthly){
+    for(let i=0;i<12;i++){ if(ep.wins[i]>0){
+      const cx=X0+i*gw+gw/2;
+      g+='<text x="'+cx.toFixed(1)+'" y="'+(yPts[i]-3).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(ep.inv[i])+' bill</text>';
+    }}
   }
   for(let i=0;i<12;i++){
     const sx=X0+i*gw;
@@ -1834,10 +1844,11 @@ function render(){
 
   /* cards — customer pace adapts to the business cadence (per month vs per year) */
   const cr = custRate(q.newCust);
-  set('o-cust-label', cr.monthly ? 'New customers / month' : 'New customers / year');
+  set('o-cust-label', cr.monthly ? 'New customers / month (ramped pace)' : 'New customers / year (ramped pace)');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
-      +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap')+(q.aiLift>1?' × 108% AI demand':''));
+      +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap')+(q.aiLift>1?' × 108% AI demand':'')
+      +' · year one models '+eventPlan(q,n).winsYr+' (ramping while we build)');
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
       ? '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value'
@@ -2181,7 +2192,7 @@ function buildPDF(mode){
   y+=h1+4;
   const h2=25;
   const crP = custRate(q.newCust);
-  box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'modeled signings once ramped'+(crP.monthly?'':' — a realistic pace for this business'), DARK);
+  box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'ramped pace — year one models '+eventPlan(q,n).winsYr+' while we build', DARK);
   box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
   box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — modeled potential', DARK);
 
@@ -2327,20 +2338,24 @@ function buildPDF(mode){
     doc.text(String(i2+1),cx,pB+5.4,{align:'center'});
   }
   /* rev-share billing line */
+  const pMonthly=custRate(q.newCust).monthly;
+  const pYs=[];
+  for(let i2=0;i2<12;i2++){
+    const feeOnly=(i2+1)<n.rampMonth?n.price:n.series.perfPrice;
+    const yb=Math.min(pyY(feeOnly), pB-1.5);
+    pYs.push(pEp.wins[i2]>0 ? Math.min(pyY(pInv[i2]), yb-2.2) : yb);
+  }
   doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.75);
   for(let i2=1;i2<12;i2++){
-    doc.line(pL2+(i2-1)*pgw+pgw/2,pyY(pInv[i2-1]),pL2+i2*pgw+pgw/2,pyY(pInv[i2]));
+    doc.line(pL2+(i2-1)*pgw+pgw/2,pYs[i2-1],pL2+i2*pgw+pgw/2,pYs[i2]);
   }
   doc.setFontSize(5.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  doc.text(fmt$(pInv[11])+(pEp.mode==='event'?' bill':'/mo total'),pR2-1,pyY(pInv[11])-1.4,{align:'right'});
-  /* the month the bars clear the lines */
-  pPos=(pEp.first||1)-1;
-  if(pPos>=0){
-    const cx=pL2+pPos*pgw+pgw/2;
-    doc.setDrawColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.setLineWidth(.4); doc.setLineDashPattern([1.6,1.3],0);
-    doc.line(cx,pT-2,cx,pB); doc.setLineDashPattern([],0);
-    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-    doc.text((custRate(q.newCust).monthly?'wins begin — month ':'first modeled win — month ')+(pPos+1), cx+(pPos>8?-1.6:(pPos<2?1.6:0)), pT-3.4, {align:pPos>8?'right':(pPos<2?'left':'center')});
+  if(pMonthly){
+    doc.text(fmt$(pInv[11])+' bill',pR2-1,pYs[11]-1.4,{align:'right'});
+  } else {
+    for(let i2=0;i2<12;i2++){ if(pEp.wins[i2]>0){
+      doc.text(fmt$(pInv[i2])+' bill',pL2+i2*pgw+pgw/2,pYs[i2]-1.6,{align:'center'});
+    }}
   }
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('month',(pL2+pR2)/2,pB+10.2,{align:'center'});
