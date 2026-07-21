@@ -766,7 +766,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <option value="local">One local market</option>
           <option value="multi">2–5 markets</option>
           <option value="metro">Major metro / regional</option>
-          <option value="national">National — many markets or online / non-geo</option>
+          <option value="national">National — many locations / markets</option>
+          <option value="nongeo">Online / non-geo restricted (e-com, SaaS)</option>
         </select></div>
       </div>
     </div>
@@ -1107,7 +1108,8 @@ const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
   multi:    {w:1.25, cost:1.06, reach:2.4, name:'a 2–5 market footprint'},
   metro:    {w:1.55, cost:1.12, reach:4.0, name:'a major metro / regional market'},
-  national: {w:2.00, cost:1.20, reach:9.0, name:'a national market'}
+  national: {w:2.00, cost:1.20, reach:9.0, name:'a national multi-market footprint'},
+  nongeo:   {w:2.00, cost:1.20, reach:9.0, name:'a nationwide online / non-geo market'}
 };
 /* competitor entrenchment / domain-authority gap: how strong the incumbents already are.
    The client's own side of the gap is captured by the SEO/GEO visibility scores; this is the
@@ -1129,8 +1131,8 @@ const COMP = {
    (SEO GrowUp B2B SaaS guide; NewMedia e-commerce guide).
    Bundled SEO+GEO adds the GEO channel at a bundle discount: ~35% of the GEO floor and
    ~75% of its ceiling — matching published combined mid-market retainers of $2–8k+. */
-const MARKET_SEO = {local:[1500,3500], multi:[2500,5000], metro:[3000,7500], national:[3500,12000]};
-const MARKET_GEO = {local:[1000,2500], multi:[1500,3500], metro:[2000,5000], national:[2500,8000]};
+const MARKET_SEO = {local:[1500,3500], multi:[2500,5000], metro:[3000,7500], national:[3500,12000], nongeo:[3500,12000]};
+const MARKET_GEO = {local:[1000,2500], multi:[1500,3500], metro:[2000,5000], national:[2500,8000], nongeo:[2500,8000]};
 const MARKET_IND = {local:1.00, highticket:1.15, ultra:1.15, b2b:1.20, ecom:1.20};
 function marketBand(s,nScopes){
   const adj=MARKET_IND[s.industry]??1, sb=MARKET_SEO[s.footprint], gb=MARKET_GEO[s.footprint];
@@ -1226,9 +1228,8 @@ function computeQuote(s){
   // BUT a geo-restricted brand with many locations fights MANY LOCAL battles, not one national
   // one: capture is modeled on per-location demand, so a 15-branch service brand isn't damped
   // by the aggregate click share that belongs to borderless e-com/SaaS.
-  const geoRestricted = (s.industry==='local'||s.industry==='highticket'||s.industry==='ultra');
   const multiMarket = (s.footprint==='multi'||s.footprint==='metro'||s.footprint==='national');
-  const shareVol = (geoRestricted && multiMarket) ? vol/units : vol;
+  const shareVol = multiMarket ? vol/units : vol;   // 'nongeo' (borderless) and single-market 'local' use the full-market share
   const clickShare = clamp(0.15*Math.pow(1500/Math.max(shareVol,1), 0.35), 0.03, 0.15);
   const closeRate = clamp(s.convrate??ind.conv, 0.1, 100)/100;   // decimals allowed: a $750k custom home converts at 0.1–0.5%, not 1%+
   // only the demand a channel isn't already capturing counts as NEW revenue:
@@ -1540,7 +1541,7 @@ function evalRoiGuardrail(s,q,n){
     const nonGeo = (s.industry==='ecom'||s.industry==='b2b') && s.footprint==='national';
     let sug='';
     if(!nonGeo){
-      const order=['national','metro','multi','local'];
+      const order=['nongeo','national','metro','multi','local'];
       for(let i=order.indexOf(s.footprint)+1;i<order.length;i++){
         /* manually-entered demand belongs to the CURRENT footprint — scale it down with the
            tighter footprint's reach so the suggestion never "fixes" the ROI using demand the
@@ -1871,7 +1872,7 @@ function researchWithAI(){
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'Classification rules — follow exactly:\n'
     +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
-    +'- footprint: "national" covers BOTH nationwide multi-location service brands (keep industry local/highticket/ultra and set units to the real location count — the model then scores capture per local market) AND borderless online businesses (industry ecom or b2b). A business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
+    +'- footprint: "national" = a brand winning MANY physical markets nationwide (set units to the real location count — the model scores capture per local market). "nongeo" = borderless online businesses with no physical service areas (e-commerce, SaaS, DTC) — the model applies the big-market capture damper there instead. A business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
     +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets) and size the volume across all of them; units>1 with footprint=local is only correct when every location shares ONE market.\n'
@@ -1898,7 +1899,7 @@ function researchWithAI(){
     +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
-    +'- footprint: local | multi | metro | national\n'
+    +'- footprint: local | multi | metro | national | nongeo\n'
     +'- compstr: weak | moderate | strong | dominant\n'
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
