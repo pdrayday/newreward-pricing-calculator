@@ -1521,9 +1521,9 @@ function renderChart(q,n){
   const rm=n.rampMonth;
   if(rm>=1&&rm<=12){
     const x1=X0+(rm-1)*gw+gw/2, y1L=pyC(invoice[rm-1])-4;
-    g+='<text x="'+x1.toFixed(1)+'" y="'+y1L.toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(invoice[rm-1])+'</text>';
+    g+='<text x="'+x1.toFixed(1)+'" y="'+y1L.toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(invoice[rm-1])+'/mo</text>';
     const y2L=pyC(invoice[11])-4;
-    g+='<text x="'+(X1-2)+'" y="'+y2L.toFixed(1)+'" text-anchor="end" font-size="8">'+fmtK(invoice[11])+' bill</text>';
+    g+='<text x="'+(X1-2)+'" y="'+y2L.toFixed(1)+'" text-anchor="end" font-size="8">'+fmtK(invoice[11])+'/mo bill</text>';
   }
   /* the month the bars clear the lines: monthly return turns positive */
   let mPos=-1; for(let i=0;i<12;i++){ if(mrr[i]>=invoice[i]&&mrr[i]>0){ mPos=i; break; } }
@@ -1899,7 +1899,7 @@ function render(){
   set('o-cust-label', cr.monthly ? 'New customers / month (ramped pace)' : 'New customers / year (ramped pace)');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
-      +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap')+(q.aiLift>1?' × 108% AI demand':'')
+      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.aiLift>1?' × 108% AI demand':'')
       +' · year one models '+eventPlan(q,n).winsYr+' (ramping while we build)');
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
@@ -1989,8 +1989,7 @@ function render(){
   const parts = [];
   const crA = custRate(q.newCust);
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
-    +(q.nScopes===2?'dual-channel upside':'visibility gap')
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'
     +(q.aiLift>1?' × 108% AI demand':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
@@ -2330,7 +2329,7 @@ function buildPDF(mode){
   y+=3.5;   /* centered between the summary above and the disclosure below */
   doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap')
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'
     +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')
     +(q.aiLift>1?' × 108% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
@@ -2417,7 +2416,13 @@ function buildPDF(mode){
   }
   doc.setFontSize(5.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   if(pMonthly){
-    doc.text(fmt$(pInv[11])+' bill',pR2-1,pYs[11]-1.4,{align:'right'});
+    /* every month's actual bill, printed on the line — no single figure can read as a
+       12-month total */
+    doc.setFontSize(4.8);
+    for(let i2=0;i2<12;i2++){
+      const cx2=pL2+i2*pgw+pgw/2;
+      doc.text(fmtK(pInv[i2])+(i2===11?' bill':''),cx2,pYs[i2]+3.1,{align:'center'});
+    }
   } else {
     for(let i2=0;i2<12;i2++){ if(pEp.wins[i2]>0){
       doc.text(fmt$(pInv[i2])+' bill',pL2+i2*pgw+pgw/2,pYs[i2]-1.6,{align:'center'});
