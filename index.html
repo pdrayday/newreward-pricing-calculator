@@ -2781,13 +2781,26 @@ function nrToast(msg){
   setTimeout(function(){ d.style.opacity='0'; setTimeout(function(){ d.remove(); },700); },4500);
   return d;
 }
+let nrFilled=false;   // set once this tab holds ANY company inputs — it then never accepts a handoff
+function nrBlank(){
+  /* a tab is a valid handoff target ONLY if it is a clean slate: no prefill params of its own,
+     nothing typed into the client field, and never previously filled over the channel —
+     an open tab with a different company loaded is NEVER overwritten */
+  if(nrFilled) return false;
+  const p0=new URLSearchParams(location.search);
+  if([...p0.keys()].some(function(k){ return k!=='cb' && k!=='stay'; })) return false;
+  const c=document.getElementById('client');
+  return !(c&&c.value.trim());
+}
 if(nrChan){
   nrChan.onmessage=function(e){
     const d=e.data||{};
     if(nrProbing) return;                              // a probing (handing-off) tab is not a primary
-    if(d.t==='probe'){ nrChan.postMessage({t:'here'}); }
+    if(d.t==='probe'){ if(nrBlank()) nrChan.postMessage({t:'here'}); }
     else if(d.t==='prefill'){
-      priceDirty=false; shareDirty=false; rampDirty=false;   // fresh research replaces any negotiation state
+      if(!nrBlank()) return;                           // guard again at fill time (probe→fill race)
+      nrFilled=true;
+      priceDirty=false; shareDirty=false; rampDirty=false;
       applyPrefill(d.qs); render();
       nrToast('&#9989; <b style="color:#eec77c">Inputs loaded</b> — filled from the research link you just opened.');
     }
@@ -2798,7 +2811,17 @@ if(nrChan){
   const p=new URLSearchParams(qs);
   const hasParams=[...p.keys()].some(function(k){ return k!=='cb' && k!=='stay'; });
   if(!hasParams) return;
-  if(!nrChan || p.has('stay')){ applyPrefill(qs); return; }
+  /* REFRESH GUARD: hand off only on the very first open of this link in this tab.
+     A reload/back-nav of a prefilled page always fills itself — it never reaches into
+     another tab (sessionStorage survives refresh but not new tabs; nav-type as backup). */
+  let isRefresh=false;
+  try{
+    const nav=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];
+    if(nav&&nav.type!=='navigate') isRefresh=true;
+    if(sessionStorage.getItem('nrSeen')) isRefresh=true;
+    sessionStorage.setItem('nrSeen','1');
+  }catch(err){}
+  if(!nrChan || p.has('stay') || isRefresh){ applyPrefill(qs); return; }
   nrProbing=true;
   let heard=false;
   const onMsg=function(e){ if((e.data||{}).t==='here') heard=true; };
