@@ -1755,7 +1755,7 @@ function render(){
   if(!shareDirty) shEdit.value = q.share;
   if(!rampDirty) rEdit.value = q.rampMonth;
   set('o-price-sub', q.price!=null
-      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — drops to '+fmt$(n.series.perfPrice)+'/mo when the revenue share begins (month '+n.rampMonth+')'+(eventPlan(q,n).feeWaive?' — and is <b>waived entirely</b> in any month a win lands':'')
+      ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — drops to '+fmt$(n.series.perfPrice)+'/mo when the revenue share begins (month '+n.rampMonth+')'+(eventPlan(q,n).feeWaive?' — and is waived entirely in any month a win lands':'')
       : 'select a service in Scope');
   set('o-ramp', 'month '+n.rampMonth);
 
