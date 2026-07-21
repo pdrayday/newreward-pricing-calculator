@@ -1516,6 +1516,15 @@ function renderChart(q,n){
   let dA='M'+(X0+gw/2).toFixed(1)+','+pyC(invoice[0]).toFixed(1);
   for(let i=1;i<12;i++) dA+=' L'+(X0+i*gw+gw/2).toFixed(1)+','+pyC(invoice[i]).toFixed(1);
   g+='<path class="cost-line" d="'+dA+'" fill="none" stroke-width="2.2"></path>';
+  /* the bill rises with collections (landed-basis share) — label the share-phase start and
+     end so the climb is readable even when the slope is visually shallow */
+  const rm=n.rampMonth;
+  if(rm>=1&&rm<=12){
+    const x1=X0+(rm-1)*gw+gw/2, y1L=pyC(invoice[rm-1])-4;
+    g+='<text x="'+x1.toFixed(1)+'" y="'+y1L.toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(invoice[rm-1])+'</text>';
+    const y2L=pyC(invoice[11])-4;
+    g+='<text x="'+(X1-2)+'" y="'+y2L.toFixed(1)+'" text-anchor="end" font-size="8">'+fmtK(invoice[11])+' bill</text>';
+  }
   /* the month the bars clear the lines: monthly return turns positive */
   let mPos=-1; for(let i=0;i<12;i++){ if(mrr[i]>=invoice[i]&&mrr[i]>0){ mPos=i; break; } }
   if(mPos>=0){
