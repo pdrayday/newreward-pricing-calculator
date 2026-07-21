@@ -1416,6 +1416,7 @@ function resetNeg(kind){
 }
 
 let chartSeries=null;   // month-by-month values behind the bars, for the hover/tap tooltip (small chart AND zoom)
+let volScaleNote='';    // note under the volume field after a footprint/units change
 function renderChart(q,n){
   const el=document.getElementById('o-chart');
   if(n.price==null){ el.innerHTML=''; chartSeries=null; return; }
