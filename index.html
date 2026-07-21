@@ -766,7 +766,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <option value="local">One local market</option>
           <option value="multi">2–5 markets</option>
           <option value="metro">Major metro / regional</option>
-          <option value="national">National / non-geo restricted</option>
+          <option value="national">National — many markets or online / non-geo</option>
         </select></div>
       </div>
     </div>
@@ -1222,8 +1222,14 @@ function computeQuote(s){
   const yearlyValue = aovYear>0 ? aovYear : (useYearly ? s.yearly : ind.yr);
   const retainYears = clamp(s.years??ind.yrs, 1, 20);
   const ltv = yearlyValue*retainYears;            // context only — not used in revenue math
-  // achievable click share decays in very large markets (you can't win 15% of 50k searches)
-  const clickShare = clamp(0.15*Math.pow(1500/Math.max(vol,1), 0.35), 0.03, 0.15);
+  // achievable click share decays in very large markets (you can't win 15% of 50k searches).
+  // BUT a geo-restricted brand with many locations fights MANY LOCAL battles, not one national
+  // one: capture is modeled on per-location demand, so a 15-branch service brand isn't damped
+  // by the aggregate click share that belongs to borderless e-com/SaaS.
+  const geoRestricted = (s.industry==='local'||s.industry==='highticket'||s.industry==='ultra');
+  const multiMarket = (s.footprint==='multi'||s.footprint==='metro'||s.footprint==='national');
+  const shareVol = (geoRestricted && multiMarket) ? vol/units : vol;
+  const clickShare = clamp(0.15*Math.pow(1500/Math.max(shareVol,1), 0.35), 0.03, 0.15);
   const closeRate = clamp(s.convrate??ind.conv, 0.1, 100)/100;   // decimals allowed: a $750k custom home converts at 0.1–0.5%, not 1%+
   // only the demand a channel isn't already capturing counts as NEW revenue:
   // a 13/100 channel has 87% of its upside left; a 57/100 channel only 43%.
@@ -1233,11 +1239,15 @@ function computeQuote(s){
   const chFactor = Math.min(1, nScopes===2 ? Math.max(gapSeo, gapGeo, (gapSeo+gapGeo)*0.8)
                  : s.seo ? gapSeo : s.geo ? gapGeo : 0);   // capped at 100% — we never model winning more than the available demand
   const volQ = VOLQ[s.volsource] ?? 1;
-  const newCust = vol*clickShare*closeRate*chFactor*volQ;
+  /* AEO/GEO widens the funnel: buyers who ask AI assistants directly are demand Google's
+     counters never see — modeled at a conservative +8% whenever GEO is in scope, and it
+     only grows as more buying starts in AI answers. */
+  const aiLift = s.geo ? 1.08 : 1;
+  const newCust = vol*clickShare*closeRate*chFactor*volQ*aiLift;
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
   // organic-vs-paid: the captured visits/mo once ramped, and what that traffic would cost in Google Ads
-  const clicksPM  = vol*clickShare*chFactor*volQ;
+  const clicksPM  = vol*clickShare*chFactor*volQ*aiLift;
   const adValuePM = clicksPM*(s.cpc||0);
 
   /* ---- rev-share start month + ramp length: harder markets and more intensive (low-visibility)
@@ -1298,7 +1308,7 @@ function computeQuote(s){
 
   return {difficulty, price, share, yearlyValue, yrIsAuto, aovYear, retainYears, ltv,
           seoEff, seoEntered, rankImplied, rankNow,
-          newCust, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ,
+          newCust, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
           vol, volIsAuto, clickShare, closeRate, clicksPM, adValuePM, rampMonth, rampSpan, windowDays, nScopes,
           comp, compN, units, unitsCost, intensityCost,
           seoIntensity, geoIntensity, intensityGap, intensityLabel};
@@ -1756,7 +1766,7 @@ function render(){
   set('o-cust-label', cr.monthly ? 'New customers / month' : 'New customers / year');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
-      +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap'));
+      +(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap')+(q.aiLift>1?' × 108% AI demand':''));
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
       ? '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value'
@@ -1839,7 +1849,7 @@ function render(){
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% '
     +(q.nScopes===2?'dual-channel upside':'visibility gap')
-    +' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
+    +(q.aiLift>1?' × 108% AI demand':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -1861,7 +1871,7 @@ function researchWithAI(){
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'Classification rules — follow exactly:\n'
     +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
-    +'- footprint: a business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
+    +'- footprint: "national" covers BOTH nationwide multi-location service brands (keep industry local/highticket/ultra and set units to the real location count — the model then scores capture per local market) AND borderless online businesses (industry ecom or b2b). A business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
     +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets) and size the volume across all of them; units>1 with footprint=local is only correct when every location shares ONE market.\n'
@@ -2163,6 +2173,7 @@ function buildPDF(mode){
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% '+(q.nScopes===2?'dual-channel upside':'visibility gap')
     +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')
+    +(q.aiLift>1?' × 108% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
   doc.splitTextToSize(math1,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   const math2=crP.monthly
@@ -2440,7 +2451,7 @@ function buildPDF(mode){
     ['SEO visibility score','0-100 visibility in traditional Google search. Lower = bigger gap = more upside and more work. Pulled toward what the rank implies.'],
     ['AEO/GEO visibility score','0-100: how often AI assistants mention or recommend the client today. Most local businesses score under 25.'],
     ['Visibility gap','100 minus the visibility score — the untapped demand left to win. Drives both the revenue upside and the effort required.'],
-    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint.'],
+    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. With AEO/GEO in scope, demand is modeled at +8% — buyers who ask AI assistants directly are demand Google\'s counters never see, and that slice only grows.'],
     ['Volume source','Where the search-demand number came from. Demand measured in tools like Keyword Planner, Semrush, or GSC counts in full; estimates are weighted conservatively so demand is never overstated.'],
     ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market.'],
     ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],
@@ -2460,7 +2471,7 @@ function buildPDF(mode){
     ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built. From the start month, the fixed fee drops and the share begins — billed monthly on the new customers won. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
     ['LTV — lifetime value','Yearly value × retention years — the full worth of one customer. Shown but never used — on purpose: every projection runs on the smaller one-year value (retention enters only as churn), so if the program pays for itself on year-one value alone, the lifetime value is pure upside on top.'],
-    ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets.'],
+    ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets. A geo-restricted brand with many locations is modeled per LOCAL market it fights in — only borderless businesses (e-commerce, SaaS) carry the big-market damper.'],
     ['Growth ceiling — why the projection never compounds','The visibility asset compounds in real life — authority, content, and AI presence keep strengthening — but the projection counts none of it: the modeled pace is capped by real market demand, and customer turnover pulls monthly recurring revenue toward a natural ceiling where new wins roughly equal customers lost. Any real-world compounding is upside on top of these numbers. Faster-turnover markets (e-commerce, national) level out sooner.'],
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
