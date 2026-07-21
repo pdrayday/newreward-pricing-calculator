@@ -1425,7 +1425,11 @@ function eventPlan(q,n){
   /* wins per month: the modeled total for the year (ramp-weighted, so year one is honest),
      distributed as WHOLE customers across the months — some months land one more, some one
      fewer, exactly like real life. Deterministic on purpose: same inputs, same chart. */
-  const f=[]; for(let m=1;m<=12;m++) f.push(m<n.rampMonth?0:Math.min(1,(m-n.rampMonth+1)/(q.rampSpan||3)));
+  /* wins can start during the build — technical and trust fixes land in the first weeks, so
+     from month 2 the win pace trickles up to full speed. Billing is untouched: the share only
+     starts at the ramp month, so every build-month win is share-free for the client. */
+  const span=(q.rampSpan||3);
+  const f=[]; for(let m=1;m<=12;m++) f.push(m===1?0:Math.min(1,(m-1)/(n.rampMonth+span-2)));
   const sumF=f.reduce(function(a,b){return a+b;},0);
   const W=Math.max(1,Math.round(q.newCust*sumF));
   const raw=f.map(function(x){return sumF>0?W*x/sumF:0;});
@@ -1440,7 +1444,7 @@ function eventPlan(q,n){
     const wm=wins[m-1];
     if(!first&&wm>0) first=m;
     rev.push(wm*q.yearlyValue);
-    const bill=(m<n.rampMonth?n.price:n.series.perfPrice)+wm*perWin;
+    const bill=m<n.rampMonth ? n.price : n.series.perfPrice+wm*perWin;   // build-month wins bill NO share
     inv.push(bill); eventY1+=bill;
   }
   return {mode:'event', winsYr:W, wins:wins, first:first, perWin:perWin, rev:rev, inv:inv, eventY1:eventY1};
@@ -1857,7 +1861,7 @@ function render(){
     const epT=eventPlan(q,n);
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
       (custRate(q.newCust).monthly
-      ? '<b>The gold bars</b> are the new customers this program wins each month — <b>'+epT.winsYr+' this year</b>; the exact count varies month to month, exactly like real months do. Each bar is that month\'s wins &times; '+fmt$(q.yearlyValue)+'. <b>The white line</b> is the actual bill: the fee plus '+fmt$(epT.perWin)+' for each win that month. Year one under this pattern totals <b>'+fmt$(epT.eventY1)+'</b>.'
+      ? '<b>The gold bars</b> are the new customers this program wins each month — <b>'+epT.winsYr+' this year</b>; the exact count varies month to month, exactly like real months do. Each bar is that month\'s wins &times; '+fmt$(q.yearlyValue)+'. <b>The white line</b> is the actual bill: the full fee during the build — <b>any build-month wins are share-free</b> — then the reduced fee plus '+fmt$(epT.perWin)+' for each win that month. Year one under this pattern totals <b>'+fmt$(epT.eventY1)+'</b>.'
       : '<b>The gold bars</b> are the contracts this program is modeled to win — <b>'+epT.winsYr+' new customer'+(epT.winsYr>1?'s':'')+' this year</b>, each worth '+fmt$(q.yearlyValue)+', spread across the post-ramp months for illustration (the count is modeled; the exact timing will vary). <b>The white line</b> is the actual bill: a no-win month bills just '+fmt$(n.series.perfPrice)+', a win month adds '+fmt$(epT.perWin)+' of share against the contract signed. Year one under this pattern totals <b>'+fmt$(epT.eventY1)+'</b>.')
       +(mPos>0&&epT.mode!=='event'?' The program starts <b>earning more each month than it costs</b> around <b>month '+mPos+'</b> — where the bars clear the lines'+(beM>0?' — and has fully repaid the build months by <b>month '+beM+'</b>.':'.'):'')+(!custRate(q.newCust).monthly&&epT.first?' <b>One win pays for the entire year</b>: a single '+fmt$(q.yearlyValue)+' contract covers the program many times over.':'')
       +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
@@ -1886,7 +1890,7 @@ function render(){
         let rampEnd=n.rampMonth-1;
         n.series.invoice.forEach(function(v,i){ if(i+1>=n.rampMonth && v<n.series.ongoingCost-0.5) rampEnd=i+1; });
         const hasRamp=rampEnd>=n.rampMonth;
-        return '<p><b>The cost lines on the chart, in exact dollars:</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins &mdash; billed only when a win lands: one proven win adds '+fmt$(perWin)+' ('+n.share+'% &times; '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases), and a month with no wins bills just the fixed fee. '
+        return '<p><b>The cost lines on the chart, in exact dollars:</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build &mdash; and any customers won during the build are <span class="sm-big">share-free</span>. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins &mdash; billed only when a win lands: one proven win adds '+fmt$(perWin)+' ('+n.share+'% &times; '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases), and a month with no wins bills just the fixed fee. '
         +(crM.monthly
           ? 'A ramped month lands about '+crM.v+' wins &mdash; some months a couple more, some fewer, exactly as the chart shows &mdash; and each win adds '+fmt$(perWin)+' to that month\'s bill (a typical ramped month: &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo all-in</span>). '
           : 'At the modeled pace ('+crM.txt+' once fully ramped &mdash; year one lands fewer while we build), most months bill only the fixed '+fmt$(n.series.perfPrice)+' &mdash; the chart places each modeled win in an illustrative month (the count is modeled; the exact timing will vary), and a win month bills the fee plus '+fmt$(perWin)+'. ')
@@ -2380,7 +2384,7 @@ function buildPDF(mode){
   };
   if(custRate(q.newCust).monthly){
     pdDraw('The gold bars','are the new customers won each month — '+pEp.winsYr+' this year, with the count varying month to month exactly as real months do. Each bar is that month\'s wins × '+fmt$(q.yearlyValue)+'.');
-    pdDraw('The cost line','is the actual bill: the fee plus '+fmt$(pEp.perWin)+' for each win that month. Year one under this pattern totals '+fmt$(pEp.eventY1)+'.');
+    pdDraw('The cost line','is the actual bill: the full fee during the build (build-month wins are share-free), then the reduced fee plus '+fmt$(pEp.perWin)+' for each win that month. Year one under this pattern totals '+fmt$(pEp.eventY1)+'.');
   } else if(pEp.mode==='event'){
     pdDraw('The gold bars','are the contracts this program is modeled to win — '+pEp.winsYr+' new customer'+(pEp.winsYr>1?'s':'')+' this year, each worth '+fmt$(q.yearlyValue)+', placed in illustrative months (the count is modeled; the exact timing will vary).');
     pdDraw('The cost line','is the actual bill: a no-win month bills just '+fmt$(n.series.perfPrice)+'; a win month adds '+fmt$(pEp.perWin)+' of share against the contract signed. Year one under this pattern totals '+fmt$(pEp.eventY1)+'.');
@@ -2391,7 +2395,7 @@ function buildPDF(mode){
   if(false) pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   else if(!custRate(q.newCust).monthly) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract covers the program many times over — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
   else pdDraw('Every bar towers over the line:','a single month\'s wins are worth many times that month\'s bill — the share is only ever a small slice of revenue we provably created.');
-  pdDraw('The cost lines, in exact dollars:','months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases), and a month with no wins bills just the fixed fee. '
+  pdDraw('The cost lines, in exact dollars:','months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build — and any customers won during the build are share-free. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases), and a month with no wins bills just the fixed fee. '
     +(pdCr.monthly
       ? 'A ramped month lands about '+pdCr.v+' wins — some months a couple more, some fewer, exactly as the chart shows — and each win adds '+pdPerWin+' to that month\'s bill (a typical ramped month: ~'+fmt$(n.series.ongoingCost)+'/mo all-in). '
       : 'At the modeled pace ('+pdCr.txt+' once fully ramped — year one lands fewer while we build), most months bill only the fixed '+fmt$(n.series.perfPrice)+' — the chart places each modeled win in an illustrative month (the count is modeled; the exact timing will vary), and a win month bills the fee plus '+pdPerWin+'. ')
