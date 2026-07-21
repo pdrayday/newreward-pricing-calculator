@@ -1280,7 +1280,7 @@ function computeQuote(s){
     // against published 2026 pricing by construction, and only a negotiated discount below the
     // band floor reads "below market". Cost drivers (units, intensity, competitors, rank, CPC)
     // still lift the price above the floor when the work genuinely costs more. Once the share
-    // kicks in, the fixed drops 20% (see PERF_DISCOUNT in buildSeries).
+    // kicks in, the fixed drops 20–30% (tiered — see PERF_DISCOUNT in buildSeries).
     const [mLo,mHi] = marketBand(s,nScopes);
     price = Math.max(1500, Math.round(clamp(rawCost*0.90, mLo, mHi)/50)*50);   // hard floor: $1,500/mo for every combination
     if(price<mLo) price+=50; else if(price>mHi) price-=50;   // keep the $50 rounding inside the band
@@ -1319,11 +1319,13 @@ function computeQuote(s){
 
 /* 12-month series. TWO-PHASE billing:
    • Build phase (months 1 .. rampMonth-1): full fixed fee, no revenue share.
-   • Performance phase (rampMonth .. 12): fixed drops 20%, plus a revenue share
+   • Performance phase (rampMonth .. 12): fixed drops 20–30% (tiered by fee), plus a revenue share
      (share % of attributable new net revenue). */
-const PERF_DISCOUNT = 0.80;   // fixed fee once the revenue share starts = build fixed × 0.80
+/* tiered: the bigger the program, the bigger the drop when the share starts — 20% under
+   $3k/mo, 25% at $3k–5k, 30% at $5k+ — sweetening the rev-share structure where fees are highest */
+const PERF_DISCOUNT = p => p>=5000 ? 0.70 : p>=3000 ? 0.75 : 0.80;
 function buildSeries(q, price, share){
-  const perfPrice = price!=null ? Math.round(price*PERF_DISCOUNT/50)*50 : null;   // reduced fixed once share starts
+  const perfPrice = price!=null ? Math.round(price*PERF_DISCOUNT(price)/50)*50 : null;   // reduced fixed once share starts
   const months=[]; const mrr=[]; const invoice=[]; let cum=0;
   const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
   for(let m=1;m<=12;m++){
@@ -1334,7 +1336,7 @@ function buildSeries(q, price, share){
     mrr.push(rev);
     if(price!=null){
       const inShare = m>=q.rampMonth;                          // rev share only in the performance phase
-      const fixedM = inShare ? perfPrice : price;              // fixed drops 20% when the share begins
+      const fixedM = inShare ? perfPrice : price;              // fixed drops (tiered) when the share begins
       /* BOOKED BASIS: the share is taken on the attributable new net revenue WON in the period —
          new customers signed × their first-year value × attribution — accrued monthly here for
          the chart, billed in the month each win lands. */
@@ -1733,7 +1735,7 @@ function render(){
   const tpm=document.getElementById('tip-price-math');
   if(tpm) tpm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
     'How this number is built: the researched cost to deliver this exact scope — engagement intensity (graded from current visibility), industry model, market footprint, '
-    +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. It drops 20% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins — or choose the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, with 0% share.';
+    +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. It drops '+Math.round((1-PERF_DISCOUNT(n.price))*100)+'% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins — or choose the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, with 0% share.';
   const tsm=document.getElementById('tip-share-math');
   if(tsm) tsm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
     'How this percentage is built: sized from the client\'s own economics so it stays fair — gross margin (<b>'+(s.margin??IND[s.industry].margin)+'%</b>), acquisition budget (<b>'+(s.acq??15)+'%</b>), existing sales commissions (<b>'+(s.commission??8)+'%</b>), and typical deal size (<b>'+fmt$(q.yearlyValue)+'/yr</b>). Thinner margins, bigger deals, and higher existing commissions all pull it <b>down</b>; it is bounded 2–10% in 0.5% steps. Applied only to a proven new customer\'s first-year value: <b>'+n.share+'% × '+fmt$(q.yearlyValue)+' = '+fmt$(q.yearlyValue*n.share/100)+'</b> per win — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond.';
@@ -1756,7 +1758,10 @@ function render(){
       ? 'negotiated — recommended '+q.share+'% &nbsp;·&nbsp; <a onclick="return resetNeg(\'share\')">use recommended</a>' : '';
   let pLow=false, shLow=false;
   if(q.price!=null){
-    const floor=Math.max(1500, Math.round(q.price*0.85/50)*50);   // negotiation never goes below the $1,500 minimum
+    /* wiggle shrinks as the fee grows: 15% under $3k, 12% at $3k–5k, 10% at $5k+ —
+       a $5,200 program can never be negotiated anywhere near sub-$1,000 territory */
+    const negWiggle = q.price>=5000 ? 0.90 : q.price>=3000 ? 0.88 : 0.85;
+    const floor=Math.max(1500, Math.round(q.price*negWiggle/50)*50);   // and never below the $1,500 minimum
     pLow = n.price<floor;
     pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Use the recommended '+fmt$(q.price)+'.';
   }
@@ -2448,7 +2453,7 @@ function buildPDF(mode){
     ['"What happens if these projections turn out to be wrong?"',
      'Then we feel it with you — that\'s the point of the structure. The share is billed only on wins that actually happen, so if the model was too optimistic, your cost drops automatically: the projection is a bet we co-sign, not a sales number. The chart shows the conservative floor, not just the modeled pace, and at the review window every estimate is replaced with your live data and the terms adjust to match reality. We commit to the work and the transparency — Google decides the rest, which is why nothing here is ever a guarantee.'],
     ['"Can I skip the revenue share and just pay a flat fee?"',
-     'Yes. The fixed-only option keeps the full monthly fee — no 20% drop, and 0% share, ever. Nearly every client chooses the share version, and it is the one we recommend: the fee steps down once wins start, and we only earn more when you provably do — it is the structure built to scale when you scale.'],
+     'Yes. The fixed-only option keeps the full monthly fee — no discounted fee, and 0% share, ever. Nearly every client chooses the share version, and it is the one we recommend: the fee steps down once wins start, and we only earn more when you provably do — it is the structure built to scale when you scale.'],
     ['"Do I have to sign a long contract?"',
      'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway to show up. You stay because it works, not because paper says so.'],
     ['"What do you need from me to start?"',
@@ -2538,7 +2543,7 @@ function buildPDF(mode){
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
     ['Ongoing (run-rate) return','The headline ROI band: month-12 proven new revenue vs the full ongoing cost, shown from conservative floor to modeled. It is the number that proves the program keeps paying for itself after the build.'],
     ['Year-1 ROI','The ramp year: proven new revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — the build happens first, the results follow.'],
-    ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20% once the revenue share starts.'],
+    ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20–30% once the revenue share starts — the bigger the program, the bigger the drop.'],
     ['Revenue share — and the baseline','When our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond. The baseline is the revenue the client already generates before the program starts: only tracked growth ABOVE that line counts, and existing business is never touched. "Net" means revenue the client actually keeps after refunds — not profit; fairness to margin is built into the rate itself, so lower-margin businesses are quoted a lower percentage, and acquisition budget, existing commissions, and deal size pull it down further. No new wins, no share.'],
     ['Attribution (attributable)','One hundred percent verifiable proof, or no share: every win is tracked — calls, forms, and bookings — so every win is provable. A win is a win; there is no in-between. If a customer cannot be proven to have come from this program, they are not a win, and we do not take a dime.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
