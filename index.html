@@ -1295,7 +1295,8 @@ function computeQuote(s){
   /* ---- revenue share: CALCULATED from the client's economics so it's fair to both sides ----
      Higher gross margin → they can afford to share a bit more; commissions they already pay to
      staff/reps pull our share down; larger deals take a slightly lower % (still a bigger $ amount).
-     Clamped to a 2–10% RATE. Reps can fine-tune the % live. */
+     Clamped to a 2–10% RATE — except ULTRA high-ticket, where the floor is 1%: on a $500k+
+     contract even 1% is real money, and thin builder margins (15–25%) can't wear more. */
   let share = 5;
   const shMargin = s.margin??ind.margin;                                  // affordability: profit they keep per sale
   share += shMargin>=65?2 : shMargin>=50?1 : shMargin>=35?0 : shMargin>=25?-1 : -2;
@@ -1305,7 +1306,7 @@ function computeQuote(s){
   share += shComm>=12?-1 : shComm>=8?-0.5 : 0;
   share += 0.5;                                                           // new-net-revenue basis (growth above baseline)
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;                  // very large deals take a slightly lower %
-  share = clamp(Math.round(share*2)/2, 2, 10);
+  share = clamp(Math.round(share*2)/2, s.industry==='ultra' ? 1 : 2, 10);
 
   /* ---- attribution: every win is tracked and 100% verifiable — a win is a win, there is
           no in-between, so no provability haircut. Conservatism lives in the demand model
