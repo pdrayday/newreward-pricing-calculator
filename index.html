@@ -1759,15 +1759,14 @@ function render(){
   pEdit.classList.toggle('too-low',pLow);
   shEdit.classList.toggle('too-low',shLow);
 
-  /* GEO-only advisory: AI engines lean on search rankings — weak SEO caps GEO results.
-     Threshold varies by segment: local answers come from GBP/map pack/reviews (classic
-     local SEO), so local segments need stronger SEO before GEO-only is defensible;
-     B2B/national citations lean more on off-site authority, so the bar is lower. */
+  /* GEO-only advisory: AI engines lean so heavily on search rankings that GEO-only is
+     rarely defensible — the bundle is recommended below 90/100 SEO visibility for every
+     geo-bound footprint. Only borderless online businesses (nongeo) get a slightly lower
+     bar (80/100), since their citations lean more on off-site authority. */
   const scopeWarn = document.getElementById('scope-warn');
   const seoSc = q.seoEff;   // rank-blended SEO visibility
-  const localSeg = (s.industry==='local'||s.industry==='highticket') && (s.footprint==='local'||s.footprint==='multi');
-  const natSeg = s.industry==='b2b'||s.industry==='ecom'||s.footprint==='national';
-  const bundleBar = localSeg ? 75 : natSeg ? 40 : 50;
+  const localSeg = (s.industry==='local'||s.industry==='highticket'||s.industry==='ultra') && s.footprint!=='nongeo';
+  const bundleBar = s.footprint==='nongeo' ? 80 : 90;
   if(s.geo && !s.seo && seoSc < bundleBar){
     scopeWarn.classList.add('show');
     scopeWarn.innerHTML = '<b>Recommend the full bundle.</b> '
