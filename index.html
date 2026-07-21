@@ -1334,18 +1334,24 @@ function buildSeries(q, price, share){
      wins landed from the ramp month on. */
   const span=(q.rampSpan||3);
   const fW = m => m===1 ? 0 : Math.min(1,(m-1)/(q.rampMonth+span-2));
+  /* LANDED BASIS: for repeat-purchase billing the share is taken on what program-won customers
+     ACTUALLY SPEND each month (through each customer's first 12 months, never beyond) — exactly
+     as the transparency copy promises. Two cohort pools: build-phase wins (share-free forever)
+     and share-phase wins (share on their actual monthly spend × attribution). The cost line
+     therefore RISES with collections instead of flat-billing a win's whole year at signing. */
+  let cumB=0, cumS=0;
   for(let m=1;m<=12;m++){
     months.push(m);
-    cum = cum*(1-churn) + q.newCust*fW(m);
+    const w=q.newCust*fW(m);
+    cumB=cumB*(1-churn)+(m<q.rampMonth?w:0);
+    cumS=cumS*(1-churn)+(m<q.rampMonth?0:w);
+    cum=cumB+cumS;
     const rev = cum*q.mrrPC;
     mrr.push(rev);
     if(price!=null){
       const inShare = m>=q.rampMonth;                          // rev share only in the performance phase
       const fixedM = inShare ? perfPrice : price;              // fixed drops (tiered) when the share begins
-      /* BOOKED BASIS: the share is taken on the attributable new net revenue WON in the period —
-         new customers signed × their first-year value × attribution — accrued monthly here for
-         the chart, billed in the month each win lands. Build-phase wins bill NO share, ever. */
-      const sc = inShare ? share/100*(q.newCust*fW(m)*q.yearlyValue*q.attribFactor) : 0;
+      const sc = inShare ? share/100*(cumS*q.mrrPC*q.attribFactor) : 0;
       invoice.push(fixedM+sc);
     } else invoice.push(null);
   }
@@ -1354,8 +1360,11 @@ function buildSeries(q, price, share){
   const year1Cost = price!=null ? invoice.reduce((a,b)=>a+b,0) : null;
   const exitMRR = mrr[11];
   // run-rate (ongoing) ROI: month-12 attributable revenue vs the FULL ongoing cost —
-  // the reduced fixed fee PLUS the booked-basis share at full ramp (honest denominator).
-  const ongoingCost = perfPrice!=null ? perfPrice + share/100*q.newCust*q.yearlyValue*q.attribFactor : null;
+  // the reduced fixed fee PLUS the landed-basis share at full ramp (honest denominator):
+  // at steady state the share applies to cohorts inside their first 12 months, on what
+  // they actually spend (churn included) — matching how the invoice line actually bills.
+  let s12=0; for(let j2=0;j2<12;j2++) s12+=Math.pow(1-churn,j2);
+  const ongoingCost = perfPrice!=null ? perfPrice + share/100*(q.newCust*q.mrrPC*s12*q.attribFactor) : null;
   const runRateROI = (ongoingCost>0) ? (exitMRR*q.attribFactor)/ongoingCost : null;
   // highest ongoing cost that still clears the target return (client-value ceiling)
   const ceil2x = exitMRR*q.attribFactor/ROI_TARGET;
