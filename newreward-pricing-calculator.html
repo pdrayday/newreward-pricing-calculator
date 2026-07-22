@@ -2932,6 +2932,24 @@ render();
 </script>
 <button class="mjump hide" id="mjump" type="button" aria-label="Jump to results"><span id="mjump-txt">See results</span><span class="mj-arrow">&darr;</span></button>
 <script>
+/* keep every "?" tooltip inside the viewport — on phones a tooltip centered on a "?" near
+   the screen edge would otherwise clip off-screen */
+(function(){
+  document.querySelectorAll('.tip').forEach(function(t){
+    const fix=function(){
+      const b=t.querySelector('.tipbox'); if(!b) return;
+      b.style.marginLeft='';
+      const r=b.getBoundingClientRect(); if(!r.width) return;
+      const vw=window.innerWidth;
+      let dx=0;
+      if(r.left<8) dx=8-r.left; else if(r.right>vw-8) dx=(vw-8)-r.right;
+      if(dx) b.style.marginLeft=dx+'px';
+    };
+    t.addEventListener('mouseenter',fix);
+    t.addEventListener('focus',fix);
+    t.addEventListener('touchstart',fix,{passive:true});
+  });
+})();
 (function(){
   const mj=document.getElementById('mjump'), out=document.querySelector('.outputs');
   if(!mj||!out) return;
