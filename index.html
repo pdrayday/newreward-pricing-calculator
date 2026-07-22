@@ -1839,7 +1839,11 @@ function render(){
     pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Use the recommended '+fmt$(q.price)+'.';
   }
   pWarn.classList.toggle('show',pLow);
-  const shFloor=Math.max(2, q.share-1.5);
+  /* negotiated-share floor mirrors the computed floor: 1% for ULTRA (a 1% share on a
+     $500k+ contract still clears our cost-to-deliver many times over — exactly the room
+     a rep needs in a live negotiation), 2% for everything else; never more than 1.5
+     points below the recommended rate. Floors are never shown to the client. */
+  const shFloor=Math.max(s.industry==='ultra'?1:2, q.share-1.5);
   shLow = n.share<shFloor;
   shWarn.innerHTML='&#9888; This revenue share is too low for the engagement. Use the recommended '+q.share+'%.';
   shWarn.classList.toggle('show',shLow);
