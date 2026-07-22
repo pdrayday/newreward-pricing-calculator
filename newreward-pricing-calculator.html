@@ -2938,12 +2938,13 @@ render();
   document.querySelectorAll('.tip').forEach(function(t){
     const fix=function(){
       const b=t.querySelector('.tipbox'); if(!b) return;
-      b.style.marginLeft='';
+      b.style.left='';
       const r=b.getBoundingClientRect(); if(!r.width) return;
       const vw=window.innerWidth;
       let dx=0;
       if(r.left<8) dx=8-r.left; else if(r.right>vw-8) dx=(vw-8)-r.right;
-      if(dx) b.style.marginLeft=dx+'px';
+      if(dx&&getComputedStyle(b).position==='absolute'&&!b.closest('.o-share'))
+        b.style.left='calc(50% + '+dx+'px)';
     };
     t.addEventListener('mouseenter',fix);
     t.addEventListener('focus',fix);
