@@ -787,6 +787,15 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="row2">
       <div class="fgroup">
+        <label class="flabel">Vertical subtype
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">A finer-grained business type under the industry model — med spa vs legal vs roofing under high-ticket, MSP vs SaaS under B2B, and so on. Each subtype carries its own researched benchmarks (customer value, retention, conversion, margin, ad cost) used for any field left blank. Researched inputs always override the benchmark; General keeps the broad industry typicals.</span></button>
+        </label>
+        <div class="fwrap"><select id="subtype"></select></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
         <label class="flabel">Locations or service lines
           <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how many physical locations or distinct service lines the program must cover. Each is its own set of pages, listings, and content to optimize, so more units raise the cost to deliver — with economies of scale, so it's not strictly linear.<br><br><b>How to count it:</b><br>• Local business (one market) → physical locations in that market (a 5-office dental group in one city = 5; one location = 1).<br>• Law/medical/multi-service → distinct service lines that each need their own content (e.g. injury + family + criminal = 3).<br>• <b>B2B / SaaS</b> → separate products or solution lines (one core product = 1).<br>• <b>E-commerce / national</b> → major product categories you'd build out separately (one core category = 1).<br><br><b>Don't double-count geography:</b> if the Market footprint is already metro or national, it covers the cities — set units to the number of <b>service lines</b>, NOT the number of metros (a multi-metro restoration company on a national footprint = its ~3 core services, not its 9 cities).<br>When in doubt, leave it at 1.</span></button>
         </label>
@@ -944,6 +953,16 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         </label>
         <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
       </div>
+    </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel" id="lbl-capacity">Delivery capacity
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The MOST new customers this business could physically take on per month — crew hours, chairs, build slots, install teams. When set, every projection (customers, revenue, ROI, share) is capped to it: the model never promises wins the client could not serve, no matter how much demand the market offers. For a few-contracts-a-year business use a decimal — a builder who could deliver 6 homes a year is 0.5/mo. Leave blank only if genuinely unconstrained.</span></button>
+        </label>
+        <div class="fwrap"><input type="number" id="capacity" class="has-suffix" placeholder="no limit" min="0" step="0.1"><span class="suffix">/mo</span></div>
+        <div class="auto-note" id="note-capacity"></div>
+      </div>
+      <div class="fgroup"></div>
     </div>
   </div>
 
@@ -1120,6 +1139,44 @@ const IND = {
   b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.10, cpc:10, name:'B2B / SaaS'},
   ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.12, cpc:3, name:'E-commerce / National'}
 };
+/* VERTICAL SUBTYPES — finer-grained benchmarks under each industry model. Used ONLY as the
+   fallback for fields left blank; researched inputs always override. 'general' keeps the
+   broad industry benchmark unchanged. Values = researched 2026 mid-market typicals. */
+const SUBT = {
+  local: {
+    general:   {name:'General local service'},
+    homesvc:   {name:'Home services (plumbing / HVAC / electrical)', yr:1500, yrs:3, vol:1300, conv:6, margin:45, cpc:18},
+    fitwell:   {name:'Fitness / salon / wellness', yr:1100, yrs:2, vol:1000, conv:6, margin:55, cpc:4},
+    petvet:    {name:'Pet & veterinary', yr:1500, yrs:4, vol:1000, conv:5, margin:45, cpc:5}
+  },
+  highticket: {
+    general:   {name:'General high-ticket local'},
+    medspa:    {name:'Med spa / aesthetics', yr:3800, yrs:3, vol:1400, conv:4, margin:65, cpc:8},
+    legal:     {name:'Legal', yr:9500, yrs:1, vol:2400, conv:2, margin:55, cpc:35},
+    roofhvac:  {name:'Roofing / exterior / large HVAC', yr:12000, yrs:1, vol:1000, conv:3, margin:30, cpc:22},
+    dental:    {name:'Dental / medical clinic', yr:2600, yrs:4, vol:1500, conv:5, margin:60, cpc:12}
+  },
+  ultra: {
+    general:   {name:'General ultra high-ticket'},
+    customhome:{name:'Custom home builder', yr:750000, yrs:1, vol:800, conv:0.25, margin:20, cpc:9},
+    commercial:{name:'Commercial construction / projects', yr:400000, yrs:1, vol:500, conv:0.3, margin:15, cpc:12},
+    bigdeal:   {name:'Enterprise contracts ($100k+)', yr:150000, yrs:2, vol:400, conv:0.4, margin:40, cpc:20}
+  },
+  b2b: {
+    general:   {name:'General B2B / SaaS'},
+    msp:       {name:'IT services / MSP', yr:30000, yrs:4, vol:1200, conv:1.5, margin:45, cpc:20},
+    saas:      {name:'SaaS subscriptions', yr:4800, yrs:4, vol:3000, conv:1.5, margin:80, cpc:12},
+    agency:    {name:'Agency / consulting', yr:24000, yrs:2, vol:800, conv:2, margin:50, cpc:15}
+  },
+  ecom: {
+    general:   {name:'General e-commerce'},
+    dtc:       {name:'DTC brand (apparel / goods)', yr:600, yrs:2, conv:2, margin:55, cpc:2.5},
+    supplements:{name:'Supplements / consumables', yr:900, yrs:2, conv:2.5, margin:65, cpc:3},
+    foodgrocery:{name:'Food / grocery / delivery', yr:1100, yrs:3, conv:2, margin:35, cpc:2.5}
+  }
+};
+/* effective benchmark: industry model refined by the chosen subtype */
+function BENCH(s){ const base=IND[s.industry]; const o=SUBT[s.industry]&&SUBT[s.industry][s.subtype]; return (o&&s.subtype&&s.subtype!=='general') ? Object.assign({}, base, o) : base; }
 const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
   multi:    {w:1.25, cost:1.06, reach:2.4, name:'a 2–5 market footprint'},
@@ -1189,7 +1246,7 @@ const num = id => { const v = parseFloat(String(document.getElementById(id).valu
 const fmt$ = v => '$'+Math.round(v).toLocaleString('en-US');
 
 function computeQuote(s){
-  const ind = IND[s.industry], foot = FOOT[s.footprint];
+  const ind = BENCH(s), foot = FOOT[s.footprint];
   const comp = COMP[s.compstr] ?? COMP.moderate;
   const compN = comp.w;                                   // 0..1 competitor entrenchment / DA gap
   const units = clamp(Math.round(s.units??1), 1, 25);     // # locations or service lines
@@ -1267,7 +1324,12 @@ function computeQuote(s){
      counters never see — modeled at a conservative +8% whenever GEO is in scope, and it
      only grows as more buying starts in AI answers. */
   const aiLift = s.geo ? 1.08 : 1;
-  const newCust = vol*clickShare*closeRate*chFactor*volQ*aiLift;
+  const newCustDemand = vol*clickShare*closeRate*chFactor*volQ*aiLift;
+  /* DELIVERY CAPACITY CAP — the model never promises wins the client could not physically
+     serve: when a monthly capacity is stated and the market supports more, every projection
+     (customers, revenue, ROI, share) is clipped to the stated ceiling. */
+  const capApplied = (s.capacity>0) && s.capacity < newCustDemand;
+  const newCust = capApplied ? s.capacity : newCustDemand;
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
   // organic-vs-paid: the captured visits/mo once ramped, and what that traffic would cost in Google Ads
@@ -1350,7 +1412,7 @@ function computeQuote(s){
 
   return {difficulty, price, share, yearlyValue, yrIsAuto, aovYear, retainYears, ltv,
           seoEff, seoEntered, rankImplied, rankNow,
-          newCust, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
+          newCust, newCustDemand, capApplied, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
           vol, volIsAuto, clickShare, closeRate, clicksPM, adValuePM, rampMonth, rampSpan, windowDays, nScopes,
           comp, compN, units, unitsCost, intensityCost,
           seoIntensity, geoIntensity, intensityGap, intensityLabel};
@@ -1414,11 +1476,22 @@ function buildSeries(q, price, share){
           exitCust: cum, exitARR: cum*q.yearlyValue, exitMRR, exitInvoice: invoice[11]};
 }
 
+function refreshSubtypes(){
+  const indSel=document.getElementById('industry'), sub=document.getElementById('subtype');
+  if(!indSel||!sub) return;
+  if(sub.dataset.forInd===indSel.value) return;
+  const set=SUBT[indSel.value]||{general:{name:'General'}};
+  const cur=sub.value;
+  sub.innerHTML=Object.keys(set).map(function(k){ return '<option value="'+k+'">'+(set[k].name||k)+'</option>'; }).join('');
+  sub.dataset.forInd=indSel.value;
+  sub.value=set[cur]?cur:'general';
+}
 function readState(){
   return {
     client: document.getElementById('client').value.trim(),
     phrase: document.getElementById('phrase').value.trim(),
     industry: document.getElementById('industry').value,
+    subtype: (document.getElementById('subtype')||{}).value||'general',
     footprint: document.getElementById('footprint').value,
     volume: num('volume'), volsource: document.getElementById('volsource').value,
     cpc: num('cpc'),
@@ -1746,7 +1819,7 @@ function evalRoiGuardrail(s,q,n){
                  : ' At the current conversion and gap, volume alone won\'t reach 1.3× — raise those too.'));
   }
 
-  const conv=s.convrate??IND[s.industry].conv;
+  const conv=s.convrate??BENCH(s).conv;
   if(conv<8 && q.yearlyValue<50000){   // "raise conversion" advice is nonsense for $100k+ purchases, where sub-1% is normal
     flagRoi('convrate');
     const ct=solveUp('convrate', conv, 100);
@@ -1784,6 +1857,7 @@ function evalRoiGuardrail(s,q,n){
 }
 
 function render(){
+  refreshSubtypes();
   const s = readState();
   const q = computeQuote(s);
   const set = (id,v)=>document.getElementById(id).textContent = v;
@@ -1829,7 +1903,7 @@ function render(){
     const [mLo,mHi]=marketBand(s,q.nScopes);
     const scopeName=q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO':'AEO/GEO');
     mEl.innerHTML = (n.price>=mLo && n.price<=mHi)
-      ? '<span class="in-range">&#10003; Within the typical 2026 market rate</span> for '+scopeName+' for a '+IND[s.industry].name.toLowerCase()+' targeting '+FOOT[s.footprint].name+' — verified against published agency pricing research.'
+      ? '<span class="in-range">&#10003; Within the typical 2026 market rate</span> for '+scopeName+' for a '+BENCH(s).name.toLowerCase()+' targeting '+FOOT[s.footprint].name+' — verified against published agency pricing research.'
       : (n.price<mLo ? 'Below the typical 2026 market rate for this scope and market — above-market value at this fee.'
                      : 'At the top of the 2026 market range for this scope and market — the depth of competition and footprint here genuinely costs more to win, and the fee reflects it.');
   } else mEl.innerHTML='';
@@ -1843,7 +1917,7 @@ function render(){
     +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. It drops '+Math.round((1-PERF_DISCOUNT(n.price))*100)+'% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins — or choose the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, with 0% share.';
   const tsm=document.getElementById('tip-share-math');
   if(tsm) tsm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
-    'How this percentage is built: sized from the client\'s own economics so it stays fair — gross margin (<b>'+(s.margin??IND[s.industry].margin)+'%</b>), acquisition budget (<b>'+(s.acq??15)+'%</b>), existing sales commissions (<b>'+(s.commission??8)+'%</b>), and typical deal size (<b>'+fmt$(q.yearlyValue)+'/yr</b>). Thinner margins, bigger deals, and higher existing commissions all pull it <b>down</b>; it is bounded 2–10% in 0.5% steps. Applied only to a proven new customer\'s first-year value: <b>'+n.share+'% × '+fmt$(q.yearlyValue)+' = '+fmt$(q.yearlyValue*n.share/100)+'</b> per win — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond.';
+    'How this percentage is built: sized from the client\'s own economics so it stays fair — gross margin (<b>'+(s.margin??BENCH(s).margin)+'%</b>), acquisition budget (<b>'+(s.acq??15)+'%</b>), existing sales commissions (<b>'+(s.commission??8)+'%</b>), and typical deal size (<b>'+fmt$(q.yearlyValue)+'/yr</b>). Thinner margins, bigger deals, and higher existing commissions all pull it <b>down</b>; it is bounded 2–10% in 0.5% steps. Applied only to a proven new customer\'s first-year value: <b>'+n.share+'% × '+fmt$(q.yearlyValue)+' = '+fmt$(q.yearlyValue*n.share/100)+'</b> per win — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond.';
 
   /* engagement intensity — graded from the SEO/GEO visibility scores */
   const igEl=document.getElementById('o-intensity');
@@ -1908,14 +1982,14 @@ function render(){
 
   /* auto-estimate math notes under blank inputs */
   document.getElementById('note-vol').innerHTML = q.volIsAuto
-      ? 'Auto: '+IND[s.industry].name+' baseline '+IND[s.industry].vol.toLocaleString()
+      ? 'Auto: '+BENCH(s).name+' baseline '+BENCH(s).vol.toLocaleString()
         +' × '+FOOT[s.footprint].reach+'× reach = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : volScaleNote;
   const isEcom = s.industry==='ecom';
   document.getElementById('row-aov').style.display = isEcom ? '' : 'none';       // AOV × purchases shown only for ecom
   document.getElementById('fg-yearly').style.display = isEcom ? 'none' : '';     // annual-value field hidden for ecom (AOV replaces it)
   document.getElementById('note-yr').innerHTML = q.aovYear>0
       ? 'From order value: <b>'+fmt$(q.yearlyValue)+'/yr</b> (used instead of the field above)'
-      : (q.yrIsAuto ? 'Auto: '+IND[s.industry].name+' benchmark = <b>'+fmt$(q.yearlyValue)+'/yr</b>' : '');
+      : (q.yrIsAuto ? 'Auto: '+BENCH(s).name+' benchmark = <b>'+fmt$(q.yearlyValue)+'/yr</b>' : '');
   document.getElementById('note-aov').innerHTML = q.aovYear>0
       ? fmt$(s.aov)+' × '+s.freq+'/yr = <b>'+fmt$(q.aovYear)+'/yr</b>' : '';
   document.getElementById('note-ltv').innerHTML =
@@ -1930,25 +2004,28 @@ function render(){
       ? 'Pulled by rank '+q.rankNow+' (implies ≈'+q.rankImplied+'/100): model uses <b>'+q.seoEff+'/100</b>'
       : '';
 
+  document.getElementById('note-capacity').innerHTML = q.capApplied
+      ? '<b>Capacity cap active:</b> market demand supports ~'+(q.newCustDemand<3?q.newCustDemand.toFixed(1):Math.round(q.newCustDemand))+'/mo — every projection is capped at their <b>'+s.capacity+'/mo</b>.'
+      : '';
   document.getElementById('note-cpc').innerHTML = (s.cpc==null)
-      ? 'Auto: '+IND[s.industry].name+' typical = <b>$'+IND[s.industry].cpc+'</b>/click — set the real CPC if known' : '';
+      ? 'Auto: '+BENCH(s).name+' typical = <b>$'+BENCH(s).cpc+'</b>/click — set the real CPC if known' : '';
   /* volume source only matters once a volume is actually entered — hide it until then */
   (function(){ var g=document.getElementById('volsource').closest('.fgroup'); if(g) g.style.display=(s.volume>0)?'':'none'; })();
   /* AOV x frequency only applies to e-commerce — hide the fields everywhere else */
   ['aov','freq'].forEach(function(id){ var g=document.getElementById(id).closest('.fgroup'); if(g) g.style.display = (s.industry==='ecom')?'':'none'; });
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
-      ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
+      ? '' : 'Auto: '+BENCH(s).name+' typical = <b>'+BENCH(s).conv+'%</b> visit-to-customer — set the real rate if known';
   document.getElementById('note-yrs').innerHTML = (s.years>0)
-      ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].yrs+' yrs</b>';
+      ? '' : 'Auto: '+BENCH(s).name+' typical = <b>'+BENCH(s).yrs+' yrs</b>';
   document.getElementById('note-margin').innerHTML = (s.margin>0)
-      ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].margin+'%</b>';
+      ? '' : 'Auto: '+BENCH(s).name+' typical = <b>'+BENCH(s).margin+'%</b>';
 
   /* cards — customer pace adapts to the business cadence (per month vs per year) */
   const cr = custRate(q.newCust);
   set('o-cust-label', cr.monthly ? 'New customers / month (ramped pace)' : 'New customers / year (ramped pace)');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
-      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')
+      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+s.capacity+'/mo capacity':'')
       +' · year one models '+eventPlan(q,n).winsYr+' (ramping while we build)');
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
@@ -1995,13 +2072,13 @@ function render(){
     const perWin = q.yearlyValue*q.attribFactor*n.share/100;
     const shareMo = n.share/100*q.newCust*q.yearlyValue*q.attribFactor;
     const crM = custRate(q.newCust);
-    const mgnPct = s.margin??IND[s.industry].margin;
+    const mgnPct = s.margin??BENCH(s).margin;
     const grossWin = q.yearlyValue*mgnPct/100;
     const keepWin = grossWin-perWin;
     smEl.innerHTML =
       '<p><b>The share only ever applies to new customers our work wins.</b> Existing customers, repeat business, referrals, and anything the client finds on their own are <span class="sm-big">never touched</span> — the revenue baseline is measured before we start, and everything below it is off-limits. We are not taking a percentage of the business they already built.</p>'
       +'<p><b>100% verifiable proof, or nothing.</b> A win only counts when it can be <span class="sm-big">proven</span> to have come from this program — tracked calls, forms, and bookings. If we can\'t prove we won it, we don\'t take a dime of share on it. Period.</p>'
-      +'<p><b>One proven win, in exact dollars:</b> a new customer worth '+fmt$(q.yearlyValue)+' in first-year value &times; '+n.share+'% share = <span class="sm-big">'+fmt$(q.yearlyValue*n.share/100)+'</span> — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond. The client keeps the other '+fmt$(q.yearlyValue*(1-n.share/100))+' — and 100% of every repeat purchase after year one. The share is on revenue, not profit — and the rate is already sized to the client\'s margin ('+(s.margin??IND[s.industry].margin)+'% here), so lower-margin businesses pay a lower percentage.</p>'
+      +'<p><b>One proven win, in exact dollars:</b> a new customer worth '+fmt$(q.yearlyValue)+' in first-year value &times; '+n.share+'% share = <span class="sm-big">'+fmt$(q.yearlyValue*n.share/100)+'</span> — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond. The client keeps the other '+fmt$(q.yearlyValue*(1-n.share/100))+' — and 100% of every repeat purchase after year one. The share is on revenue, not profit — and the rate is already sized to the client\'s margin ('+(s.margin??BENCH(s).margin)+'% here), so lower-margin businesses pay a lower percentage.</p>'
       +'<p><b>The profit math on a single win — in the client\'s favor, every time.</b> A '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+fmt$(perWin)+' — a customer who brings &asymp;<span class="sm-big">'+fmt$(grossWin)+' in gross profit</span> (at their '+mgnPct+'% margin) they wouldn\'t otherwise have. They keep &asymp;'+fmt$(keepWin)+' of that first-year profit — and the share <span class="sm-big">never touches anything after year one</span>: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.')+'</p>'
       +(function(){
         let rampEnd=n.rampMonth-1;
@@ -2039,7 +2116,7 @@ function render(){
   const crA = custRate(q.newCust);
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+s.capacity+'/mo capacity':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -2080,17 +2157,20 @@ function researchWithAI(){
     +'- margin: the GROSS margin typical for this exact vertical (e.g. custom home builders 15-25, roofing 25-35, med spas 60-70, law 50-65, SaaS 75-85, e-commerce 40-60).\n'
     +'- acq: percent of revenue this business would sensibly spend to win a new customer (10-20 typical; large one-time-ticket businesses often run lower).\n'
     +'- commission: percent of the gross sale they already pay staff or reps in this vertical (construction/realty-adjacent 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10).\n'
+    +'- subtype: the closest vertical subtype under the industry model — it sharpens every blank-field benchmark. Pick general only when nothing fits.\n'
+    +'- capacity: the MOST new customers this business could physically take on per MONTH (crew size, chairs, consult slots, build slots — decimals allowed: 6 homes a year = 0.5). Estimate from team size and reviews if unstated. The calculator hard-caps every projection at this number, so it is the single best defense against over-promising — fill it whenever research supports an estimate.\n'
     +'- yearly: the FULL first-year revenue from ONE new customer, including typical repeat visits, packages, or memberships inside year one — a med spa patient is several visits and often a package, not one treatment; use their published prices and typical visit counts.\n'
     +'- LOW-SIDE REALISM CHECK (everyday and med-spa-style local services): sanity-test volume x 0.15 x (convrate/100) x 12. If it implies fewer than roughly 12 new customers a YEAR for an established local service with real demand, your volume, conversion, or footprint is understated — fix the inputs rather than under-selling the business.\n'
     +'- ULTRA-HIGH-TICKET REALISM CHECK (industry=ultra — customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n\n'
     +'Then give me BOTH of the following:\n\n'
     +'(1) A three-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&subtype=SUBTYPE&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
     +'- footprint: local | multi | metro | national | nongeo\n'
     +'- compstr: weak | moderate | strong | dominant\n'
+    +'- subtype: local -> general|homesvc|fitwell|petvet · highticket -> general|medspa|legal|roofhvac|dental · ultra -> general|customhome|commercial|bigdeal · b2b -> general|msp|saas|agency · ecom -> general|dtc|supplements|foodgrocery\n'
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
@@ -2330,19 +2410,21 @@ function buildPDF(mode){
   const rows=[
     ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'],
     ['Industry model', selText('industry')],
+    ['Vertical subtype', selText('subtype')||'General'],
     ['Market footprint', selText('footprint')],
     ['Competitor strength', selText('compstr')],
     ['Locations / service lines', String(q.units)],
     ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')],
     ['Volume source', selText('volsource')],
-    ['Typical search ad cost', '$'+(s.cpc??IND[s.industry].cpc)+'/click'+(s.cpc==null?' (auto)':'')],
+    ['Delivery capacity', (s.capacity>0? s.capacity+' new customers/mo (hard cap)' : 'no stated limit')],
+    ['Typical search ad cost', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')],
     ['Average search rank', String(s.rank??'—')],
     ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')],
     ['AEO/GEO visibility score', (s.geoScore??0)+'/100'],
     ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))],
     ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'],
-    ['Conversion rate', (s.convrate??IND[s.industry].conv)+'%'+(s.convrate>0?'':' (typical)')],
-    ['Gross margin', (s.margin??IND[s.industry].margin)+'%'+(s.margin>0?'':' (typical)')],
+    ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)')],
+    ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')],
     ['Acquisition budget', (s.acq??0)+'%'],
     ['Sales commission', (s.commission??0)+'%'],
     ['Engagement intensity', q.intensityLabel
@@ -2378,8 +2460,7 @@ function buildPDF(mode){
   y+=3.5;   /* centered between the summary above and the disclosure below */
   doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' → capped at '+s.capacity+'/mo capacity':'')
     +(q.aiLift>1?' × 108% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
   doc.splitTextToSize(math1,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
@@ -2489,7 +2570,7 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   const pdCr=custRate(q.newCust);
   const pdPerWin=fmt$(q.yearlyValue*n.share/100);
-  const pdMgn=s.margin??IND[s.industry].margin;
+  const pdMgn=s.margin??BENCH(s).margin;
   const pdGross=q.yearlyValue*pdMgn/100;
   const pdKeep=pdGross-q.yearlyValue*n.share/100;
   const pdShareMo=fmt$(n.share/100*q.newCust*q.yearlyValue);
@@ -2555,7 +2636,7 @@ function buildPDF(mode){
   doc.text('Common Questions',L,11);
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('Straight answers to the things most owners ask before saying yes.',L,17.5);
-  const fMgn=s.margin??IND[s.industry].margin;
+  const fMgn=s.margin??BENCH(s).margin;
   const fGross=q.yearlyValue*fMgn/100;
   const fShareWin=q.yearlyValue*n.share/100;
   const FAQ=[
@@ -2593,6 +2674,10 @@ function buildPDF(mode){
      'Then we feel it with you — that\'s the point of the structure. The share is billed only on wins that actually happen, so if the model was too optimistic, your cost drops automatically: the projection is a bet we co-sign, not a sales number. The chart shows the conservative floor, not just the modeled pace, and at the review window every estimate is replaced with your live data and the terms adjust to match reality. We commit to the work and the transparency — Google decides the rest, which is why nothing here is ever a guarantee.'],
     ['"Can I skip the revenue share and just pay a flat fee?"',
      'Yes. The fixed-only option keeps the full monthly fee — no discounted fee, and 0% share, ever. Nearly every client chooses the share version, and it is the one we recommend: the fee steps down once wins start, and we only earn more when you provably do — it is the structure built to scale when you scale.'],
+    ['"What if we couldn\'t even handle that many new customers?"',
+     'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, ROI, and the share — is hard-capped at that number, no matter how much demand the market offers.'+(q.capApplied?' This proposal is already capped at your stated '+s.capacity+'/mo — the market supports more, and that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo':'assumes capacity is not the constraint — tell us your real ceiling and we\'ll re-run it in seconds')+'.')],
+    ['"Our business isn\'t like other '+BENCH(s).name.toLowerCase()+'s — do generic benchmarks even fit us?"',
+     'Two protections. First, the model uses vertical subtypes — a med spa, a law firm, and a roofing company under "high-ticket" each carry their own researched 2026 benchmarks for customer value, retention, conversion, margin, and ad cost, and the same is true under every industry model. Second, benchmarks only ever fill fields left blank: every researched, business-specific number you or we provide overrides them completely. The benchmark is the floor of accuracy, never the ceiling.'],
     ['"Do I have to sign a long contract?"',
      'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway to show up. You stay because it works, not because paper says so.'],
     ['"What do you need from me to start?"',
@@ -2664,6 +2749,8 @@ function buildPDF(mode){
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
     ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank.'],
     ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize.'],
+    ['Vertical subtype','A finer-grained business type under the industry model — med spa vs legal vs roofing under high-ticket, MSP vs SaaS under B2B. Each carries its own researched 2026 benchmarks (customer value, retention, conversion, margin, ad cost) used only for fields left blank; researched inputs always override.'],
+    ['Delivery capacity (cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. When set, every projection (customers, revenue, ROI, share) is hard-capped at it: the model never promises wins the client could not serve, regardless of market demand.'],
     ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — the total cost rises, but the cost per location shrinks.'],
     ['Competitor strength','How strong the businesses already ranking are (site authority, backlinks). The biggest driver of market difficulty.'],
     ['Average search rank','The client\'s average Google position for money phrases. Top-5 speeds up the ramp; page 2+ raises the cost. Blended 50/50 with the SEO visibility score.'],
@@ -2811,7 +2898,10 @@ document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty
 function applyPrefill(qs){
   const p = new URLSearchParams(qs);
   if(![...p.keys()].length) return false;
-  const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc',
+  /* industry first so the subtype option list exists before the subtype value is applied */
+  if(p.has('industry')){ const ie=document.getElementById('industry'); if([...ie.options].some(o=>o.value===p.get('industry'))) ie.value=p.get('industry'); }
+  if(typeof refreshSubtypes==='function') refreshSubtypes();
+  const fields = ['client','website','phrase','industry','subtype','footprint','compstr','units','volume','volsource','cpc','capacity',
                   'rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin',
                   'acq','commission'];
   fields.forEach(id=>{
@@ -2976,7 +3066,7 @@ render();
 /* HARD INPUT CLAMPS — the model already protects itself, but visible impossible values
    (rank 0, score 150, negative CPC) hurt trust. Values snap into range on change. */
 (function(){
-  var CL={rank:[1,100],seoScore:[0,100],geoScore:[0,100],cpc:[0,500],units:[1,100],volume:[0,10000000],yearly:[0,100000000],aov:[0,10000000],freq:[0,365],convrate:[0,100],margin:[0,95],acq:[0,100],commission:[0,60],years:[1,30]};
+  var CL={rank:[1,100],seoScore:[0,100],geoScore:[0,100],cpc:[0,500],units:[1,100],volume:[0,10000000],yearly:[0,100000000],aov:[0,10000000],freq:[0,365],convrate:[0,100],margin:[0,95],acq:[0,100],commission:[0,60],years:[1,30],capacity:[0,100000]};
   Object.keys(CL).forEach(function(id){
     var el=document.getElementById(id); if(!el) return;
     el.addEventListener('change',function(){
@@ -2990,7 +3080,7 @@ render();
    into a prefill URL, so the address bar never having updated stops mattering. */
 function copyQuoteLink(){
   var p=new URLSearchParams();
-  var ids=['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc','rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin','acq','commission'];
+  var ids=['client','website','phrase','industry','subtype','footprint','compstr','units','volume','volsource','cpc','capacity','rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin','acq','commission'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(!el) return;
     var v=String(el.value||'').trim().replace(/,/g,''); if(v!=='') p.set(id,v); });
   p.set('seo', document.getElementById('scopeSeo').checked?'1':'0');
