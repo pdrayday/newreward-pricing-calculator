@@ -1932,6 +1932,8 @@ function render(){
 
   document.getElementById('note-cpc').innerHTML = (s.cpc==null)
       ? 'Auto: '+IND[s.industry].name+' typical = <b>$'+IND[s.industry].cpc+'</b>/click — set the real CPC if known' : '';
+  /* volume source only matters once a volume is actually entered — hide it until then */
+  (function(){ var g=document.getElementById('volsource').closest('.fgroup'); if(g) g.style.display=(s.volume>0)?'':'none'; })();
   /* AOV x frequency only applies to e-commerce — hide the fields everywhere else */
   ['aov','freq'].forEach(function(id){ var g=document.getElementById(id).closest('.fgroup'); if(g) g.style.display = (s.industry==='ecom')?'':'none'; });
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
@@ -2558,7 +2560,7 @@ function buildPDF(mode){
   const fShareWin=q.yearlyValue*n.share/100;
   const FAQ=[
     ['"How will I know it\'s actually working?"',
-     'You will see it in your own data — rankings, AI mentions, tracked calls, forms, and bookings — reported in plain English, week by week. And at the '+q.windowDays+'-day review, every estimate in this proposal is re-verified against your live numbers, in the open.'],
+     'You will see it in your own data — rankings, AI mentions, tracked calls, forms, and bookings — reported in plain English, month after month. And at the '+q.windowDays+'-day review, every estimate in this proposal is re-verified against your live numbers, in the open.'],
     ['"What if it doesn\'t deliver?"',
      'The fixed fee only ever covers real, visible work: pages built, content published, listings fixed, authority earned. The share is pure performance — no proven wins, no share. And at the review window the whole program is re-quoted from live data; if the numbers don\'t support it, we say so first.'],
     ['"Are you taking a percentage of my whole business?"',
@@ -2570,17 +2572,17 @@ function buildPDF(mode){
     ['"I already do some SEO. Why add AEO/GEO?"',
      'Because buyers now ask ChatGPT, Gemini, Perplexity, and Google\'s AI Overviews — and those engines recommend businesses they can verify. The channels feed each other: search visibility earns AI citations, and AI answers reinforce search trust.'],
     ['"How fast will I see results?"',
-     'Technical and trust fixes land in the first few weeks — you see what shipped from day one. The first '+(n.rampMonth-1)+' months are the build, billed as exactly that; wins ramp from month '+n.rampMonth+', and the visibility asset keeps strengthening through months 12–24. Anyone promising page one in two weeks is selling something else.'],
+     'Technical and trust fixes land in the first few weeks — you see what shipped from day one. The first '+(n.rampMonth-1)+' months are the build, billed as exactly that — and any customers won during the build are yours share-free. The share begins month '+n.rampMonth+', wins ramp to full pace from there, and the visibility asset keeps strengthening through months 12–24. Anyone promising page one in two weeks is selling something else.'],
     ['"I\'ve been burned by an agency before."',
      'Most owners have — which is why this proposal shows every input, every formula, and every assumption, prices inside published 2026 market rates, and bills the share only on provable wins. Nothing here asks for faith.'],
     ['"Why this price?"',
-     'It is the researched cost of delivering this exact scope in this exact market, verified against published 2026 SEO and AEO/GEO rates — never a number pulled from the air. It steps DOWN once the revenue share begins, because from then on we get paid the way you do: on results. If we don\'t move the number, we don\'t earn the share.'],
+     'It is the researched cost of delivering this exact scope in this exact market, verified against published 2026 SEO and AEO/GEO rates — never a number pulled from the air. It steps DOWN once the revenue share begins, because from then on we get paid the way you do: on results'+(pEp.feeWaive?' — and at this contract size it is waived entirely in any month a win lands: you pay the share only':'')+'. If we don\'t move the number, we don\'t earn the share.'],
     ['"Can SEO/GEO really return 10×? That number seems high."',
      'They can — and the economics are why. Once you rank, in Google or in AI answers, every additional customer arrives without buying another click, so the return on a fixed monthly fee really can reach 10× and beyond. Your exact multiple depends on your industry, deal size, margins, and market footprint — a $500,000 custom home needs a couple of wins a year to outrun the fee, while a $900/yr service needs steady volume — which is exactly why this calculator prices from your inputs, not a template. And none of it is hand-waved: every figure is modeled against researched, published 2026 SEO and AEO/GEO projections, capped conservatively, and re-verified against your live tracking data at the review window.'],
     ['"What happens at the review window?"',
      'At day '+q.windowDays+', the estimates in this proposal are replaced with your live tracking data, and the terms are re-confirmed or adjusted to match reality. It is your built-in checkpoint — and ours.'],
     ['"What exactly does New Reward do?"',
-     'We score how you show up in Google and AI answers, fix what holds you back, and show you weekly improvements — one path from gap to growth.'],
+     'We score how you show up in Google and AI answers, fix what holds you back, and prove the improvements from your own data — one path from gap to growth.'],
     ['"What\'s the difference between SEO and GEO?"',
      'SEO earns rankings in classic Google search. GEO — generative-engine optimization, also called AEO — shapes how AI systems like ChatGPT, Perplexity, Gemini, Claude, and Google\'s AI Overviews describe and cite your brand. This program runs both together.'],
     ['"Does the projected growth just climb forever?"',
@@ -2661,7 +2663,7 @@ function buildPDF(mode){
     ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
     ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank.'],
-    ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, or national. Wider = more demand, competitors, and pages to optimize.'],
+    ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize.'],
     ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — the total cost rises, but the cost per location shrinks.'],
     ['Competitor strength','How strong the businesses already ranking are (site authority, backlinks). The biggest driver of market difficulty.'],
     ['Average search rank','The client\'s average Google position for money phrases. Top-5 speeds up the ramp; page 2+ raises the cost. Blended 50/50 with the SEO visibility score.'],
@@ -2669,8 +2671,8 @@ function buildPDF(mode){
     ['AEO/GEO visibility score','0-100: how often AI assistants mention or recommend the client today. Lower = more of the AI-driven demand is still winnable — a 7/100 honestly projects MORE new wins than a 70/100, because a 70/100 client already captures most of those buyers (and the model never counts or shares what they already win). Most local businesses score under 25. Carries 35% of the winnable-demand blend.'],
     ['Visibility gap','100 minus the visibility score — the untapped demand left to win. Drives both the revenue upside and the effort required.'],
     ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. With AEO/GEO in scope, demand is modeled at +8% — buyers who ask AI assistants directly are demand Google\'s counters never see, and that slice only grows.'],
-    ['Volume source','Where the search-demand number came from. Demand measured in tools like Keyword Planner, Semrush, or GSC counts in full; estimates are weighted conservatively so demand is never overstated.'],
-    ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market.'],
+    ['Volume source','Where the search-demand number came from. Demand measured in tools like Keyword Planner, Semrush, or GSC counts in full; estimates are weighted conservatively so demand is never overstated — and the confidence weighting is shown right in the model line.'],
+    ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market. Left blank, an industry-typical CPC is used automatically.'],
     ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],
     ['Retention','How many years a typical customer stays. Sets the monthly churn in the 12-month projection.'],
     ['AOV x purchases / year','E-commerce: average order value times orders per year = the yearly customer value.'],
@@ -2680,12 +2682,12 @@ function buildPDF(mode){
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
     ['Ongoing (run-rate) return','The headline ROI band: month-12 proven new revenue vs the full ongoing cost, shown from conservative floor to modeled. It is the number that proves the program keeps paying for itself after the build.'],
     ['Year-1 ROI','The ramp year: proven new revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — the build happens first, the results follow.'],
-    ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20–30% once the revenue share starts — the bigger the program, the bigger the drop.'],
+    ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20–30% once the revenue share starts — the bigger the program, the bigger the drop.'+(pEp.feeWaive?' At this contract size it is waived entirely in any month a win lands.':'')],
     ['Revenue share — and the baseline','When our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond. The baseline is the revenue the client already generates before the program starts: only tracked growth ABOVE that line counts, and existing business is never touched. "Net" means revenue the client actually keeps after refunds — not profit; fairness to margin is built into the rate itself, so lower-margin businesses are quoted a lower percentage, and acquisition budget, existing commissions, and deal size pull it down further. No new wins, no share.'],
     ['Attribution (attributable)','One hundred percent verifiable proof, or no share: every win is tracked — calls, forms, and bookings — so every win is provable. A win is a win; there is no in-between. If a customer cannot be proven to have come from this program, they are not a win, and we do not take a dime.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
     ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
-    ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built. From the start month, the fixed fee drops and the share begins — billed monthly on the new customers won. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
+    ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built — and wins can start landing during the build, entirely share-free. From the start month, the fixed fee drops and the share begins — billed monthly on the new customers won from then on. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
     ['LTV — lifetime value','Yearly value × retention years — the full worth of one customer. Shown but never used — on purpose: every projection runs on the smaller one-year value (retention enters only as churn), so if the program pays for itself on year-one value alone, the lifetime value is pure upside on top.'],
     ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets. A geo-restricted brand with many locations is modeled per LOCAL market it fights in — only borderless businesses (e-commerce, SaaS) carry the big-market damper.'],
