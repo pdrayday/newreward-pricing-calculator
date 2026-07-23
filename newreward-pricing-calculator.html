@@ -322,6 +322,7 @@ a.wordmark:hover span{color:var(--gold-bright)}
    price + return in a floating pill that scrolls to the results panel on tap */
 .mjump{display:none}
 @media(max-width:1020px){
+  body::after{content:"";display:block;height:88px}
   .mjump{
     position:fixed;left:50%;transform:translateX(-50%);
     bottom:max(14px, env(safe-area-inset-bottom, 0px));z-index:70;
@@ -871,7 +872,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <label class="flabel">Typical search ad cost
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one click costs on Google Ads for this phrase (CPC). High ad prices signal a competitive, high-value market — and show what the client avoids paying once organic visibility takes over. Typical: $2–6 for everyday local, $8–25+ for legal, medical, finance, and SaaS terms.</span></button>
         </label>
-        <div class="fwrap"><span class="prefix">$</span><input type="number" id="cpc" class="has-prefix" value="9" min="0" step="0.5"></div>
+        <div class="fwrap"><span class="prefix">$</span><input type="number" id="cpc" class="has-prefix" placeholder="auto" min="0" step="0.5"></div>
+        <div class="auto-note" id="note-cpc"></div>
       </div>
       <div class="fgroup"></div>
     </div>
@@ -1044,6 +1046,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="no-print" style="display:flex;gap:10px;margin-top:6px">
       <button class="btn btn-ghost" style="flex:1" onclick="previewPDF()" title="See exactly what the PDF will contain — nothing is downloaded">Preview PDF</button>
       <button class="btn btn-gold" id="pdfbtn" style="flex:1" onclick="downloadPDF()">Download PDF</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="copyQuoteLink()" title="Copies a link that reopens the calculator with every current input — including any negotiated price/share/ramp">Copy quote link</button>
     </div>
 
     <div class="o-foot">
@@ -1111,11 +1114,11 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 /* cost = relative cost-to-deliver multiplier — intentionally FLAT (compressed spread across
    industries and footprints per pricing decision: everything stays near the local-service base) */
 const IND = {
-  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, cost:1.00, name:'Local service'},
-  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, cost:1.08, name:'High-ticket local'},
-  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.3, margin:22, cost:1.10, name:'Ultra high-ticket'},
-  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.10, name:'B2B / SaaS'},
-  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.12, name:'E-commerce / National'}
+  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:5, margin:50, cost:1.00, cpc:6, name:'Local service'},
+  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:4, margin:65, cost:1.08, cpc:12, name:'High-ticket local'},
+  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.3, margin:22, cost:1.10, cpc:9, name:'Ultra high-ticket'},
+  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.10, cpc:10, name:'B2B / SaaS'},
+  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.12, cpc:3, name:'E-commerce / National'}
 };
 const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
@@ -1201,7 +1204,8 @@ function computeQuote(s){
      ad costs, and demand then add up to ~+3 on top of the competitor base. */
   const indN  = clamp((ind.w-1.0)/1.0, 0, 1);
   const footN = clamp((foot.w-1.0)/1.0, 0, 1);
-  const cpcN  = clamp((s.cpc||0)/20, 0, 1);
+  const cpcEff = s.cpc ?? ind.cpc;   // blank = industry-typical CPC (auto)
+  const cpcN  = clamp((cpcEff||0)/20, 0, 1);
   const volN  = clamp(Math.log10(vol+1)/4.7, 0, 1);
   const difficulty = clamp(Math.round(1.5 + compN*7.5 + 0.9*indN + 0.7*footN + 1.1*cpcN + 0.6*volN), 1, 10);
 
@@ -1268,7 +1272,7 @@ function computeQuote(s){
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
   // organic-vs-paid: the captured visits/mo once ramped, and what that traffic would cost in Google Ads
   const clicksPM  = vol*clickShare*chFactor*volQ*aiLift;
-  const adValuePM = clicksPM*(s.cpc||0);
+  const adValuePM = clicksPM*(cpcEff||0);
 
   /* ---- rev-share start month + ramp length: harder markets and more intensive (low-visibility)
           engagements push back when rev share starts and lengthen the climb to full output.
@@ -1288,7 +1292,7 @@ function computeQuote(s){
   if(nScopes>0){
     const scopeBase = 400 + (s.seo?700:0) + (s.geo?500:0);
     const rankN  = clamp(((s.rank??28)-1)/40, 0, 1);
-    const cpcN2  = clamp((s.cpc||0)/20, 0, 1);
+    const cpcN2  = clamp((cpcEff||0)/20, 0, 1);
     const workFactor = 1 + 0.18*rankN + 0.10*cpcN2 + 0.14*compN;  // rank weighs heavier: page-4 sites take real catch-up work (visibility gap flows via intensityCost)
     const rawCost = scopeBase * ind.cost * foot.cost * unitsCost * intensityCost * workFactor;
     // BUILD-phase fixed = 90% of cost-to-deliver, then ANCHORED INTO THE 2026 MARKET BAND
@@ -1299,8 +1303,25 @@ function computeQuote(s){
     // still lift the price above the floor when the work genuinely costs more. Once the share
     // kicks in, the fixed drops 20–30% (tiered — see PERF_DISCOUNT in buildSeries).
     const [mLo,mHi] = marketBand(s,nScopes);
-    price = Math.max(1500, Math.round(clamp(rawCost*0.90, mLo, mHi)/50)*50);   // hard floor: $1,500/mo for every combination
-    if(price<mLo) price+=50; else if(price>mHi) price-=50;   // keep the $50 rounding inside the band
+    /* the band ceiling is where TYPICAL programs land. When the cost drivers (dominant
+       competitors, many locations, deep catch-up work) genuinely exceed it, the price keeps
+       moving — up to +25% above the ceiling, scaled smoothly by the overrun — instead of
+       pinning at the cap. This is what keeps weak vs dominant competition, and 1 vs 5
+       locations, from pricing identically on national/non-geo programs. */
+    let p0 = rawCost*0.90;
+    if(p0 > mHi) p0 = mHi*(1 + 0.25*Math.tanh((p0-mHi)/mHi));
+    else {
+      /* wide-market floors often exceed the raw cost at typical inputs — the floor is the
+         price, but harder configurations must still price above it: competitor strength
+         adds up to +12%, extra locations up to +8%. Applied as a max() so the raw-cost
+         path and the floor-premium path never cross (price stays monotone in the drivers).
+         Without this, weak vs dominant and 1 vs 5 locations quote identically on
+         national/non-geo programs. */
+      const drv = 0.12*compN + 0.08*clamp(((s.units||1)-1)/4, 0, 1);
+      p0 = Math.max(p0, mLo*(1 + drv));
+    }
+    price = Math.max(1500, Math.round(p0/50)*50);   // hard floor: $1,500/mo for every combination
+    if(price<mLo) price+=50;   // keep the $50 rounding at or above the band floor
   }
 
   /* ---- revenue share: CALCULATED from the client's economics so it's fair to both sides ----
@@ -1338,7 +1359,7 @@ function computeQuote(s){
 /* 12-month series. TWO-PHASE billing:
    • Build phase (months 1 .. rampMonth-1): full fixed fee, no revenue share.
    • Performance phase (rampMonth .. 12): fixed drops 20–30% (tiered by fee), plus a revenue share
-     (share % of attributable new net revenue). */
+     (share % of attributable first-year revenue). */
 /* tiered: the bigger the program, the bigger the drop when the share starts — 20% under
    $3k/mo, 25% at $3k–5k, 30% at $5k+ — sweetening the rev-share structure where fees are highest */
 const PERF_DISCOUNT = p => p>=5000 ? 0.70 : p>=3000 ? 0.75 : 0.80;
@@ -1810,7 +1831,7 @@ function render(){
     mEl.innerHTML = (n.price>=mLo && n.price<=mHi)
       ? '<span class="in-range">&#10003; Within the typical 2026 market rate</span> for '+scopeName+' for a '+IND[s.industry].name.toLowerCase()+' targeting '+FOOT[s.footprint].name+' — verified against published agency pricing research.'
       : (n.price<mLo ? 'Below the typical 2026 market rate for this scope and market — above-market value at this fee.'
-                     : 'Above the typical 2026 market rate for this scope and market.');
+                     : 'At the top of the 2026 market range for this scope and market — the depth of competition and footprint here genuinely costs more to win, and the fee reflects it.');
   } else mEl.innerHTML='';
 
   /* "?" math explainers on the two priced outputs — how each number is built.
@@ -1909,6 +1930,10 @@ function render(){
       ? 'Pulled by rank '+q.rankNow+' (implies ≈'+q.rankImplied+'/100): model uses <b>'+q.seoEff+'/100</b>'
       : '';
 
+  document.getElementById('note-cpc').innerHTML = (s.cpc==null)
+      ? 'Auto: '+IND[s.industry].name+' typical = <b>$'+IND[s.industry].cpc+'</b>/click — set the real CPC if known' : '';
+  /* AOV x frequency only applies to e-commerce — hide the fields everywhere else */
+  ['aov','freq'].forEach(function(id){ var g=document.getElementById(id).closest('.fgroup'); if(g) g.style.display = (s.industry==='ecom')?'':'none'; });
   document.getElementById('note-conv').innerHTML = (s.convrate>0)
       ? '' : 'Auto: '+IND[s.industry].name+' typical = <b>'+IND[s.industry].conv+'%</b> visit-to-customer — set the real rate if known';
   document.getElementById('note-yrs').innerHTML = (s.years>0)
@@ -1921,7 +1946,7 @@ function render(){
   set('o-cust-label', cr.monthly ? 'New customers / month (ramped pace)' : 'New customers / year (ramped pace)');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
-      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.aiLift>1?' × 108% AI demand':'')
+      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')
       +' · year one models '+eventPlan(q,n).winsYr+' (ramping while we build)');
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
@@ -2002,7 +2027,7 @@ function render(){
       + 'Once ramped, the model signs '+crS.txt+' — roughly '
       + (crS.monthly ? fmtK(q.arrAddedPM)+' in new annual contracts every month.' : fmtK(q.newCust*12*q.yearlyValue)+' a year in new contract value.')
       + ' The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
-      + fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus a '+n.share+'% share of proven new net revenue from month '+n.rampMonth+'. '
+      + fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus '+n.share+'% of attributable first-year revenue from proven new customers, from month '+n.rampMonth+'. '
       + 'Figures are estimated from research — confirm with live data within the '+q.windowDays+'-day review window.';
   }
   set('o-summary', txt);
@@ -2012,7 +2037,7 @@ function render(){
   const crA = custRate(q.newCust);
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'
-    +(q.aiLift>1?' × 108% AI demand':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -2308,7 +2333,7 @@ function buildPDF(mode){
     ['Locations / service lines', String(q.units)],
     ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')],
     ['Volume source', selText('volsource')],
-    ['Typical search ad cost', '$'+(s.cpc??0)+'/click'],
+    ['Typical search ad cost', '$'+(s.cpc??IND[s.industry].cpc)+'/click'+(s.cpc==null?' (auto)':'')],
     ['Average search rank', String(s.rank??'—')],
     ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')],
     ['AEO/GEO visibility score', (s.geoScore??0)+'/100'],
@@ -2351,7 +2376,7 @@ function buildPDF(mode){
   y+=3.5;   /* centered between the summary above and the disclosure below */
   doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')
     +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')
     +(q.aiLift>1?' × 108% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
@@ -2799,6 +2824,10 @@ function applyPrefill(qs){
   });
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
+  /* negotiated terms travel with the quote link */
+  if(p.has('negPrice')){ var npv=parseFloat(p.get('negPrice')); if(npv>0){ document.getElementById('o-price-edit').value=Math.round(npv).toLocaleString('en-US'); priceDirty=true; } }
+  if(p.has('negShare')){ var nsv=parseFloat(p.get('negShare')); if(!isNaN(nsv)){ document.getElementById('o-share-edit').value=nsv; shareDirty=true; } }
+  if(p.has('negRamp')){ var nrv=parseInt(p.get('negRamp'),10); if(nrv>=2&&nrv<=12){ document.getElementById('o-ramp-edit').value=nrv; rampDirty=true; } }
   return true;
 }
 
@@ -2940,6 +2969,39 @@ render();
   window.addEventListener('resize',resize,{passive:true});
   resize(); reduce?stat():frame();
 })();
+</script>
+<script>
+/* HARD INPUT CLAMPS — the model already protects itself, but visible impossible values
+   (rank 0, score 150, negative CPC) hurt trust. Values snap into range on change. */
+(function(){
+  var CL={rank:[1,100],seoScore:[0,100],geoScore:[0,100],cpc:[0,500],units:[1,100],volume:[0,10000000],yearly:[0,100000000],aov:[0,10000000],freq:[0,365],convrate:[0,100],margin:[0,95],acq:[0,100],commission:[0,60],years:[1,30]};
+  Object.keys(CL).forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    el.addEventListener('change',function(){
+      var v=parseFloat(String(el.value).replace(/,/g,'')); if(isNaN(v)) return;
+      var c2=Math.min(CL[id][1],Math.max(CL[id][0],v));
+      if(c2!==v){ el.value=(['volume','yearly','aov'].indexOf(id)>=0)?Math.round(c2).toLocaleString('en-US'):c2; if(typeof render==='function') render(); }
+    });
+  });
+})();
+/* COPY QUOTE LINK — serializes every current input (plus any negotiated price/share/ramp)
+   into a prefill URL, so the address bar never having updated stops mattering. */
+function copyQuoteLink(){
+  var p=new URLSearchParams();
+  var ids=['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc','rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin','acq','commission'];
+  ids.forEach(function(id){ var el=document.getElementById(id); if(!el) return;
+    var v=String(el.value||'').trim().replace(/,/g,''); if(v!=='') p.set(id,v); });
+  p.set('seo', document.getElementById('scopeSeo').checked?'1':'0');
+  p.set('geo', document.getElementById('scopeGeo').checked?'1':'0');
+  if(typeof priceDirty!=='undefined'&&priceDirty){ var pv=(document.getElementById('o-price-edit').value||'').replace(/[^0-9.]/g,''); if(pv) p.set('negPrice',pv); }
+  if(typeof shareDirty!=='undefined'&&shareDirty){ var sv=document.getElementById('o-share-edit').value; if(sv) p.set('negShare',sv); }
+  if(typeof rampDirty!=='undefined'&&rampDirty){ var rv=document.getElementById('o-ramp-edit').value; if(rv) p.set('negRamp',rv); }
+  var url=location.origin+location.pathname+'?'+p.toString();
+  (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(url):Promise.reject()).then(function(){
+    if(typeof nrToast==='function') nrToast('&#9989; <b style="color:#eec77c">Quote link copied</b> — reopens with every current input'+((priceDirty||shareDirty||rampDirty)?' and the negotiated terms':'')+'.');
+  }).catch(function(){ window.prompt('Copy this quote link:',url); });
+  return false;
+}
 </script>
 <button class="mjump hide" id="mjump" type="button" aria-label="Jump to results"><span id="mjump-txt">See results</span><span class="mj-arrow">&darr;</span></button>
 <script>
