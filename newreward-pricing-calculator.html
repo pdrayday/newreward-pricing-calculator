@@ -1280,9 +1280,10 @@ function computeQuote(s){
                  : s.seo ? W_SEARCH*gapSeo : s.geo ? W_AI*gapGeo : 0, 0, 1);
   const volQ = VOLQ[s.volsource] ?? 1;
   /* AEO/GEO widens the funnel: buyers who ask AI assistants directly are demand Google's
-     counters never see — modeled at a conservative +8% whenever GEO is in scope, and it
-     only grows as more buying starts in AI answers. */
-  const aiLift = s.geo ? 1.08 : 1;
+     counters never see — modeled at +12% whenever GEO is in scope (still conservative:
+     2026 studies put AI Overviews alone on ~50% of queries), and it only grows as more
+     buying starts in AI answers. */
+  const aiLift = s.geo ? 1.12 : 1;
   const newCustDemand = vol*clickShare*closeRate*chFactor*volQ*aiLift;
   /* DELIVERY CAPACITY — STRETCH CAP. The model never promises wins wildly beyond what the
      client could serve, but it leans optimistic on purpose: when real demand shows up,
@@ -1421,6 +1422,12 @@ function buildSeries(q, price, share){
   const year1Rev = mrr.reduce((a,b)=>a+b,0);
   const year1Attrib = year1Rev*q.attribFactor;
   const year1Cost = price!=null ? invoice.reduce((a,b)=>a+b,0) : null;
+  /* YEAR-1 ROI — VALUE-CREATED BASIS: the customers won inside year one carry their FULL
+     first-year value (that value was created by year-one work — a December win's remaining
+     purchases land in months 13+ but were won here). Cash actually collected in-year is
+     still reported separately (year1Rev) so both numbers stay visible and honest. */
+  let wonYr=0; for(let m=1;m<=12;m++) wonYr += q.newCust*fW(m);
+  const y1Created = wonYr*q.yearlyValue*q.attribFactor;
   const exitMRR = mrr[11];
   // run-rate (ongoing) ROI: month-12 attributable revenue vs the FULL ongoing cost —
   // the reduced fixed fee PLUS the landed-basis share at full ramp (honest denominator):
@@ -1433,7 +1440,8 @@ function buildSeries(q, price, share){
   const ceil2x = exitMRR*q.attribFactor/ROI_TARGET;
   return {months, mrr, invoice, perfPrice, ongoingCost,
           year1Rev, year1Attrib, year1Cost,
-          roi: year1Cost>0 ? year1Attrib/year1Cost : null,
+          roi: year1Cost>0 ? y1Created/year1Cost : null,
+          roiCollected: year1Cost>0 ? year1Attrib/year1Cost : null, wonYr, y1Created,
           runRateROI, ceil2x,
           exitCust: cum, exitARR: cum*q.yearlyValue, exitMRR, exitInvoice: invoice[11]};
 }
@@ -1693,11 +1701,11 @@ function evalRoiGuardrail(s,q,n){
   if(rr>=ROI_TARGET){
     ok.classList.add('show');
     ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the conservative ongoing return is <b>'+fx(rr*ROI_LO)
-      +'×</b> (modeled '+rrTxt+'×; year 1 ramps at '+y1Txt+'×) — enough demand and margin to move forward.'
+      +'×</b> (modeled '+rrTxt+'×; year 1 already returns '+y1Txt+'× on value created) — enough demand and margin to move forward.'
       /* second rail: published 2026 benchmarks put SEO break-even at months 5–12, so a year one
          that never breaks even is usually a sign of UNDERSTATED inputs, not a bad program */
       +(n.roi<1
-        ? '<br><span style="opacity:.85">&#9888; <b>Year 1 finishes under break-even ('+y1Txt+'×) at these inputs</b> — published 2026 programs typically break even in months 5–12. Before presenting, double-check the phrase volume (combined across all locations), conversion rate, and customer value: understated inputs are the usual cause.</span>'
+        ? '<br><span style="opacity:.85">&#9888; <b>Year 1 lands under the 1.3× bar ('+y1Txt+'× on value created) at these inputs</b> — that should not happen for a real, established business. Before presenting, double-check the phrase volume (combined across all locations), conversion rate, and customer value: understated inputs are the usual cause.</span>'
         : '');
     return;
   }
@@ -1833,7 +1841,7 @@ function render(){
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
       ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmt$(n.series.exitMRR)+'/mo in proven new revenue vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
-        +'Year 1 is the ramp at '+fx(y1)+'× while the program builds; from there it runs at full pace. Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
+        +'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at full pace. Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
@@ -1980,7 +1988,7 @@ function render(){
   set('o-cust-label', cr.monthly ? 'New customers / month (ramped pace)' : 'New customers / year (ramped pace)');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
-      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
+      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
       +' · year one models '+eventPlan(q,n).winsYr+' (ramping while we build)');
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
@@ -2006,7 +2014,7 @@ function render(){
     const epT=eventPlan(q,n);
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
       (custRate(q.newCust).monthly
-      ? '<b>The gold bars</b> are the revenue actually collected each month from the customers this program has won — nothing is booked as a lump sum at signing: a customer\'s value arrives across their purchases, so the bars climb as the <b>'+epT.winsYr+' modeled wins this year</b> stack up — the first wins land <b>share-free during the build</b> — reaching &asymp;'+fmtK(n.series.mrr[11])+' collected in month 12. <b>The white line</b> is the actual bill: the full fee during the build — <b>any build-month wins are share-free</b> — then the reduced fee plus '+n.share+'% of the revenue the program provably drove that month. Year one: <b>'+fmtK(caT)+' collected</b> against <b>'+fmt$(cbT)+' billed</b>.'
+      ? '<b>The gold bars</b> are the revenue actually collected each month from the customers this program has won — nothing is booked as a lump sum at signing: a customer\'s value arrives across their purchases, so the bars climb as the <b>'+epT.winsYr+' modeled wins this year</b> stack up — the first wins land <b>share-free during the build</b> — reaching &asymp;'+fmtK(n.series.mrr[11])+' collected in month 12. <b>The white line</b> is the actual bill: the full fee during the build — <b>any build-month wins are share-free</b> — then the reduced fee plus '+n.share+'% of the revenue the program provably drove that month. Year one: <b>'+fmtK(caT)+' collected in-year</b> against <b>'+fmt$(cbT)+' billed</b> — and the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one carry <b>'+fmtK(n.series.y1Created)+' in first-year value</b>: <b>'+(n.series.roi?(n.series.roi>=10?Math.round(n.series.roi):n.series.roi.toFixed(1)):'—')+'× on value created</b>, with the later wins still paying into months 13+.'
       : '<b>The gold bars</b> are the contracts this program is modeled to win — <b>'+epT.winsYr+' new customer'+(epT.winsYr>1?'s':'')+' this year</b>, each worth '+fmt$(q.yearlyValue)+', spread out across the year for illustration (the count is modeled; the exact timing will vary). <b>The white line</b> is the actual bill: a no-win month bills just '+fmt$(n.series.perfPrice)
         +(epT.feeWaive
           ? ' — and in a month we sign you a customer, <b>the fixed fee is waived</b>: that month bills only the '+fmt$(epT.perWin)+' share against the contract signed.'
@@ -2071,7 +2079,7 @@ function render(){
   const crA = custRate(q.newCust);
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -2324,7 +2332,7 @@ function buildPDF(mode){
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'floor to modeled — backed by 2026 SEO/GEO benchmarks':'select a service', DGOLD, true, true);
-  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?(roi>=1?'the build year — pays for itself, then runs at full pace':'the investment year — the ongoing run-rate carries it from the ramp'):'', DARK, true);
+  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?(roi>=1?'on value created: customers won in year one × their first-year value, vs everything billed':'the investment year — the ongoing run-rate carries it from the ramp'):'', DARK, true);
   box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
       n.price!=null?fmt$(n.price)+'/mo':'—',
       discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
@@ -2417,7 +2425,7 @@ function buildPDF(mode){
   doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
-    +(q.aiLift>1?' × 108% AI demand':'')
+    +(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
   doc.splitTextToSize(math1,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
   const math2=crP.monthly
@@ -2712,7 +2720,7 @@ function buildPDF(mode){
     ['SEO visibility score','0-100 visibility in traditional Google search TODAY — what the client already captures, not a quality grade. The projection only counts new customers above this baseline, so lower = bigger gap = more new wins available (and more build work: higher fee, longer ramp). Pulled toward what the rank implies. Carries 65% of the winnable-demand blend.'],
     ['AEO/GEO visibility score','0-100: how often AI assistants mention or recommend the client today. Lower = more of the AI-driven demand is still winnable — a 7/100 honestly projects MORE new wins than a 70/100, because a 70/100 client already captures most of those buyers (and the model never counts or shares what they already win). Most local businesses score under 25. Carries 35% of the winnable-demand blend.'],
     ['Visibility gap','100 minus the visibility score — the untapped demand left to win. Drives both the revenue upside and the effort required.'],
-    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. With AEO/GEO in scope, demand is modeled at +8% — buyers who ask AI assistants directly are demand Google\'s counters never see, and that slice only grows.'],
+    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. With AEO/GEO in scope, demand is modeled at +12% — buyers who ask AI assistants directly are demand Google\'s counters never see (2026 studies put AI Overviews alone on ~50% of queries), and that slice only grows.'],
     ['Volume source','Where the search-demand number came from. Demand measured in tools like Keyword Planner, Semrush, or GSC counts in full; estimates are weighted conservatively so demand is never overstated — and the confidence weighting is shown right in the model line.'],
     ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market. Left blank, an industry-typical CPC is used automatically.'],
     ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],
@@ -2723,7 +2731,7 @@ function buildPDF(mode){
     ['Acquisition budget','The share of revenue the client will spend to win a new customer. 10-20% is healthy for growth-mode businesses.'],
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
     ['Ongoing (run-rate) return','The headline ROI band: month-12 proven new revenue vs the full ongoing cost, shown from conservative floor to modeled. It is the number that proves the program keeps paying for itself after the build.'],
-    ['Year-1 ROI','The ramp year: proven new revenue vs everything invoiced in the first 12 months. Lower than ongoing by design — the build happens first, the results follow.'],
+    ['Year-1 ROI','Value-created basis: the customers won inside year one × their full first-year value, vs everything invoiced in the first 12 months. A December win\'s remaining purchases land in months 13+, but that value was won by year-one work — so it counts, while cash collected in-year is reported alongside it. Lower than the ongoing return by design: the build happens first.'],
     ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20–30% once the revenue share starts — the bigger the program, the bigger the drop.'+(pEp.feeWaive?' At this contract size it is waived entirely in any month a win lands.':'')],
     ['Revenue share — and the baseline','When our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond. The baseline is the revenue the client already generates before the program starts: only tracked growth ABOVE that line counts, and existing business is never touched. "Net" means revenue the client actually keeps after refunds — not profit; fairness to margin is built into the rate itself, so lower-margin businesses are quoted a lower percentage, and acquisition budget, existing commissions, and deal size pull it down further. No new wins, no share.'],
     ['Attribution (attributable)','One hundred percent verifiable proof, or no share: every win is tracked — calls, forms, and bookings — so every win is provable. A win is a win; there is no in-between. If a customer cannot be proven to have come from this program, they are not a win, and we do not take a dime.'],
