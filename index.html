@@ -785,15 +785,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         </select></div>
       </div>
     </div>
-    <div class="row2">
-      <div class="fgroup">
-        <label class="flabel">Vertical subtype
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">A finer-grained business type under the industry model — med spa vs legal vs roofing under high-ticket, MSP vs SaaS under B2B, and so on. Each subtype carries its own researched benchmarks (customer value, retention, conversion, margin, ad cost) used for any field left blank. Researched inputs always override the benchmark; General keeps the broad industry typicals.</span></button>
-        </label>
-        <div class="fwrap"><select id="subtype"></select></div>
-      </div>
-      <div class="fgroup"></div>
-    </div>
+    <div class="auto-note" id="note-industry" style="margin-top:-6px;margin-bottom:10px"></div>
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Locations or service lines
@@ -1139,44 +1131,11 @@ const IND = {
   b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:2, margin:78, cost:1.10, cpc:10, name:'B2B / SaaS'},
   ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2, margin:55, cost:1.12, cpc:3, name:'E-commerce / National'}
 };
-/* VERTICAL SUBTYPES — finer-grained benchmarks under each industry model. Used ONLY as the
-   fallback for fields left blank; researched inputs always override. 'general' keeps the
-   broad industry benchmark unchanged. Values = researched 2026 mid-market typicals. */
-const SUBT = {
-  local: {
-    general:   {name:'General local service'},
-    homesvc:   {name:'Home services (plumbing / HVAC / electrical)', yr:1500, yrs:3, vol:1300, conv:6, margin:45, cpc:18},
-    fitwell:   {name:'Fitness / salon / wellness', yr:1100, yrs:2, vol:1000, conv:6, margin:55, cpc:4},
-    petvet:    {name:'Pet & veterinary', yr:1500, yrs:4, vol:1000, conv:5, margin:45, cpc:5}
-  },
-  highticket: {
-    general:   {name:'General high-ticket local'},
-    medspa:    {name:'Med spa / aesthetics', yr:3800, yrs:3, vol:1400, conv:4, margin:65, cpc:8},
-    legal:     {name:'Legal', yr:9500, yrs:1, vol:2400, conv:2, margin:55, cpc:35},
-    roofhvac:  {name:'Roofing / exterior / large HVAC', yr:12000, yrs:1, vol:1000, conv:3, margin:30, cpc:22},
-    dental:    {name:'Dental / medical clinic', yr:2600, yrs:4, vol:1500, conv:5, margin:60, cpc:12}
-  },
-  ultra: {
-    general:   {name:'General ultra high-ticket'},
-    customhome:{name:'Custom home builder', yr:750000, yrs:1, vol:800, conv:0.25, margin:20, cpc:9},
-    commercial:{name:'Commercial construction / projects', yr:400000, yrs:1, vol:500, conv:0.3, margin:15, cpc:12},
-    bigdeal:   {name:'Enterprise contracts ($100k+)', yr:150000, yrs:2, vol:400, conv:0.4, margin:40, cpc:20}
-  },
-  b2b: {
-    general:   {name:'General B2B / SaaS'},
-    msp:       {name:'IT services / MSP', yr:30000, yrs:4, vol:1200, conv:1.5, margin:45, cpc:20},
-    saas:      {name:'SaaS subscriptions', yr:4800, yrs:4, vol:3000, conv:1.5, margin:80, cpc:12},
-    agency:    {name:'Agency / consulting', yr:24000, yrs:2, vol:800, conv:2, margin:50, cpc:15}
-  },
-  ecom: {
-    general:   {name:'General e-commerce'},
-    dtc:       {name:'DTC brand (apparel / goods)', yr:600, yrs:2, conv:2, margin:55, cpc:2.5},
-    supplements:{name:'Supplements / consumables', yr:900, yrs:2, conv:2.5, margin:65, cpc:3},
-    foodgrocery:{name:'Food / grocery / delivery', yr:1100, yrs:3, conv:2, margin:35, cpc:2.5}
-  }
-};
-/* effective benchmark: industry model refined by the chosen subtype */
-function BENCH(s){ const base=IND[s.industry]; const o=SUBT[s.industry]&&SUBT[s.industry][s.subtype]; return (o&&s.subtype&&s.subtype!=='general') ? Object.assign({}, base, o) : base; }
+/* Effective benchmark for blank fields = the industry model. Finer vertical accuracy comes
+   from the RESEARCH PROMPT: every prefilled quote's inputs are researched for the client's
+   specific vertical and verified against 2026 benchmarks — researched inputs always
+   override, so the industry benchmark is only ever the fallback of last resort. */
+function BENCH(s){ return IND[s.industry]; }
 const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, name:'one local market'},
   multi:    {w:1.25, cost:1.06, reach:2.4, name:'a 2–5 market footprint'},
@@ -1476,22 +1435,11 @@ function buildSeries(q, price, share){
           exitCust: cum, exitARR: cum*q.yearlyValue, exitMRR, exitInvoice: invoice[11]};
 }
 
-function refreshSubtypes(){
-  const indSel=document.getElementById('industry'), sub=document.getElementById('subtype');
-  if(!indSel||!sub) return;
-  if(sub.dataset.forInd===indSel.value) return;
-  const set=SUBT[indSel.value]||{general:{name:'General'}};
-  const cur=sub.value;
-  sub.innerHTML=Object.keys(set).map(function(k){ return '<option value="'+k+'">'+(set[k].name||k)+'</option>'; }).join('');
-  sub.dataset.forInd=indSel.value;
-  sub.value=set[cur]?cur:'general';
-}
 function readState(){
   return {
     client: document.getElementById('client').value.trim(),
     phrase: document.getElementById('phrase').value.trim(),
     industry: document.getElementById('industry').value,
-    subtype: (document.getElementById('subtype')||{}).value||'general',
     footprint: document.getElementById('footprint').value,
     volume: num('volume'), volsource: document.getElementById('volsource').value,
     cpc: num('cpc'),
@@ -1515,6 +1463,7 @@ const fmtBig = v => v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : fmt$(v);
 
 /* negotiation overrides: outputs are editable live; recompute downstream numbers */
 let priceDirty=false, shareDirty=false, rampDirty=false;
+let researchedQuote=false;   // true when this quote arrived via a researched prefill link
 
 function getNegotiated(q){
   let price=q.price, share=q.share, rampMonth=q.rampMonth;
@@ -1858,7 +1807,6 @@ function evalRoiGuardrail(s,q,n){
 }
 
 function render(){
-  refreshSubtypes();
   const s = readState();
   const q = computeQuote(s);
   const set = (id,v)=>document.getElementById(id).textContent = v;
@@ -2005,6 +1953,9 @@ function render(){
       ? 'Pulled by rank '+q.rankNow+' (implies ≈'+q.rankImplied+'/100): model uses <b>'+q.seoEff+'/100</b>'
       : '';
 
+  document.getElementById('note-industry').innerHTML = researchedQuote
+      ? '&#10003; <b>Researched:</b> these inputs and outputs are researched and verified against <b>2026 benchmarks</b> for this client\'s specific vertical — the industry benchmark only fills what research left blank.'
+      : '';
   document.getElementById('note-capacity').innerHTML = q.capApplied
       ? '<b>Capacity cap active:</b> market demand supports ~'+(q.newCustDemand<3?q.newCustDemand.toFixed(1):Math.round(q.newCustDemand))+'/mo — every projection is capped at their <b>'+s.capacity+'/mo</b>.'
       : '';
@@ -2158,7 +2109,6 @@ function researchWithAI(){
     +'- margin: the GROSS margin typical for this exact vertical (e.g. custom home builders 15-25, roofing 25-35, med spas 60-70, law 50-65, SaaS 75-85, e-commerce 40-60).\n'
     +'- acq: percent of revenue this business would sensibly spend to win a new customer (10-20 typical; large one-time-ticket businesses often run lower).\n'
     +'- commission: percent of the gross sale they already pay staff or reps in this vertical (construction/realty-adjacent 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10).\n'
-    +'- subtype: the closest vertical subtype under the industry model — it sharpens every blank-field benchmark. Pick general only when nothing fits.\n'
     +'- capacity: the MOST new customers this business could physically take on per MONTH (crew size, chairs, consult slots, build slots — decimals allowed: 6 homes a year = 0.5). Estimate from team size and reviews if unstated. The calculator hard-caps every projection at this number, so it is the single best defense against over-promising — fill it whenever research supports an estimate.\n'
     +'- yearly: the FULL first-year revenue from ONE new customer, including typical repeat visits, packages, or memberships inside year one — a med spa patient is several visits and often a package, not one treatment; use their published prices and typical visit counts.\n'
     +'- LOW-SIDE REALISM CHECK (everyday and med-spa-style local services): sanity-test volume x 0.15 x (convrate/100) x 12. If it implies fewer than roughly 12 new customers a YEAR for an established local service with real demand, your volume, conversion, or footprint is understated — fix the inputs rather than under-selling the business.\n'
@@ -2166,12 +2116,11 @@ function researchWithAI(){
     +'Then give me BOTH of the following:\n\n'
     +'(1) A three-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&subtype=SUBTYPE&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
     +'- footprint: local | multi | metro | national | nongeo\n'
     +'- compstr: weak | moderate | strong | dominant\n'
-    +'- subtype: local -> general|homesvc|fitwell|petvet · highticket -> general|medspa|legal|roofhvac|dental · ultra -> general|customhome|commercial|bigdeal · b2b -> general|msp|saas|agency · ecom -> general|dtc|supplements|foodgrocery\n'
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
@@ -2406,12 +2355,15 @@ function buildPDF(mode){
   y+=8;
   doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('INPUTS & ASSUMPTIONS — FOR REFERENCE',L,y,{charSpace:.8});
+  if(typeof researchedQuote!=='undefined'&&researchedQuote){
+    doc.setFont('helvetica','italic'); doc.setFontSize(6.6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+    doc.text('These inputs and outputs are researched and verified against 2026 benchmarks for this client\'s specific vertical.', R, y, {align:'right'});
+  }
   y+=2.5; doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3); doc.line(L,y,R,y);
   y+=6;
   const rows=[
     ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'],
     ['Industry model', selText('industry')],
-    ['Vertical subtype', selText('subtype')||'General'],
     ['Market footprint', selText('footprint')],
     ['Competitor strength', selText('compstr')],
     ['Locations / service lines', String(q.units)],
@@ -2678,7 +2630,7 @@ function buildPDF(mode){
     ['"What if we couldn\'t even handle that many new customers?"',
      'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, ROI, and the share — is hard-capped at that number, no matter how much demand the market offers.'+(q.capApplied?' This proposal is already capped at your stated '+s.capacity+'/mo — the market supports more, and that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo':'assumes capacity is not the constraint — tell us your real ceiling and we\'ll re-run it in seconds')+'.')],
     ['"Our business isn\'t like other '+BENCH(s).name.toLowerCase()+'s — do generic benchmarks even fit us?"',
-     'Two protections. First, the model uses vertical subtypes — a med spa, a law firm, and a roofing company under "high-ticket" each carry their own researched 2026 benchmarks for customer value, retention, conversion, margin, and ad cost, and the same is true under every industry model. Second, benchmarks only ever fill fields left blank: every researched, business-specific number you or we provide overrides them completely. The benchmark is the floor of accuracy, never the ceiling.'],
+     'They don\'t have to — because generic benchmarks are only ever the fallback of last resort. Every researched proposal starts from deep research on YOUR business specifically — your prices, your market, your vertical\'s real customer values, margins, and conversion rates — verified against published 2026 benchmarks for that exact vertical. Those researched numbers override the broad industry benchmark completely; the benchmark only fills a field when research turned up nothing usable. The accuracy comes from the research, not the category.'],
     ['"Do I have to sign a long contract?"',
      'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway to show up. You stay because it works, not because paper says so.'],
     ['"What do you need from me to start?"',
@@ -2748,9 +2700,8 @@ function buildPDF(mode){
     ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
     ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
-    ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank.'],
+    ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank — and on researched proposals, every input and output is researched and verified against 2026 benchmarks for the client\'s specific vertical, so the broad benchmark is only ever the fallback of last resort.'],
     ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize.'],
-    ['Vertical subtype','A finer-grained business type under the industry model — med spa vs legal vs roofing under high-ticket, MSP vs SaaS under B2B. Each carries its own researched 2026 benchmarks (customer value, retention, conversion, margin, ad cost) used only for fields left blank; researched inputs always override.'],
     ['Delivery capacity (cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. When set, every projection (customers, revenue, ROI, share) is hard-capped at it: the model never promises wins the client could not serve, regardless of market demand.'],
     ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — the total cost rises, but the cost per location shrinks.'],
     ['Competitor strength','How strong the businesses already ranking are (site authority, backlinks). The biggest driver of market difficulty.'],
@@ -2899,10 +2850,8 @@ document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty
 function applyPrefill(qs){
   const p = new URLSearchParams(qs);
   if(![...p.keys()].length) return false;
-  /* industry first so the subtype option list exists before the subtype value is applied */
   if(p.has('industry')){ const ie=document.getElementById('industry'); if([...ie.options].some(o=>o.value===p.get('industry'))) ie.value=p.get('industry'); }
-  if(typeof refreshSubtypes==='function') refreshSubtypes();
-  const fields = ['client','website','phrase','industry','subtype','footprint','compstr','units','volume','volsource','cpc','capacity',
+  const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc','capacity',
                   'rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin',
                   'acq','commission'];
   fields.forEach(id=>{
@@ -2915,6 +2864,7 @@ function applyPrefill(qs){
       el.value=isNaN(nv)?p.get(id):nv.toLocaleString('en-US');
     } else el.value = p.get(id);
   });
+  researchedQuote=true;   // arrived via a researched prefill link
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
   /* negotiated terms travel with the quote link */
@@ -3081,7 +3031,7 @@ render();
    into a prefill URL, so the address bar never having updated stops mattering. */
 function copyQuoteLink(){
   var p=new URLSearchParams();
-  var ids=['client','website','phrase','industry','subtype','footprint','compstr','units','volume','volsource','cpc','capacity','rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin','acq','commission'];
+  var ids=['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc','capacity','rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin','acq','commission'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(!el) return;
     var v=String(el.value||'').trim().replace(/,/g,''); if(v!=='') p.set(id,v); });
   p.set('seo', document.getElementById('scopeSeo').checked?'1':'0');
