@@ -949,7 +949,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel" id="lbl-capacity">Delivery capacity
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The MOST new customers this business could physically take on per month — crew hours, chairs, build slots, install teams. When set, every projection (customers, revenue, ROI, share) is capped to it: the model never promises wins the client could not serve, no matter how much demand the market offers. For a few-contracts-a-year business use a decimal — a builder who could deliver 6 homes a year is 0.5/mo. Leave blank only if genuinely unconstrained.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The MOST new customers this business could physically take on per month — crew hours, chairs, build slots, install teams. When set, projections are capped at this number <b>plus a 30% stretch</b> — because when real demand shows up, businesses find a way: extra crews, longer books, waitlists. The model never promises wins wildly beyond what they could serve, but it leans optimistic on purpose. For a few-contracts-a-year business use a decimal — a builder who could deliver 6 homes a year is 0.5/mo. Leave blank only if genuinely unconstrained.</span></button>
         </label>
         <div class="fwrap"><input type="number" id="capacity" class="has-suffix" placeholder="no limit" min="0" step="0.1"><span class="suffix">/mo</span></div>
         <div class="auto-note" id="note-capacity"></div>
@@ -1284,11 +1284,14 @@ function computeQuote(s){
      only grows as more buying starts in AI answers. */
   const aiLift = s.geo ? 1.08 : 1;
   const newCustDemand = vol*clickShare*closeRate*chFactor*volQ*aiLift;
-  /* DELIVERY CAPACITY CAP — the model never promises wins the client could not physically
-     serve: when a monthly capacity is stated and the market supports more, every projection
-     (customers, revenue, ROI, share) is clipped to the stated ceiling. */
-  const capApplied = (s.capacity>0) && s.capacity < newCustDemand;
-  const newCust = capApplied ? s.capacity : newCustDemand;
+  /* DELIVERY CAPACITY — STRETCH CAP. The model never promises wins wildly beyond what the
+     client could serve, but it leans optimistic on purpose: when real demand shows up,
+     businesses pull heaven and earth to take it — extra crews, longer books, waitlists.
+     So the effective ceiling is the stated capacity plus a 30% stretch, and projections
+     are clipped there, not at the bare number. */
+  const capStretch = (s.capacity>0) ? Math.round(s.capacity*1.3*10)/10 : null;
+  const capApplied = (capStretch!=null) && capStretch < newCustDemand;
+  const newCust = capApplied ? capStretch : newCustDemand;
   const arrAddedPM = newCust*yearlyValue;         // new YEARLY revenue added by each month of work
   const mrrPC = yearlyValue/12;                   // monthly revenue per customer
   // organic-vs-paid: the captured visits/mo once ramped, and what that traffic would cost in Google Ads
@@ -1371,7 +1374,7 @@ function computeQuote(s){
 
   return {difficulty, price, share, yearlyValue, yrIsAuto, aovYear, retainYears, ltv,
           seoEff, seoEntered, rankImplied, rankNow,
-          newCust, newCustDemand, capApplied, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
+          newCust, newCustDemand, capApplied, capStretch, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
           vol, volIsAuto, clickShare, closeRate, clicksPM, adValuePM, rampMonth, rampSpan, windowDays, nScopes,
           comp, compN, units, unitsCost, intensityCost,
           seoIntensity, geoIntensity, intensityGap, intensityLabel};
@@ -1957,7 +1960,7 @@ function render(){
       ? '&#10003; <b>Researched:</b> these inputs and outputs are researched and verified against <b>2026 benchmarks</b> for this client\'s specific vertical — the industry benchmark only fills what research left blank.'
       : '';
   document.getElementById('note-capacity').innerHTML = q.capApplied
-      ? '<b>Capacity cap active:</b> market demand supports ~'+(q.newCustDemand<3?q.newCustDemand.toFixed(1):Math.round(q.newCustDemand))+'/mo — every projection is capped at their <b>'+s.capacity+'/mo</b>.'
+      ? '<b>Capacity cap active:</b> market demand supports ~'+(q.newCustDemand<3?q.newCustDemand.toFixed(1):Math.round(q.newCustDemand))+'/mo — projections are capped at <b>'+q.capStretch+'/mo</b>: their stated '+s.capacity+'/mo plus the 30% stretch every business finds when demand shows up.'
       : '';
   document.getElementById('note-cpc').innerHTML = (s.cpc==null)
       ? 'Auto: '+BENCH(s).name+' typical = <b>$'+BENCH(s).cpc+'</b>/click — set the real CPC if known' : '';
@@ -1977,7 +1980,7 @@ function render(){
   set('o-cust-label', cr.monthly ? 'New customers / month (ramped pace)' : 'New customers / year (ramped pace)');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
-      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+s.capacity+'/mo capacity':'')
+      +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
       +' · year one models '+eventPlan(q,n).winsYr+' (ramping while we build)');
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
@@ -2068,7 +2071,7 @@ function render(){
   const crA = custRate(q.newCust);
   parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+s.capacity+'/mo capacity':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
+    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × 108% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
   document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
@@ -2109,7 +2112,7 @@ function researchWithAI(){
     +'- margin: the GROSS margin typical for this exact vertical (e.g. custom home builders 15-25, roofing 25-35, med spas 60-70, law 50-65, SaaS 75-85, e-commerce 40-60).\n'
     +'- acq: percent of revenue this business would sensibly spend to win a new customer (10-20 typical; large one-time-ticket businesses often run lower).\n'
     +'- commission: percent of the gross sale they already pay staff or reps in this vertical (construction/realty-adjacent 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10).\n'
-    +'- capacity: the MOST new customers this business could physically take on per MONTH (crew size, chairs, consult slots, build slots — decimals allowed: 6 homes a year = 0.5). Estimate from team size and reviews if unstated. The calculator hard-caps every projection at this number, so it is the single best defense against over-promising — fill it whenever research supports an estimate.\n'
+    +'- capacity: the MOST new customers this business could physically take on per MONTH (crew size, chairs, consult slots, build slots — decimals allowed: 6 homes a year = 0.5). Estimate from team size and reviews if unstated. State the TRUE physical ceiling — the calculator adds a 30% stretch on top (businesses find a way when demand shows up) and caps every projection there, so it is the single best defense against over-promising without under-selling. Fill it whenever research supports an estimate.\n'
     +'- yearly: the FULL first-year revenue from ONE new customer, including typical repeat visits, packages, or memberships inside year one — a med spa patient is several visits and often a package, not one treatment; use their published prices and typical visit counts.\n'
     +'- LOW-SIDE REALISM CHECK (everyday and med-spa-style local services): sanity-test volume x 0.15 x (convrate/100) x 12. If it implies fewer than roughly 12 new customers a YEAR for an established local service with real demand, your volume, conversion, or footprint is understated — fix the inputs rather than under-selling the business.\n'
     +'- ULTRA-HIGH-TICKET REALISM CHECK (industry=ultra — customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n\n'
@@ -2369,7 +2372,7 @@ function buildPDF(mode){
     ['Locations / service lines', String(q.units)],
     ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')],
     ['Volume source', selText('volsource')],
-    ['Delivery capacity', (s.capacity>0? s.capacity+' new customers/mo (hard cap)' : 'no stated limit')],
+    ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated (+30% stretch cap = '+q.capStretch+'/mo)' : 'no stated limit')],
     ['Typical search ad cost', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')],
     ['Average search rank', String(s.rank??'—')],
     ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')],
@@ -2413,7 +2416,7 @@ function buildPDF(mode){
   y+=3.5;   /* centered between the summary above and the disclosure below */
   doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' → capped at '+s.capacity+'/mo capacity':'')
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
     +(q.aiLift>1?' × 108% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
   doc.splitTextToSize(math1,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
@@ -2628,7 +2631,7 @@ function buildPDF(mode){
     ['"Can I skip the revenue share and just pay a flat fee?"',
      'Yes. The fixed-only option keeps the full monthly fee — no discounted fee, and 0% share, ever. Nearly every client chooses the share version, and it is the one we recommend: the fee steps down once wins start, and we only earn more when you provably do — it is the structure built to scale when you scale.'],
     ['"What if we couldn\'t even handle that many new customers?"',
-     'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, ROI, and the share — is hard-capped at that number, no matter how much demand the market offers.'+(q.capApplied?' This proposal is already capped at your stated '+s.capacity+'/mo — the market supports more, and that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo':'assumes capacity is not the constraint — tell us your real ceiling and we\'ll re-run it in seconds')+'.')],
+     'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, ROI, and the share — is capped at that number plus a 30% stretch, because when real demand shows up, businesses pull heaven and earth to take it: extra crews, longer books, waitlists.'+(q.capApplied?' This proposal is capped at '+q.capStretch+'/mo — your stated '+s.capacity+'/mo plus that stretch — and the market supports even more: that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo plus stretch':'assumes capacity is not the constraint — tell us your real ceiling and we\'ll re-run it in seconds')+'.')],
     ['"Our business isn\'t like other '+BENCH(s).name.toLowerCase()+'s — do generic benchmarks even fit us?"',
      'They don\'t have to — because generic benchmarks are only ever the fallback of last resort. Every researched proposal starts from deep research on YOUR business specifically — your prices, your market, your vertical\'s real customer values, margins, and conversion rates — verified against published 2026 benchmarks for that exact vertical. Those researched numbers override the broad industry benchmark completely; the benchmark only fills a field when research turned up nothing usable. The accuracy comes from the research, not the category.'],
     ['"Do I have to sign a long contract?"',
@@ -2702,7 +2705,7 @@ function buildPDF(mode){
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
     ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank — and on researched proposals, every input and output is researched and verified against 2026 benchmarks for the client\'s specific vertical, so the broad benchmark is only ever the fallback of last resort.'],
     ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize.'],
-    ['Delivery capacity (cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. When set, every projection (customers, revenue, ROI, share) is hard-capped at it: the model never promises wins the client could not serve, regardless of market demand.'],
+    ['Delivery capacity (stretch cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. Projections are capped at this number plus a 30% stretch: deliberately optimistic, because businesses find a way when real demand shows up — but never wildly beyond what they could serve.'],
     ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — the total cost rises, but the cost per location shrinks.'],
     ['Competitor strength','How strong the businesses already ranking are (site authority, backlinks). The biggest driver of market difficulty.'],
     ['Average search rank','The client\'s average Google position for money phrases. Top-5 speeds up the ramp; page 2+ raises the cost. Blended 50/50 with the SEO visibility score.'],
