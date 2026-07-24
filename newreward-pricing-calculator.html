@@ -1435,9 +1435,13 @@ function buildSeries(q, price, share){
   // they actually spend (churn included) — matching how the invoice line actually bills.
   let s12=0; for(let j2=0;j2<12;j2++) s12+=Math.pow(1-churn,j2);
   const ongoingCost = perfPrice!=null ? perfPrice + share/100*(q.newCust*q.mrrPC*s12*q.attribFactor) : null;
-  const runRateROI = (ongoingCost>0) ? (exitMRR*q.attribFactor)/ongoingCost : null;
+  /* VALUE-CREATED BASIS (same yardstick as Year-1 ROI): a fully-ramped month wins
+     ~newCust customers carrying their full first-year value, vs the full ongoing monthly
+     cost. Measuring ongoing on collected-cash while Y1 measured value created made the
+     ramp year look BETTER than full pace — same program, two different rulers. */
+  const runRateROI = (ongoingCost>0) ? (q.newCust*q.yearlyValue*q.attribFactor)/ongoingCost : null;
   // highest ongoing cost that still clears the target return (client-value ceiling)
-  const ceil2x = exitMRR*q.attribFactor/ROI_TARGET;
+  const ceil2x = q.newCust*q.yearlyValue*q.attribFactor/ROI_TARGET;
   return {months, mrr, invoice, perfPrice, ongoingCost,
           year1Rev, year1Attrib, year1Cost,
           roi: year1Cost>0 ? y1Created/year1Cost : null,
@@ -1697,7 +1701,7 @@ function evalRoiGuardrail(s,q,n){
 
   const fx=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
   const rr=n.runRate, rrTxt = fx(rr);
-  const y1Txt = fx(n.roi);
+  const y1Txt = fx(Math.min(n.roi, n.runRate??n.roi));   // shown Y1 never exceeds the full ongoing pace
   if(rr>=ROI_TARGET){
     ok.classList.add('show');
     ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the conservative ongoing return is <b>'+fx(rr*ROI_LO)
@@ -1840,8 +1844,8 @@ function render(){
   if(mjt) mjt.textContent = q.price==null ? 'See results' : fmt$(n.price)+'/mo · '+fx(rrCons)+'–'+fx(rr)+'× return';
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
-      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmt$(n.series.exitMRR)+'/mo in proven new revenue vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
-        +'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at full pace. Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
+      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
+        +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+'Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
@@ -2328,7 +2332,7 @@ function buildPDF(mode){
   const h1=28;
   const fxr=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
   const ongTxt = n.runRate!=null ? fxr(n.runRate*ROI_LO)+'–'+fxr(n.runRate)+'×' : '—';
-  const y1Txt  = roi!=null ? fxr(roi)+'×' : '—';
+  const y1Txt  = roi!=null ? fxr(Math.min(roi, n.runRate??roi))+'×' : '—';   // Y1 shown never exceeds full pace
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'floor to modeled — backed by 2026 SEO/GEO benchmarks':'select a service', DGOLD, true, true);
@@ -2730,7 +2734,7 @@ function buildPDF(mode){
     ['Gross margin','What the client keeps from each sale after direct costs. Higher margins support a higher revenue share.'],
     ['Acquisition budget','The share of revenue the client will spend to win a new customer. 10-20% is healthy for growth-mode businesses.'],
     ['Sales commission','Percent of the gross sale already paid to staff or reps. It stacks with our revenue share, so it pulls our percentage down.'],
-    ['Ongoing (run-rate) return','The headline ROI band: month-12 proven new revenue vs the full ongoing cost, shown from conservative floor to modeled. It is the number that proves the program keeps paying for itself after the build.'],
+    ['Ongoing (run-rate) return','The headline ROI band, on the same value-created basis as Year-1: a fully-ramped month\'s won customers × their full first-year value, vs the full ongoing monthly cost (reduced fee + share). Shown from conservative floor to modeled — the number that proves the program keeps paying for itself after the build.'],
     ['Year-1 ROI','Value-created basis: the customers won inside year one × their full first-year value, vs everything invoiced in the first 12 months. A December win\'s remaining purchases land in months 13+, but that value was won by year-one work — so it counts, while cash collected in-year is reported alongside it. Lower than the ongoing return by design: the build happens first.'],
     ['Fixed monthly investment','The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Drops 20–30% once the revenue share starts — the bigger the program, the bigger the drop.'+(pEp.feeWaive?' At this contract size it is waived entirely in any month a win lands.':'')],
     ['Revenue share — and the baseline','When our work wins the client a new customer, we earn a small percentage of that customer\'s first-year value — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond. The baseline is the revenue the client already generates before the program starts: only tracked growth ABOVE that line counts, and existing business is never touched. "Net" means revenue the client actually keeps after refunds — not profit; fairness to margin is built into the rate itself, so lower-margin businesses are quoted a lower percentage, and acquisition budget, existing commissions, and deal size pull it down further. No new wins, no share.'],
