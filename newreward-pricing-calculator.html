@@ -1495,6 +1495,7 @@ const fmtBig = v => v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : fmt$(v);
 /* negotiation overrides: outputs are editable live; recompute downstream numbers */
 let priceDirty=false, shareDirty=false, rampDirty=false;
 let researchedQuote=false;   // true when this quote arrived via a researched prefill link
+let researchRationale=null;  // {field:{w:'why',s:['source','...']}} — travels in the &rationale= link param
 
 function getNegotiated(q){
   let price=q.price, share=q.share, rampMonth=q.rampMonth;
@@ -2167,8 +2168,8 @@ function researchWithAI(){
     +'- LOW-SIDE REALISM CHECK (everyday and med-spa-style local services): sanity-test volume x 0.15 x (convrate/100) x 12. If it implies fewer than roughly 12 new customers a YEAR for an established local service with real demand, your volume, conversion, or footprint is understated — fix the inputs rather than under-selling the business.\n'
     +'- ULTRA-HIGH-TICKET REALISM CHECK (industry=ultra — customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n\n'
     +'Then give me BOTH of the following:\n\n'
-    +'(1) A three-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason.\n\n'
-    +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder):\n'
+    +'(1) A FOUR-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why", "Sources") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason. In the "Sources" column list 1-3 short, NAMED sources per row with dates where possible (e.g. "Ahrefs via Lantern Sol, Apr 2026", "their published pricing page", "IBISWorld margin study 2025") — as many relevant sources as genuinely align with the value.\n\n'
+    +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder). CRITICAL: append ONE more parameter, &rationale=, whose value is the URI-encoded compact JSON of the table: an array of {"f":"<link field name>","w":"<Why, max ~22 words>","s":["<source 1>","<source 2>"]} for every field you filled. This travels into the proposal PDF, which prints the full cited inputs table — so the client sees every source.\n'
     +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
@@ -2402,88 +2403,55 @@ function buildPDF(mode){
   y+=h2+4.6;
 
   /* ---- the pricing principle — full-width section, gold title, no box ---- */
-  y+=5;
+  y+=7;
   const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every number comes from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work actually requires — a price that only works when it works for both sides.';
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('THE PRINCIPLE BEHIND THIS PRICE',L,y,{charSpace:.8});
-  y+=4.8;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-  doc.splitTextToSize(PRINCIPLE,W).forEach(function(ln){ doc.text(ln,L,y); y+=4.1; });
-
-
-  /* inputs for reference */
-  y+=8;
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
-  doc.text('INPUTS & ASSUMPTIONS — FOR REFERENCE',L,y,{charSpace:.8});
-  if(typeof researchedQuote!=='undefined'&&researchedQuote){
-    doc.setFont('helvetica','italic'); doc.setFontSize(6.6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text('These inputs and outputs are researched and verified against 2026 benchmarks for this client\'s specific vertical.', R, y, {align:'right'});
-  }
-  y+=2.5; doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3); doc.line(L,y,R,y);
   y+=6;
-  const rows=[
-    ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'],
-    ['Industry model', selText('industry')],
-    ['Market footprint', selText('footprint')],
-    ['Competitor strength', selText('compstr')],
-    ['Locations / service lines', String(q.units)],
-    ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')],
-    ['Volume source', selText('volsource')],
-    ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated (+30% stretch cap = '+q.capStretch+'/mo)' : 'auto: ~'+q.capAuto+'/mo industry-typical for this footprint (+30% stretch)')],
-    ['Typical search ad cost', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')],
-    ['Average search rank', String(s.rank??'—')],
-    ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')],
-    ['AEO/GEO visibility score', (s.geoScore??0)+'/100'],
-    ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))],
-    ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'],
-    ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)')],
-    ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')],
-    ['Acquisition budget', (s.acq??0)+'%'],
-    ['Sales commission', (s.commission??0)+'%'],
-    ['Engagement intensity', q.intensityLabel
-        + (q.seoIntensity?'  · SEO '+q.seoIntensity.label:'')
-        + (q.geoIntensity?'  · GEO '+q.geoIntensity.label:'')],
-    ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')']
-  ];
-  const half=Math.ceil(rows.length/2), rowH=4.9, colW=(W+6)/2;
-  rows.forEach((r2,i)=>{
-    const col=i<half?0:1, idx=col?i-half:i, x=L+col*colW, ry=y+idx*rowH;
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text(r2[0],x,ry);
-    doc.setFont('helvetica','bold'); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-    doc.text(String(r2[1]),x+colW-9,ry,{align:'right'});
-  });
-  y+=half*rowH+3;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  doc.splitTextToSize(PRINCIPLE,W).forEach(function(ln){ doc.text(ln,L,y); y+=4.9; });
 
+
+  /* every input now lives on its own fully-cited page — point there */
+  y+=9;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.text('WHERE EVERY NUMBER COMES FROM',L,y,{charSpace:.8});
   y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  const WHERETXT=(typeof researchedQuote!=='undefined'&&researchedQuote)
+    ? 'Every input behind this proposal is itemized on the next page — value by value, with the reasoning and the named sources for each. These inputs and outputs are researched and verified against 2026 benchmarks for this client\'s specific vertical; the industry benchmark only fills what research left blank.'
+    : 'Every input behind this proposal is itemized on the next page — value by value, with where each number came from. Researched, business-specific figures always override the built-in 2026 industry benchmarks.';
+  doc.splitTextToSize(WHERETXT,W).forEach(function(ln){ doc.text(ln,L,y); y+=4.9; });
+
+  y+=9;
   /* plain english + the customer math — one merged section */
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('PLAIN ENGLISH — AND THE MATH',L,y,{charSpace:.8});
-  y+=4.8;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   (function(){
     const all=doc.splitTextToSize(document.getElementById('o-summary').textContent,W);
-    let use=all.slice(0,3);
-    if(all.length>3){   /* never cut mid-sentence — trim back to the last complete one */
+    let use=all.slice(0,5);
+    if(all.length>5){   /* never cut mid-sentence — trim back to the last complete one */
       const j=use.join(' '); const cut=j.lastIndexOf('. ');
       if(cut>60) use=doc.splitTextToSize(j.slice(0,cut+1),W);
     }
-    use.forEach(function(ln){doc.text(ln,L,y); y+=4.1;});
+    use.forEach(function(ln){doc.text(ln,L,y); y+=4.9;});
   })();
-  y+=3.5;   /* centered between the summary above and the disclosure below */
-  doc.setFontSize(8.3); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
+  y+=5;   /* centered between the summary above and the disclosure below */
+  doc.setFontSize(9.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
     +(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
-  doc.splitTextToSize(math1,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  doc.splitTextToSize(math1,W).slice(0,3).forEach(function(ln){doc.text(ln,L,y); y+=4.6;});
   const math2=crP.monthly
     ? '~'+Math.round(q.newCust)+' × '+fmt$(q.yearlyValue)+'/yr = '+fmtK(q.arrAddedPM)
       +' in annual contracts signed monthly — pacing +'+fmtK(n.series.exitARR)
       +'/yr by month 12.'
     : crP.v+' customers/yr × '+fmt$(q.yearlyValue)+' each = '+fmtK(q.newCust*12*q.yearlyValue)
       +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12.';
-  doc.splitTextToSize(math2,W).slice(0,1).forEach(function(ln){doc.text(ln,L,y); y+=4;});
+  doc.splitTextToSize(math2,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4.6;});
 
 
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
@@ -2500,7 +2468,85 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
 
-  /* ============ PAGE 2 — THE PROJECTION (full page, 12 months) ============ */
+  /* ============ PAGE 2 — CALCULATOR INPUTS, RATIONALE & SOURCES ============ */
+  doc.addPage();
+  doc.setFillColor(10,8,6); doc.rect(0,0,210,24,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
+  doc.text('Calculator Inputs — Researched & Cited',L,11);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
+  doc.text('Every value behind this proposal: what it is, why it was chosen, and the sources it came from.',L,17.5);
+  (function(){
+    const RR = (typeof researchRationale!=='undefined'&&researchRationale)?researchRationale:{};
+    const rx = function(f,fbW,fbS){ const r=RR[f]; return [ (r&&r.w)?r.w:fbW, (r&&r.s&&r.s.length)?r.s.join('  ·  '):fbS ]; };
+    const BM='New Reward 2026 benchmark set';
+    const IR=[
+      ['Company', s.client||'—'].concat(rx('client','The business this proposal was researched and priced for.','Provided / researched')),
+      ['Website', (s.website||'—')].concat(rx('website','The site the program optimizes and measures.','Provided / researched')),
+      ['Search phrase', s.phrase||'—'].concat(rx('phrase','The anchor money phrase; the quote is sized on the full phrase cluster, not this one query.','Provided / researched')),
+      ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'].concat(rx('scope','The services in this program.','Selected with the client\'s goals')),
+      ['Industry model', selText('industry')].concat(rx('industry','The business type — sets every blank-field benchmark.','Matched from their actual offering')),
+      ['Market footprint', selText('footprint')].concat(rx('footprint','How wide the program fights — demand, competitors, and pages scale with it.','Matched from their service area')),
+      ['Competitor strength', selText('compstr')].concat(rx('compstr','Decided by rule from who actually holds the top results.','Live SERP review')),
+      ['Locations / service lines', String(q.units)].concat(rx('units','Locations or distinct service lines the program must cover.','Their site / listings')),
+      ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'Industry-typical demand for this footprint (no researched figure supplied).':'Researched cluster demand, band-snapped for reproducibility.', q.volIsAuto?BM:'Research — see volume source')),
+      ['Volume source', selText('volsource')].concat(rx('volsource','Where the demand number came from; estimates are confidence-weighted in the math.','—')),
+      ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' → cap '+q.capStretch+'/mo'].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +30% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +30% stretch.', s.capacity>0?'Team / operations research':BM)),
+      ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', s.cpc==null?BM:'Ad-cost research')),
+      ['Average search rank', String(s.rank??'—')].concat(rx('rank','Their average Google position for money phrases today.','Checked rankings')),
+      ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')].concat(rx('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.','New Reward visibility audit')),
+      ['AEO/GEO visibility score', (s.geoScore??0)+'/100'].concat(rx('geoScore','Directional estimate of current AI-answer visibility — superseded by New Reward\'s internal audit.','New Reward visibility audit')),
+      ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Industry-typical first-year customer value (no researched figure supplied).':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:'Their published pricing')),
+      ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'].concat(rx('years','How long a typical customer keeps paying — sets churn; LTV shown but never projected on.','Vertical retention studies')),
+      ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)')].concat(rx('convrate', s.convrate>0?'Visitor-to-customer rate — vertical canonical unless a named fact moved it.':'Vertical canonical visitor-to-customer rate.', s.convrate>0?'Vertical conversion benchmarks':BM)),
+      ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')].concat(rx('margin','Published vertical range, middle, snapped to 5s — sizes the revenue share fairly.','Published margin studies')),
+      ['Acquisition budget', (s.acq??0)+'%'].concat(rx('acq','What this vertical sensibly spends to win a customer.','Vertical CAC studies')),
+      ['Sales commission', (s.commission??0)+'%'].concat(rx('commission','Comp already paid to staff/reps — pulls our share down.','Vertical comp norms')),
+      ['Engagement intensity', q.intensityLabel+(q.seoIntensity?' · SEO '+q.seoIntensity.label:'')+(q.geoIntensity?' · GEO '+q.geoIntensity.label:''), 'Computed from current visibility — lower scores mean more build work.', 'Calculator — from the scores above'],
+      ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')', 'Computed from competitor strength, industry, footprint, ad cost, and demand.', 'Calculator — from the inputs above']
+    ];
+    /* auto-fit: largest type size whose packed table still ends above the footer */
+    const cW=[24,36,64,58]; const cX=[L,L+cW[0]+2,L+cW[0]+cW[1]+4,L+cW[0]+cW[1]+cW[2]+6];
+    const top=32, bottom=278;
+    const presets=[[9.6,4.1,3.6],[9.2,3.95,3.4],[8.8,3.8,3.2],[8.4,3.6,3.0],[8,3.35,2.6],[7.6,3.2,2.4],[7.2,3.05,2.2],[6.8,2.9,2.0],[6.4,2.75,1.8],[6.0,2.6,1.6],[5.6,2.45,1.5]];
+    let pick=presets[presets.length-1];
+    for(const p of presets){
+      doc.setFontSize(p[0]); let yy=top+6;
+      for(const r2 of IR){
+        const l1=doc.splitTextToSize(String(r2[0]),cW[0]-2).length, l2=doc.splitTextToSize(String(r2[1]),cW[1]-2).length,
+              l3=doc.splitTextToSize(String(r2[2]),cW[2]-2).length, l4=doc.splitTextToSize(String(r2[3]),cW[3]-2).length;
+        yy+=Math.max(l1,l2,l3,l4)*p[1]+p[2];
+      }
+      if(yy<=bottom){ pick=p; break; }
+    }
+    doc.setFontSize(pick[0]);
+    let yy=top;
+    doc.setFont('helvetica','bold'); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    doc.text('INPUT',cX[0],yy); doc.text('VALUE',cX[1],yy); doc.text('WHY',cX[2],yy); doc.text('SOURCES',cX[3],yy);
+    yy+=2; doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.4); doc.line(L,yy,R,yy); yy+=4;
+    for(const r2 of IR){
+      const w1=doc.splitTextToSize(String(r2[0]),cW[0]-2), w2=doc.splitTextToSize(String(r2[1]),cW[1]-2),
+            w3=doc.splitTextToSize(String(r2[2]),cW[2]-2), w4=doc.splitTextToSize(String(r2[3]),cW[3]-2);
+      const hRow=Math.max(w1.length,w2.length,w3.length,w4.length)*pick[1];
+      doc.setFont('helvetica','bold'); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+      w1.forEach(function(ln,i2){ doc.text(ln,cX[0],yy+i2*pick[1]); });
+      w2.forEach(function(ln,i2){ doc.text(ln,cX[1],yy+i2*pick[1]); });
+      doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+      w3.forEach(function(ln,i2){ doc.text(ln,cX[2],yy+i2*pick[1]); });
+      doc.setFont('helvetica','italic');
+      w4.forEach(function(ln,i2){ doc.text(ln,cX[3],yy+i2*pick[1]); });
+      yy+=hRow+pick[2]*0.4;
+      doc.setDrawColor(236,227,208); doc.setLineWidth(.2); doc.line(L,yy-pick[2]*0.1,R,yy-pick[2]*0.1);
+      yy+=pick[2]*0.6;
+    }
+  })();
+  /* footer band — inputs page */
+  doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
+  doc.text('NEW REWARD',L,291,{charSpace:1});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
+  doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
+
+  /* ============ PAGE 3 — THE PROJECTION (full page, 12 months) ============ */
   doc.addPage();
   doc.setFillColor(10,8,6); doc.rect(0,0,210,24,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
@@ -2636,7 +2682,7 @@ function buildPDF(mode){
   pdDraw('This projection never compounds','— the visibility asset does, but these numbers count none of it. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.');
   hy+=1;
   doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Modeled projections from the inputs on page 1 — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.',L,hy,{maxWidth:W});
+  doc.text('Modeled projections from the cited inputs on page 2 — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.',L,hy,{maxWidth:W});
 
   /* footer band */
   doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
@@ -2928,6 +2974,7 @@ function applyPrefill(qs){
     } else el.value = p.get(id);
   });
   researchedQuote=true;   // arrived via a researched prefill link
+  if(p.has('rationale')){ try{ const arr=JSON.parse(p.get('rationale')); researchRationale={}; arr.forEach(function(o){ if(o&&o.f) researchRationale[o.f]={w:o.w||'',s:Array.isArray(o.s)?o.s:[]}; }); }catch(e){ researchRationale=null; } }
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
   /* negotiated terms travel with the quote link */
@@ -3102,6 +3149,7 @@ function copyQuoteLink(){
   if(typeof priceDirty!=='undefined'&&priceDirty){ var pv=(document.getElementById('o-price-edit').value||'').replace(/[^0-9.]/g,''); if(pv) p.set('negPrice',pv); }
   if(typeof shareDirty!=='undefined'&&shareDirty){ var sv=document.getElementById('o-share-edit').value; if(sv) p.set('negShare',sv); }
   if(typeof rampDirty!=='undefined'&&rampDirty){ var rv=document.getElementById('o-ramp-edit').value; if(rv) p.set('negRamp',rv); }
+  if(typeof researchRationale!=='undefined'&&researchRationale){ try{ p.set('rationale', JSON.stringify(Object.keys(researchRationale).map(function(k){ return {f:k,w:researchRationale[k].w,s:researchRationale[k].s}; }))); }catch(e){} }
   var url=location.origin+location.pathname+'?'+p.toString();
   (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(url):Promise.reject()).then(function(){
     if(typeof nrToast==='function') nrToast('&#9989; <b style="color:#eec77c">Quote link copied</b> — reopens with every current input'+((priceDirty||shareDirty||rampDirty)?' and the negotiated terms':'')+'.');
