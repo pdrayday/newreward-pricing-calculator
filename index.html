@@ -2170,7 +2170,8 @@ function researchWithAI(){
     +'Then give me BOTH of the following:\n\n'
     +'(1) A FOUR-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why", "Sources") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason. In the "Sources" column give 1-3 credible sources per row as ACTUAL LINKS — the full URL of the exact page you used (their pricing page URL, the specific Ahrefs/RisingTrends/IBISWorld article, the BBB profile URL). Use a plain named check (e.g. "live SERP check, Jul 2026") ONLY when no URL exists. As many relevant linked sources as genuinely align with the value.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder). CRITICAL: append ONE more parameter, &rationale=, whose value is the URI-encoded compact JSON of the table: an array of {"f":"<link field name>","w":"<a tight 15-25 word SUMMARY of that row\'s Why>","s":["<the full source URLs from your table (or the plain named check when no URL exists)>"]} for every field you filled. This travels into the proposal PDF, which prints the full cited inputs table — so the client sees every source.\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM&rationale=RATIONALE_JSON\n'
+    +'where RATIONALE_JSON is the URI-encoded JSON array described above — NEVER omit it. Tiny example (two fields): &rationale=%5B%7B%22f%22%3A%22volume%22%2C%22w%22%3A%22Head%20~12k%2Fmo%20plus%20variants%2C%20snapped%20to%2025k%20band%22%2C%22s%22%3A%5B%22https%3A%2F%2Fwww.risingtrends.co%2Fblog%2Fpeptides-trend%22%5D%7D%2C%7B%22f%22%3A%22margin%22%2C%22w%22%3A%22Published%20range%2060-70%2C%20middle%20snapped%22%2C%22s%22%3A%5B%22https%3A%2F%2Fwww.ibisworld.com%2F...%22%5D%7D%5D\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
     +'- footprint: local | multi | metro | national | nongeo\n'
@@ -2508,7 +2509,7 @@ function buildPDF(mode){
     /* auto-fit: largest type size whose packed table still ends above the footer */
     const cW=[24,36,64,58]; const cX=[L,L+cW[0]+2,L+cW[0]+cW[1]+4,L+cW[0]+cW[1]+cW[2]+6];
     const top=32, bottom=278;
-    const presets=[[7.8,3.15,2.0],[7.4,3.0,1.9],[7.0,2.85,1.8],[6.6,2.7,1.7],[6.2,2.55,1.6],[5.8,2.4,1.5],[5.4,2.25,1.4],[5.0,2.1,1.3]];
+    const presets=[[10.6,4.25,3.4],[10.0,4.05,3.2],[9.4,3.8,3.0],[8.8,3.55,2.7],[8.2,3.35,2.3],[7.8,3.15,2.0],[7.4,3.0,1.9],[7.0,2.85,1.8],[6.6,2.7,1.7],[6.2,2.55,1.6],[5.8,2.4,1.5],[5.4,2.25,1.4],[5.0,2.1,1.3]];
     let pick=presets[presets.length-1];
     for(const p of presets){
       doc.setFontSize(p[0]); let yy=top+6;
@@ -2520,6 +2521,17 @@ function buildPDF(mode){
       }
       if(yy<=bottom){ pick=p; break; }
     }
+    /* distribute the leftover height into the row gaps so the table spans the full page */
+    let padExtra=0;
+    (function(){
+      doc.setFontSize(pick[0]); let yy2=top+6;
+      for(const r2 of IR){
+        const l1=doc.splitTextToSize(String(r2[0]),cW[0]-2).length, l2=doc.splitTextToSize(String(r2[1]),cW[1]-2).length,
+              l3=doc.splitTextToSize(String(r2[2]),cW[2]-2).length, l4=doc.splitTextToSize(String(r2[3]),cW[3]-2).length;
+        yy2+=(Math.max(l1,l2,l3,l4)-1)*pick[1]+1.7+pick[1]*0.75+1.2;
+      }
+      padExtra=Math.max(0, Math.min(3.2, (bottom-yy2)/IR.length));
+    })();
     doc.setFontSize(pick[0]);
     let yy=top;
     doc.setFont('helvetica','bold'); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
@@ -2538,7 +2550,7 @@ function buildPDF(mode){
       w4.forEach(function(ln,i2){ doc.text(ln,cX[3],yy+i2*pick[1]); });
       const sep=yy+(nl-1)*pick[1]+1.7;                       // clearly below the deepest descender
       doc.setDrawColor(236,227,208); doc.setLineWidth(.2); doc.line(L,sep,R,sep);
-      yy=sep+pick[1]*0.75+1.2;                               // next baseline clears the rule by a full ascent
+      yy=sep+pick[1]*0.75+1.2+padExtra;                      // next baseline clears the rule; slack spread evenly
     }
   })();
   /* footer band — inputs page */
@@ -2980,7 +2992,11 @@ function applyPrefill(qs){
     } else el.value = p.get(id);
   });
   researchedQuote=true;   // arrived via a researched prefill link
-  if(p.has('rationale')){ try{ const arr=JSON.parse(p.get('rationale')); researchRationale={}; arr.forEach(function(o){ if(o&&o.f) researchRationale[o.f]={w:o.w||'',s:Array.isArray(o.s)?o.s:[]}; }); }catch(e){ researchRationale=null; } }
+  if(p.has('rationale')){
+    let arr=null; const raw=p.get('rationale');
+    try{ arr=JSON.parse(raw); }catch(e1){ try{ arr=JSON.parse(decodeURIComponent(raw)); }catch(e2){ arr=null; } }
+    if(Array.isArray(arr)){ researchRationale={}; arr.forEach(function(o){ if(o&&o.f) researchRationale[o.f]={w:o.w||'',s:Array.isArray(o.s)?o.s:(o.s?[String(o.s)]:[])}; }); }
+  }
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
   /* negotiated terms travel with the quote link */
