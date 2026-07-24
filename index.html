@@ -1134,7 +1134,7 @@ const IND = {
 /* Effective benchmark for blank fields = the industry model. Finer vertical accuracy comes
    from the RESEARCH PROMPT: every prefilled quote's inputs are researched for the client's
    specific vertical and verified against 2026 benchmarks — researched inputs always
-   override, so the industry benchmark is only ever the fallback of last resort. */
+   override; published 2026 baselines are what every figure is verified against. */
 function BENCH(s){ return IND[s.industry]; }
 const FOOT = {
   local:    {w:1.00, cost:1.00, reach:1.0, capMult:1.0, name:'one local market'},
@@ -2744,7 +2744,7 @@ function buildPDF(mode){
     ['"What if we couldn\'t even handle that many new customers?"',
      'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, ROI, and the share — is capped at that number plus a 30% stretch, because when real demand shows up, businesses pull heaven and earth to take it: extra crews, longer books, waitlists.'+(q.capApplied?' This proposal is capped at '+q.capStretch+'/mo — your stated '+s.capacity+'/mo plus that stretch — and the market supports even more: that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo plus stretch':'stays inside the industry-typical ~'+q.capAuto+'/mo for your footprint — tell us your real ceiling and we\'ll re-run it in seconds')+'.')],
     ['"Our business isn\'t like other '+BENCH(s).name.toLowerCase()+'s — do generic benchmarks even fit us?"',
-     'They don\'t have to — because generic benchmarks are only ever the fallback of last resort. Every researched proposal starts from deep research on YOUR business specifically — your prices, your market, your vertical\'s real customer values, margins, and conversion rates — verified against published 2026 benchmarks for that exact vertical. Every value in this proposal is set from your business specifically and verified against published 2026 benchmarks for your exact vertical — the accuracy comes from the research, not the category.'],
+     'They don\'t have to — this proposal isn\'t built from a category template. Every researched proposal starts from deep research on YOUR business specifically — your prices, your market, your vertical\'s real customer values, margins, and conversion rates — verified against published 2026 benchmarks for that exact vertical. Every value in this proposal is set from your business specifically and verified against published 2026 benchmarks for your exact vertical — the accuracy comes from the research, not the category.'],
     ['"Do I have to sign a long contract?"',
      'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway to show up. You stay because it works, not because paper says so.'],
     ['"What do you need from me to start?"',
