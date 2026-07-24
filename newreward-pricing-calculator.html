@@ -2006,7 +2006,7 @@ function render(){
       : '';
 
   document.getElementById('note-industry').innerHTML = researchedQuote
-      ? '&#10003; <b>Researched:</b> these inputs and outputs are researched and verified against <b>2026 benchmarks</b> for this client\'s specific vertical — the industry benchmark only fills what research left blank.'
+      ? '&#10003; <b>Researched:</b> these inputs and outputs are researched for this specific business and verified against published <b>2026 benchmarks</b> for their exact vertical, market, and footprint.'
       : '';
   document.getElementById('note-capacity').innerHTML = q.capApplied
       ? '<b>Capacity cap active:</b> market demand supports ~'+(q.newCustDemand<3?q.newCustDemand.toFixed(1):Math.round(q.newCustDemand))+'/mo — projections are capped at <b>'+q.capStretch+'/mo</b>: '+(q.capSource==='stated'?'their stated '+s.capacity+'/mo':'the '+BENCH(s).name.toLowerCase()+' typical ~'+q.capAuto+'/mo for this footprint')+' plus the 30% stretch every business finds when demand shows up.'+(q.capSource==='auto'?' Set their real ceiling to refine it.':'')
@@ -2169,7 +2169,7 @@ function researchWithAI(){
     +'- ULTRA-HIGH-TICKET REALISM CHECK (industry=ultra — customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n\n'
     +'Then give me BOTH of the following:\n\n'
     +'(1) A FOUR-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why", "Sources") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason. In the "Sources" column list 1-3 short, NAMED sources per row with dates where possible (e.g. "Ahrefs via Lantern Sol, Apr 2026", "their published pricing page", "IBISWorld margin study 2025") — as many relevant sources as genuinely align with the value.\n\n'
-    +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder). CRITICAL: append ONE more parameter, &rationale=, whose value is the URI-encoded compact JSON of the table: an array of {"f":"<link field name>","w":"<Why, max ~22 words>","s":["<source 1>","<source 2>"]} for every field you filled. This travels into the proposal PDF, which prints the full cited inputs table — so the client sees every source.\n'
+    +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder). CRITICAL: append ONE more parameter, &rationale=, whose value is the URI-encoded compact JSON of the table: an array of {"f":"<link field name>","w":"<the EXACT Why text from your table — verbatim, not summarized>","s":["<the exact sources from your table>"]} for every field you filled. This travels into the proposal PDF, which prints the full cited inputs table — so the client sees every source.\n'
     +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
@@ -2419,8 +2419,8 @@ function buildPDF(mode){
   y+=6;
   doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   const WHERETXT=(typeof researchedQuote!=='undefined'&&researchedQuote)
-    ? 'Every input behind this proposal is itemized on the next page — value by value, with the reasoning and the named sources for each. These inputs and outputs are researched and verified against 2026 benchmarks for this client\'s specific vertical; the industry benchmark only fills what research left blank.'
-    : 'Every input behind this proposal is itemized on the next page — value by value, with where each number came from. Researched, business-specific figures always override the built-in 2026 industry benchmarks.';
+    ? 'Every input behind this proposal is itemized on the next page — value by value, with the reasoning and the named sources for each. Every figure is business-specific: researched for this client and verified against published 2026 benchmarks for their exact vertical, market, and footprint.'
+    : 'Every input behind this proposal is itemized on the next page — value by value, with where each number came from. Each value is set from the client\'s own economics and published 2026 benchmarks for their exact vertical, market, and footprint.';
   doc.splitTextToSize(WHERETXT,W).forEach(function(ln){ doc.text(ln,L,y); y+=4.9; });
 
   y+=9;
@@ -2441,7 +2441,7 @@ function buildPDF(mode){
   y+=5;   /* centered between the summary above and the disclosure below */
   doc.setFontSize(9.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
+    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' — capped at '+q.capStretch+'/mo stretch capacity':'')
     +(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')
     +'  =  '+crP.v+' new customers'+crP.unit;
   doc.splitTextToSize(math1,W).slice(0,3).forEach(function(ln){doc.text(ln,L,y); y+=4.6;});
@@ -2478,7 +2478,7 @@ function buildPDF(mode){
   (function(){
     const RR = (typeof researchRationale!=='undefined'&&researchRationale)?researchRationale:{};
     const rx = function(f,fbW,fbS){ const r=RR[f]; return [ (r&&r.w)?r.w:fbW, (r&&r.s&&r.s.length)?r.s.join('  ·  '):fbS ]; };
-    const BM='New Reward 2026 benchmark set';
+    const BM='Published 2026 industry baselines (New Reward benchmark library)';
     const IR=[
       ['Company', s.client||'—'].concat(rx('client','The business this proposal was researched and priced for.','Provided / researched')),
       ['Website', (s.website||'—')].concat(rx('website','The site the program optimizes and measures.','Provided / researched')),
@@ -2488,14 +2488,14 @@ function buildPDF(mode){
       ['Market footprint', selText('footprint')].concat(rx('footprint','How wide the program fights — demand, competitors, and pages scale with it.','Matched from their service area')),
       ['Competitor strength', selText('compstr')].concat(rx('compstr','Decided by rule from who actually holds the top results.','Live SERP review')),
       ['Locations / service lines', String(q.units)].concat(rx('units','Locations or distinct service lines the program must cover.','Their site / listings')),
-      ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'Industry-typical demand for this footprint (no researched figure supplied).':'Researched cluster demand, band-snapped for reproducibility.', q.volIsAuto?BM:'Research — see volume source')),
+      ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'Published 2026 demand baseline for this vertical at this footprint.':'Researched cluster demand, band-snapped for reproducibility.', q.volIsAuto?BM:'Research — see volume source')),
       ['Volume source', selText('volsource')].concat(rx('volsource','Where the demand number came from; estimates are confidence-weighted in the math.','—')),
-      ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' → cap '+q.capStretch+'/mo'].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +30% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +30% stretch.', s.capacity>0?'Team / operations research':BM)),
+      ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' (cap '+q.capStretch+'/mo)'].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +30% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +30% stretch.', s.capacity>0?'Team / operations research':BM)),
       ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', s.cpc==null?BM:'Ad-cost research')),
       ['Average search rank', String(s.rank??'—')].concat(rx('rank','Their average Google position for money phrases today.','Checked rankings')),
       ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')].concat(rx('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.','New Reward visibility audit')),
       ['AEO/GEO visibility score', (s.geoScore??0)+'/100'].concat(rx('geoScore','Directional estimate of current AI-answer visibility — superseded by New Reward\'s internal audit.','New Reward visibility audit')),
-      ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Industry-typical first-year customer value (no researched figure supplied).':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:'Their published pricing')),
+      ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Published 2026 first-year customer value baseline for this vertical.':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:'Their published pricing')),
       ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'].concat(rx('years','How long a typical customer keeps paying — sets churn; LTV shown but never projected on.','Vertical retention studies')),
       ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)')].concat(rx('convrate', s.convrate>0?'Visitor-to-customer rate — vertical canonical unless a named fact moved it.':'Vertical canonical visitor-to-customer rate.', s.convrate>0?'Vertical conversion benchmarks':BM)),
       ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')].concat(rx('margin','Published vertical range, middle, snapped to 5s — sizes the revenue share fairly.','Published margin studies')),
@@ -2507,14 +2507,15 @@ function buildPDF(mode){
     /* auto-fit: largest type size whose packed table still ends above the footer */
     const cW=[24,36,64,58]; const cX=[L,L+cW[0]+2,L+cW[0]+cW[1]+4,L+cW[0]+cW[1]+cW[2]+6];
     const top=32, bottom=278;
-    const presets=[[9.6,4.1,3.6],[9.2,3.95,3.4],[8.8,3.8,3.2],[8.4,3.6,3.0],[8,3.35,2.6],[7.6,3.2,2.4],[7.2,3.05,2.2],[6.8,2.9,2.0],[6.4,2.75,1.8],[6.0,2.6,1.6],[5.6,2.45,1.5]];
+    const presets=[[7.8,3.15,2.0],[7.4,3.0,1.9],[7.0,2.85,1.8],[6.6,2.7,1.7],[6.2,2.55,1.6],[5.8,2.4,1.5],[5.4,2.25,1.4],[5.0,2.1,1.3]];
     let pick=presets[presets.length-1];
     for(const p of presets){
       doc.setFontSize(p[0]); let yy=top+6;
       for(const r2 of IR){
         const l1=doc.splitTextToSize(String(r2[0]),cW[0]-2).length, l2=doc.splitTextToSize(String(r2[1]),cW[1]-2).length,
               l3=doc.splitTextToSize(String(r2[2]),cW[2]-2).length, l4=doc.splitTextToSize(String(r2[3]),cW[3]-2).length;
-        yy+=Math.max(l1,l2,l3,l4)*p[1]+p[2];
+        const nl=Math.max(l1,l2,l3,l4);
+        yy+=(nl-1)*p[1]+1.7+p[1]*0.75+1.2;   // text block + rule clearance + next-row ascent room
       }
       if(yy<=bottom){ pick=p; break; }
     }
@@ -2526,7 +2527,7 @@ function buildPDF(mode){
     for(const r2 of IR){
       const w1=doc.splitTextToSize(String(r2[0]),cW[0]-2), w2=doc.splitTextToSize(String(r2[1]),cW[1]-2),
             w3=doc.splitTextToSize(String(r2[2]),cW[2]-2), w4=doc.splitTextToSize(String(r2[3]),cW[3]-2);
-      const hRow=Math.max(w1.length,w2.length,w3.length,w4.length)*pick[1];
+      const nl=Math.max(w1.length,w2.length,w3.length,w4.length);
       doc.setFont('helvetica','bold'); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
       w1.forEach(function(ln,i2){ doc.text(ln,cX[0],yy+i2*pick[1]); });
       w2.forEach(function(ln,i2){ doc.text(ln,cX[1],yy+i2*pick[1]); });
@@ -2534,9 +2535,9 @@ function buildPDF(mode){
       w3.forEach(function(ln,i2){ doc.text(ln,cX[2],yy+i2*pick[1]); });
       doc.setFont('helvetica','italic');
       w4.forEach(function(ln,i2){ doc.text(ln,cX[3],yy+i2*pick[1]); });
-      yy+=hRow+pick[2]*0.4;
-      doc.setDrawColor(236,227,208); doc.setLineWidth(.2); doc.line(L,yy-pick[2]*0.1,R,yy-pick[2]*0.1);
-      yy+=pick[2]*0.6;
+      const sep=yy+(nl-1)*pick[1]+1.7;                       // clearly below the deepest descender
+      doc.setDrawColor(236,227,208); doc.setLineWidth(.2); doc.line(L,sep,R,sep);
+      yy=sep+pick[1]*0.75+1.2;                               // next baseline clears the rule by a full ascent
     }
   })();
   /* footer band — inputs page */
@@ -2720,6 +2721,10 @@ function buildPDF(mode){
      'Most owners have — which is why this proposal shows every input, every formula, and every assumption, prices inside published 2026 market rates, and bills the share only on provable wins. Nothing here asks for faith.'],
     ['"Why this price?"',
      'It is the researched cost of delivering this exact scope in this exact market, verified against published 2026 SEO and AEO/GEO rates — never a number pulled from the air. It steps DOWN once the revenue share begins, because from then on we get paid the way you do: on results'+(pEp.feeWaive?' — and at this contract size it is waived entirely in any month a win lands: you pay the share only':'')+'. If we don\'t move the number, we don\'t earn the share.'],
+    ['"Why is a 2–5 market footprint so much more expensive than one local market? Isn\'t it the same work?"',
+     'It isn\'t the same work — each market is its own battlefield. Every additional city means its own local rankings and map pack, its own listings and citations to build and police, its own location pages and content, its own review velocity, its own local competitors to out-earn — and AI assistants answer per city, so the trust that gets you recommended has to be earned in each market separately. What IS shared is the brand-level foundation (site authority, technical work, core content), which is why the price does NOT multiply by the number of markets: a 2–5 market program runs roughly half again the single-market fee — several battlefields for well under double the cost, and cheaper per market than buying each separately.'],
+    ['"Why are different industries priced so differently?"',
+     'Because the work costs differently. The fee is the researched cost to deliver in that specific market: how entrenched the competitors are (out-ranking national law firms is a different job than out-ranking a local plumber), how demanding the content is (medical, legal, and financial verticals carry higher editorial and trust standards before Google or AI will recommend anyone), how hard the links are to earn, and how wide the footprint is. Each vertical\'s fee is then anchored against published 2026 market rates for that exact scope — so a med spa quote green-checks against what med spa programs actually cost, and a SaaS quote against SaaS programs. Same margin discipline for us either way; the difference is the work, never the markup.'],
     ['"Can SEO/GEO really return 10×? That number seems high."',
      'They can — and the economics are why. Once you rank, in Google or in AI answers, every additional customer arrives without buying another click, so the return on a fixed monthly fee really can reach 10× and beyond. Your exact multiple depends on your industry, deal size, margins, and market footprint — a $500,000 custom home needs a couple of wins a year to outrun the fee, while a $900/yr service needs steady volume — which is exactly why this calculator prices from your inputs, not a template. And none of it is hand-waved: every figure is modeled against researched, published 2026 SEO and AEO/GEO projections, capped conservatively, and re-verified against your live tracking data at the review window.'],
     ['"What happens at the review window?"',
@@ -2739,7 +2744,7 @@ function buildPDF(mode){
     ['"What if we couldn\'t even handle that many new customers?"',
      'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, ROI, and the share — is capped at that number plus a 30% stretch, because when real demand shows up, businesses pull heaven and earth to take it: extra crews, longer books, waitlists.'+(q.capApplied?' This proposal is capped at '+q.capStretch+'/mo — your stated '+s.capacity+'/mo plus that stretch — and the market supports even more: that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo plus stretch':'stays inside the industry-typical ~'+q.capAuto+'/mo for your footprint — tell us your real ceiling and we\'ll re-run it in seconds')+'.')],
     ['"Our business isn\'t like other '+BENCH(s).name.toLowerCase()+'s — do generic benchmarks even fit us?"',
-     'They don\'t have to — because generic benchmarks are only ever the fallback of last resort. Every researched proposal starts from deep research on YOUR business specifically — your prices, your market, your vertical\'s real customer values, margins, and conversion rates — verified against published 2026 benchmarks for that exact vertical. Those researched numbers override the broad industry benchmark completely; the benchmark only fills a field when research turned up nothing usable. The accuracy comes from the research, not the category.'],
+     'They don\'t have to — because generic benchmarks are only ever the fallback of last resort. Every researched proposal starts from deep research on YOUR business specifically — your prices, your market, your vertical\'s real customer values, margins, and conversion rates — verified against published 2026 benchmarks for that exact vertical. Every value in this proposal is set from your business specifically and verified against published 2026 benchmarks for your exact vertical — the accuracy comes from the research, not the category.'],
     ['"Do I have to sign a long contract?"',
      'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway to show up. You stay because it works, not because paper says so.'],
     ['"What do you need from me to start?"',
@@ -2809,7 +2814,7 @@ function buildPDF(mode){
     ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
     ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
-    ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce). Auto-fills researched typical values for any field left blank — and on researched proposals, every input and output is researched and verified against 2026 benchmarks for the client\'s specific vertical, so the broad benchmark is only ever the fallback of last resort.'],
+    ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce) — it anchors the published 2026 baselines every figure is verified against. On researched proposals, every input and output is researched for the client\'s specific business and vertical.'],
     ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize.'],
     ['Delivery capacity (stretch cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. Projections are capped at this number plus a 30% stretch: deliberately optimistic, because businesses find a way when real demand shows up — but never wildly beyond what they could serve. Left unstated, an industry-typical capacity applies automatically, per location and scaled by the footprint — a custom home builder (~0.7 builds/mo) and a med spa (~30 new patients/mo) are never judged by the same ceiling.'],
     ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — the total cost rises, but the cost per location shrinks.'],
