@@ -1015,12 +1015,12 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <div class="ocard">
         <div class="oc-label" id="o-cust-label">New customers / month</div>
         <div class="oc-val gold" id="o-cust">—</div>
-        <div class="oc-note" id="o-cust-note">modeled, once ramped</div>
+        <div class="oc-note" id="o-cust-note">modeled, after the ramp</div>
       </div>
       <div class="ocard">
         <div class="oc-label">New recurring revenue / mo</div>
         <div class="oc-val gold" id="o-arrpm">$—</div>
-        <div class="oc-note" id="o-arrpm-note">added each month once ramped</div>
+        <div class="oc-note" id="o-arrpm-note">added each month after the ramp</div>
       </div>
       <div class="ocard">
         <div class="oc-label">Modeled run-rate by month 12</div>
@@ -2026,15 +2026,15 @@ function render(){
 
   /* cards — customer pace adapts to the business cadence (per month vs per year) */
   const cr = custRate(q.newCust);
-  set('o-cust-label', cr.monthly ? 'New customers / month (ramped pace)' : 'New customers / year (ramped pace)');
+  set('o-cust-label', cr.monthly ? 'New customers / month (pace after the ramp)' : 'New customers / year (pace after the ramp)');
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
       +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
-      +' · year one models '+eventPlan(q,n).winsYr+' (ramping while we build)');
+      +' · year one models '+eventPlan(q,n).winsYr+' · the ramp (months 1–'+(n.rampMonth-1)+') bills the fixed fee only, before the share and attribution begin');
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
       ? '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value'
-      : cr.txt+' × '+fmt$(q.yearlyValue)+' each · ≈'+fmtK(q.newCust*12*q.yearlyValue)+'/yr in new contract value');
+      : cr.txt+' × '+fmt$(q.yearlyValue)+' each · ≈'+fmtK(q.newCust*12*q.yearlyValue)+'/yr in new contract value'+(q.contractStyle?' — shown as a 12-month average; wins land as whole contracts':''));
   set('o-runrate', '+'+fmtK(n.series.exitARR)+'/yr');
   set('o-runrate-note', '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed');
   set('o-window', q.windowDays+' days');
@@ -2388,7 +2388,7 @@ function buildPDF(mode){
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
   /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
   box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'floor to modeled — backed by 2026 SEO/GEO benchmarks':'select a service', DGOLD, true, true);
-  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?(roi>=1?'on value created: customers won in year one × their first-year value, vs everything billed':'the investment year — the ongoing run-rate carries it from the ramp'):'', DARK, true);
+  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?(roi>=1?'year-one wins × their first-year value, vs billed':'investment year — the run-rate carries it'):'', DARK, true);
   box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
       n.price!=null?fmt$(n.price)+'/mo':'—',
       discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
@@ -2402,9 +2402,9 @@ function buildPDF(mode){
   y+=h1+4;
   const h2=25;
   const crP = custRate(q.newCust);
-  box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'ramped pace — year one models '+eventPlan(q,n).winsYr+' while we build', DARK);
-  box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', 'pace by month 12', DARK);
-  box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', 'pace by month 12 — modeled potential', DARK);
+  box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'pace after the ramp (months 1–'+(n.rampMonth-1)+', fixed fee only) — year one models '+eventPlan(q,n).winsYr, DARK);
+  box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', q.contractStyle?'averaged across 12 months — wins land as whole contracts':'pace by month 12', DARK);
+  box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', q.contractStyle?'modeled potential — from whole-contract wins':'pace by month 12 — modeled potential', DARK);
 
   y+=h2+4.6;
 
@@ -2889,10 +2889,10 @@ function buildPDF(mode){
     ['Attribution (attributable)','One hundred percent verifiable proof, or no share: every win is tracked — calls, forms, and bookings — so every win is provable. A win is a win; there is no in-between. If a customer cannot be proven to have come from this program, they are not a win, and we do not take a dime.'],
     ['Market difficulty','1-10: how hard this market is to win. Competitor strength dominates (weak ~2, moderate ~5, strong 7-9, dominant 9-10); industry, footprint, ad cost, and demand add the rest.'],
     ['Engagement intensity','Light / Standard / Intensive per channel, graded from current visibility. Lower visibility = more catch-up build work = higher cost and a longer ramp.'],
-    ['Ramp / rev-share start','The build runway: the first months bill the fixed fee only while rankings and AI presence are built — and wins can start landing during the build, entirely share-free. From the start month, the fixed fee drops and the share begins — billed monthly on the new customers won from then on. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
+    ['Ramp / "ramped" / rev-share start','The ramp is the fixed-fee-only build period BEFORE the revenue share and attribution billing begin — "ramped" or "after the ramp" means that period has ended and the share is live. During the ramp, rankings and AI presence are built, and any wins that land are entirely share-free. From the start month, the fixed fee drops and the share begins — billed monthly on the new customers won from then on. Harder markets and lower visibility push the start later; a top-5 rank pulls it a month sooner.'],
     ['Churn','Customers lost each month, derived from retention (3-year retention is roughly 2.8% per month).'],
     ['LTV — lifetime value','Yearly value × retention years — the full worth of one customer. Shown but never used — on purpose: every projection runs on the smaller one-year value (retention enters only as churn), so if the program pays for itself on year-one value alone, the lifetime value is pure upside on top.'],
-    ['Click share','The portion of monthly searches the program realistically captures once ramped — modeled conservatively, and smaller in very large markets. A geo-restricted brand with many locations is modeled per LOCAL market it fights in — only borderless businesses (e-commerce, SaaS) carry the big-market damper.'],
+    ['Click share','The portion of monthly searches the program realistically captures after the ramp — modeled conservatively, and smaller in very large markets. A geo-restricted brand with many locations is modeled per LOCAL market it fights in — only borderless businesses (e-commerce, SaaS) carry the big-market damper.'],
     ['Growth ceiling — why the projection never compounds','The visibility asset compounds in real life — authority, content, and AI presence keep strengthening — but the projection counts none of it: the modeled pace is capped by real market demand, and customer turnover pulls monthly recurring revenue toward a natural ceiling where new wins roughly equal customers lost. Any real-world compounding is upside on top of these numbers. Faster-turnover markets (e-commerce, national) level out sooner.'],
     ['Review window','60-90 days after start, estimates are re-verified with live tracking data and the terms are adjusted if needed.']
   ];
