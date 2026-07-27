@@ -774,7 +774,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Market footprint
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How wide the client wants to win. Wider footprints mean more competitors and more pages, answers, and listings to optimize.<br><br><b>How to pick it (match the client's real service area):</b><br>• <b>local</b> — one city or a single physical location.<br>• <b>multi</b> — 2–5 cities or locations.<br>• <b>metro</b> — a whole major metro or region (e.g. all of greater Phoenix).<br>• <b>national</b> — sells nationwide with no geographic limit (most SaaS and online stores), or a service business covering many metros across several states (e.g. a restoration company in 9 cities).<br>When unsure, choose the smaller footprint.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How wide THIS program will fight — quote the scope you're selling NOW, not everything the business owns. Wider footprints mean more competitors and more pages, answers, and listings to win.<br><br><b>Pick it by counting the separate cities/markets in scope:</b><br>• <b>one local market</b> — literally one city (or one location's service area).<br>• <b>2–5 markets</b> — two to five distinct cities. Two cities are TWO markets, never "local" — and set Locations to the number of markets, because demand, capacity, and cost all scale with it.<br>• <b>metro</b> — one whole major metro or region (e.g. all of greater Phoenix).<br>• <b>national</b> — many markets across states, or borderless online (SaaS, e-commerce → the non-geo option).<br><br><b>Client starting smaller than their full footprint?</b> Scope everything down together. A brand with 5 Utah showrooms that wants to START with just Salt Lake City + St. George = <b>2–5 markets, Locations 2, and phrase volume re-sized to those two cities only</b> — expansion re-quotes in seconds. When unsure, choose the smaller footprint.</span></button>
         </label>
         <div class="fwrap"><select id="footprint">
           <option value="local">One local market</option>
@@ -789,7 +789,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Locations or service lines
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how many physical locations or distinct service lines the program must cover. Each is its own set of pages, listings, and content to optimize, so more units raise the cost to deliver — with economies of scale, so it's not strictly linear.<br><br><b>How to count it:</b><br>• Local business (one market) → physical locations in that market (a 5-office dental group in one city = 5; one location = 1).<br>• Law/medical/multi-service → distinct service lines that each need their own content (e.g. injury + family + criminal = 3).<br>• <b>B2B / SaaS</b> → separate products or solution lines (one core product = 1).<br>• <b>E-commerce / national</b> → major product categories you'd build out separately (one core category = 1).<br><br><b>Don't double-count geography:</b> if the Market footprint is already metro or national, it covers the cities — set units to the number of <b>service lines</b>, NOT the number of metros (a multi-metro restoration company on a national footprint = its ~3 core services, not its 9 cities).<br>When in doubt, leave it at 1.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">How many locations or distinct service lines <b>THIS program covers — count what's in scope, not everything the business owns</b>. Each is its own set of pages, listings, and content, so more units raise the cost to deliver (with economies of scale).<br><br><b>How to count it, by footprint:</b><br>• <b>One local market</b> → physical locations in that market (a 5-office dental group in one city = 5).<br>• <b>2–5 markets → the NUMBER OF MARKETS in scope</b> (starting with Salt Lake City + St. George = 2, even if the brand has 5 showrooms). On this footprint, demand and delivery capacity scale with this number.<br>• <b>Metro / national / non-geo</b> → distinct service or product lines (injury + family + criminal law = 3; one core SaaS product = 1). The footprint already covers the geography — never recount cities here.<br>When in doubt, leave it at 1.</span></button>
         </label>
         <div class="fwrap"><input type="number" id="units" class="has-suffix" value="1" min="1" max="25"><span class="suffix">units</span></div>
         <div class="auto-note" id="note-units"></div>
@@ -1143,6 +1143,15 @@ const FOOT = {
   national: {w:2.00, cost:1.20, reach:9.0, capMult:5.0, name:'a national multi-market footprint'},
   nongeo:   {w:2.00, cost:1.20, reach:9.0, capMult:5.0, name:'a nationwide online / non-geo market'}
 };
+/* effective demand reach — footprint sets the base, and on a 2–5 market footprint each
+   market in scope carries its own real demand: units = markets there, so auto-volume grows
+   with them (2 markets is the band's anchor; +55% of a market's demand per additional
+   market, capped at 5). Other footprints already cover their geography, so units there are
+   service lines and do NOT multiply demand. */
+function effReach(footprint, units){
+  const r=(FOOT[footprint]||FOOT.local).reach;
+  return footprint==='multi' ? r + 0.55*(clamp(Math.round(units||1),2,5)-2) : r;
+}
 /* competitor entrenchment / domain-authority gap: how strong the incumbents already are.
    The client's own side of the gap is captured by the SEO/GEO visibility scores; this is the
    other side. Feeds market difficulty, the cost to deliver (more authority to overcome = more
@@ -1213,7 +1222,7 @@ function computeQuote(s){
 
   /* ---- effective demand volume ---- */
   const volIsAuto = !(s.volume>0);
-  const vol = volIsAuto ? Math.round(ind.vol*foot.reach) : s.volume;
+  const vol = volIsAuto ? Math.round(ind.vol*effReach(s.footprint,units)) : s.volume;
 
   /* ---- market difficulty 1–10: competitor entrenchment is the DOMINANT driver ----
      weak ≈ 2, moderate ≈ 4–5, strong ≈ 7–9, dominant ≈ 9–10. Industry, footprint,
@@ -1496,6 +1505,7 @@ const fmtBig = v => v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : fmt$(v);
 let priceDirty=false, shareDirty=false, rampDirty=false;
 let researchedQuote=false;   // true when this quote arrived via a researched prefill link
 let researchRationale=null;  // {field:{w:'why',s:['source','...']}} — travels in the &rationale= link param
+let prefillScope=null;       // {volume,units,footprint} the researched volume was sized FOR — powers the re-scope advisory
 
 function getNegotiated(q){
   let price=q.price, share=q.share, rampMonth=q.rampMonth;
@@ -1982,9 +1992,18 @@ function render(){
   document.getElementById('o-diffword').appendChild(Object.assign(document.createElement('small'),{textContent:dw[2]}));
 
   /* auto-estimate math notes under blank inputs */
+  let volAdv='';
+  if(!q.volIsAuto && prefillScope && Math.round(s.volume)===prefillScope.volume
+     && (q.units!==prefillScope.units || s.footprint!==prefillScope.footprint)){
+    const w0=effReach(prefillScope.footprint,prefillScope.units), w1=effReach(s.footprint,q.units);
+    if(Math.abs(w1/w0-1)>0.08){
+      let sug=s.volume*w1/w0; const step=sug>=5000?500:(sug>=1500?250:50); sug=Math.max(step,Math.round(sug/step)*step);
+      volAdv='<span style="display:block;margin-top:4px">Scope changed since research ('+prefillScope.units+' unit'+(prefillScope.units===1?'':'s')+' on '+FOOT[prefillScope.footprint].name+') — demand for the new scope ≈ <a href="#" data-sug="'+sug+'"><b>'+sug.toLocaleString()+'/mo — apply</b></a></span>';
+    }
+  }
   document.getElementById('note-vol').innerHTML = q.volIsAuto
       ? 'Auto: '+BENCH(s).name+' baseline '+BENCH(s).vol.toLocaleString()
-        +' × '+FOOT[s.footprint].reach+'× reach = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : volScaleNote;
+        +' × '+parseFloat(effReach(s.footprint,q.units).toFixed(2))+'× reach'+(s.footprint==='multi'&&q.units>2?' ('+Math.min(q.units,5)+' markets)':'')+' = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : volScaleNote+volAdv;
   const isEcom = s.industry==='ecom';
   document.getElementById('row-aov').style.display = isEcom ? '' : 'none';       // AOV × purchases shown only for ecom
   document.getElementById('fg-yearly').style.display = isEcom ? 'none' : '';     // annual-value field hidden for ecom (AOV replaces it)
@@ -2147,7 +2166,8 @@ function researchWithAI(){
     +'- footprint: "national" = a brand winning MANY physical markets nationwide (set units to the real location count — the model scores capture per local market). "nongeo" = borderless online businesses with no physical service areas (e-commerce, SaaS, DTC) — the model applies the big-market capture damper there instead. A business with ONE physical location serving one city/area is ALWAYS "local". Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
-    +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets) and size the volume across all of them; units>1 with footprint=local is only correct when every location shares ONE market.\n'
+    +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets), set units to the NUMBER OF MARKETS, and size the volume across exactly those markets; units>1 with footprint=local is only correct when every location shares ONE market.\n'
+    +'- STARTING SCOPE: if the client has stated they want to BEGIN with fewer markets than they operate (e.g. 2 of their 5 cities), quote the STARTING scope — footprint, units, capacity, AND volume all sized to those starting markets only — and note the full-footprint expansion upside in the Why column. Footprint, units, and volume must always describe the SAME scope; never mix a full-footprint volume with a reduced-market quote.\n'
     +'- volume: the COMBINED phrase-cluster demand across ALL locations/service lines counted in units — a 2-location business serving two cities needs both cities\' demand added together.\n'
     +'- convrate: for everyday and med-spa-style local services use a realistic 3-6; reserve sub-1 rates for ultra-high-ticket contracts only.\n'
     +'- compstr: decide by rule, not vibe. dominant = household-name national brands or very high-authority sites hold most of the top results. strong = established multi-year players with real authority hold them. moderate = a mixed field with visible gaps (the default). weak = thin, outdated, or few competitors. If torn between two labels, take the STRONGER one and name the competitor that justifies it.\n'
@@ -2909,9 +2929,9 @@ function buildPDF(mode){
     ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
     ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce) — it anchors the published 2026 baselines every figure is verified against. On researched proposals, every input and output is researched for the client\'s specific business and vertical.'],
-    ['Market footprint','How wide the client wants to win: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize.'],
+    ['Market footprint','How wide THIS program fights: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize. Always the scope being quoted NOW — a brand starting with 2 of its 5 cities is a 2-5 market footprint with 2 locations and demand sized to those two cities.'],
     ['Delivery capacity (stretch cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. Projections are capped at this number plus a 30% stretch: deliberately optimistic, because businesses find a way when real demand shows up — but never wildly beyond what they could serve. Left unstated, an industry-typical capacity applies automatically, per location and scaled by the footprint — a custom home builder (~0.7 builds/mo) and a med spa (~30 new patients/mo) are never judged by the same ceiling.'],
-    ['Locations / service lines (units)','How many locations or distinct service lines the program covers. Each adds pages, listings, and content — the total cost rises, but the cost per location shrinks.'],
+    ['Locations / service lines (units)','How many locations or distinct service lines the program covers — count what is in scope, not everything the business owns. Each adds pages, listings, and content: total cost rises, cost per location shrinks. On a 2-5 market footprint this is the NUMBER OF MARKETS in scope, and demand and delivery capacity scale with it.'],
     ['Competitor strength','How strong the businesses already ranking are (site authority, backlinks). The biggest driver of market difficulty.'],
     ['Average search rank','The client\'s average Google position for money phrases. Top-5 speeds up the ramp; page 2+ raises the cost. Blended 50/50 with the SEO visibility score.'],
     ['SEO visibility score','0-100 visibility in traditional Google search TODAY — what the client already captures, not a quality grade. The projection only counts new customers above this baseline, so lower = bigger gap = more new wins available (and more build work: higher fee, longer ramp). Pulled toward what the rank implies. Carries 65% of the winnable-demand blend.'],
@@ -3019,6 +3039,13 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
     render();
   });
   volEl.addEventListener('input',function(){ volScaleNote=''; });
+  /* re-scope advisory: one click applies the demand suggestion when footprint/units changed */
+  document.getElementById('note-vol').addEventListener('click',function(e){
+    const t=e.target.closest('a[data-sug]'); if(!t) return;
+    e.preventDefault();
+    volEl.value=Number(t.dataset.sug).toLocaleString('en-US');
+    volEl.dispatchEvent(new Event('input',{bubbles:true}));
+  });
   /* units changed with a manual volume: cost now covers more locations/service lines,
      but the entered demand was NOT changed — flag it so they stay in sync */
   const unitsEl=document.getElementById('units');
@@ -3073,6 +3100,13 @@ function applyPrefill(qs){
     } else el.value = p.get(id);
   });
   researchedQuote=true;   // arrived via a researched prefill link
+  /* remember the scope the volume was researched FOR — if footprint/units change later,
+     the volume note offers a re-scaled demand figure so all three stay in step */
+  if(p.has('volume') && parseFloat(String(p.get('volume')).replace(/,/g,''))>0){
+    prefillScope={ volume:Math.round(parseFloat(String(p.get('volume')).replace(/,/g,''))),
+                   units:Math.max(1,Math.round(parseFloat(p.get('units')||'1'))||1),
+                   footprint:(FOOT[p.get('footprint')]?p.get('footprint'):'local') };
+  }
   if(p.has('rationale')){
     let arr=null; const raw=p.get('rationale');
     try{ arr=JSON.parse(raw); }catch(e1){ try{ arr=JSON.parse(decodeURIComponent(raw)); }catch(e2){ arr=null; } }
