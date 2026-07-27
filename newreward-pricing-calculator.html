@@ -2496,8 +2496,12 @@ function buildPDF(mode){
     const SRC_CALC2={u:'https://pdrayday.github.io/newreward-pricing-calculator/',d:'Calculator — from the inputs above'};
     const SITE_URL=s.website? (/^https?:\/\//.test(s.website)? s.website : 'https://'+s.website) : null;
     const SRC_SITE=SITE_URL? {u:SITE_URL,d:srcDisp(SITE_URL)} : null;
+    const SITE_HOST=SITE_URL? SITE_URL.replace(/^https?:\/\/(www\.)?/,'').replace(/\/.*$/,'') : null;
+    const SRC_PRICE=SITE_HOST? {u:'https://www.google.com/search?q='+encodeURIComponent('site:'+SITE_HOST+' pricing'),d:SITE_HOST+' — published pricing pages (live search)'} : null;
     const SRC_SERP=s.phrase? {u:'https://www.google.com/search?q='+encodeURIComponent(s.phrase),d:'google.com/search — live results for the target phrase'} : null;
-    const VSRC={kwp:SRC_KWP,semrush:SRC_SEM,gsc:SRC_GSC,trends:SRC_TR};
+    const SRC_GPT={u:'https://chatgpt.com/',d:'ChatGPT — AI prompt demand test'};
+    const SRC_KWPV={u:SRC_KWP.u,d:'Google Keyword Planner — verify before contract'};
+    const VSRC={kwp:SRC_KWP,semrush:SRC_SEM,gsc:SRC_GSC,trends:SRC_TR,aiprompt:SRC_GPT,manual:SRC_KWPV,none:SRC_KWPV};
     const norm = function(x){ if(x&&typeof x==='object'&&x.u) return {u:x.u,d:x.d||srcDisp(x.u),link:true};
       const t=String(x), isU=/^https?:\/\//.test(t); return {u:t,d:isU?srcDisp(t):t,link:isU}; };
     const rx = function(f,fbW,fbS){ const r=RR[f]; return [ (r&&r.w)?r.w:fbW, (r&&r.s&&r.s.length)?r.s:fbS ]; };
@@ -2513,12 +2517,12 @@ function buildPDF(mode){
       ['Locations / service lines', String(q.units)].concat(rx('units','Locations or distinct service lines the program must cover.',SRC_SITE?[SRC_SITE]:'Their site / listings')),
       ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'Published 2026 demand baseline for this vertical at this footprint.':'Researched cluster demand, band-snapped for reproducibility.', q.volIsAuto?[SRC_KWP,SRC_AIO]:[SRC_KWP])),
       ['Volume source', selText('volsource')].concat(rx('volsource','Where the demand number came from; estimates are confidence-weighted in the math.',VSRC[s.volsource]?[VSRC[s.volsource]]:'—')),
-      ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' (cap '+q.capStretch+'/mo)'].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +30% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +30% stretch.', s.capacity>0?'Team / operations research':BM)),
+      ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' (cap '+q.capStretch+'/mo)'].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +30% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +30% stretch.', s.capacity>0?(SRC_SITE?['Team / operations research',SRC_SITE]:'Team / operations research'):BM)),
       ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', [SRC_WS])),
       ['Average search rank', String(s.rank??'—')].concat(rx('rank','Their average Google position for money phrases today.',SRC_SERP?[SRC_SERP]:'Checked rankings')),
       ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')].concat(rx('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.',[SRC_NR])),
       ['AEO/GEO visibility score', (s.geoScore??0)+'/100'].concat(rx('geoScore','Directional estimate of current AI-answer visibility — superseded by New Reward\'s internal audit.',[SRC_NR])),
-      ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Published 2026 first-year customer value baseline for this vertical.':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:(SRC_SITE?[SRC_SITE]:'Their published pricing'))),
+      ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Published 2026 first-year customer value baseline for this vertical.':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:(SRC_SITE?[SRC_SITE,SRC_PRICE]:'Their published pricing'))),
       ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'].concat(rx('years','How long a typical customer keeps paying — sets churn; LTV shown but never projected on.',[SRC_CHURN])),
       ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)')].concat(rx('convrate', s.convrate>0?'Visitor-to-customer rate — vertical canonical unless a named fact moved it.':'Vertical canonical visitor-to-customer rate.', [SRC_WS])),
       ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')].concat(rx('margin','Published vertical range, middle, snapped to 5s — sizes the revenue share fairly.',[SRC_STERN])),
