@@ -2481,9 +2481,9 @@ function buildPDF(mode){
     const srcDisp = function(u){ u=String(u).replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,''); return u.length>62 ? u.slice(0,59)+'...' : u; };
     /* verified, stable benchmark pages — real clickable links for every non-obvious input */
     const SRC_WS={u:'https://www.wordstream.com/ppc-benchmarks',d:'wordstream.com — 2026 Google Ads benchmarks by industry'};
-    const SRC_STERN={u:'https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/margin.html',d:'NYU Stern (Damodaran) — margins by sector, Jan 2026'};
-    const SRC_CHURN={u:'https://recurly.com/research/churn-rate-benchmarks/',d:'recurly.com — churn benchmarks by industry'};
-    const SRC_CAC={u:'https://firstpagesage.com/reports/average-customer-acquisition-cost-cac-by-industry-b2b-edition-fc/',d:'firstpagesage.com — CAC by industry (2026)'};
+    const SRC_STERN={u:'https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/margin.html',d:'context: NYU Stern (Damodaran) — margins by sector, Jan 2026'};
+    const SRC_CHURN={u:'https://recurly.com/research/churn-rate-benchmarks/',d:'context: recurly.com — churn benchmarks by industry'};
+    const SRC_CAC={u:'https://firstpagesage.com/reports/average-customer-acquisition-cost-cac-by-industry-b2b-edition-fc/',d:'context: firstpagesage.com — CAC by industry (2026)'};
     const SRC_KWP={u:'https://ads.google.com/home/tools/keyword-planner/',d:'Google Keyword Planner'};
     const SRC_KD={u:'https://ahrefs.com/keyword-difficulty',d:'ahrefs.com — keyword difficulty checker'};
     const SRC_AIO={u:'https://sqmagazine.co.uk/ai-overviews-statistics/',d:'sqmagazine.co.uk — AI Overviews statistics 2026'};
@@ -2516,7 +2516,7 @@ function buildPDF(mode){
       ['Market footprint', selText('footprint')].concat(rx('footprint','How wide the program fights — demand, competitors, and pages scale with it.',SRC_SITE?[SRC_SITE]:'Matched from their service area')),
       ['Competitor strength', selText('compstr')].concat(rx('compstr','Decided by rule from who actually holds the top results.',SRC_SERP?[SRC_SERP,SRC_KD]:['Live SERP review',SRC_KD])),
       ['Locations / service lines', String(q.units)].concat(rx('units','Locations or distinct service lines the program must cover.',SRC_SITE?[SRC_SITE]:'Their site / listings')),
-      ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'Published 2026 demand baseline for this vertical at this footprint.':'Researched cluster demand, band-snapped for reproducibility.', q.volIsAuto?[SRC_KWP,SRC_AIO]:[SRC_KWP])),
+      ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'New Reward 2026 demand baseline for this vertical at this footprint.':'Researched cluster demand, band-snapped for reproducibility.', q.volIsAuto?[BM,SRC_KWPV]:[VSRC[s.volsource]||SRC_KWPV])),
       ['Volume source', selText('volsource')].concat(rx('volsource','Where the demand number came from; estimates are confidence-weighted in the math.',VSRC[s.volsource]?[VSRC[s.volsource]]:'—')),
       ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' (cap '+q.capStretch+'/mo)'].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +30% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +30% stretch.', s.capacity>0?(SRC_SITE?['Team / operations research',SRC_SITE]:'Team / operations research'):BM)),
       ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', [SRC_WS])),
@@ -2524,10 +2524,10 @@ function buildPDF(mode){
       ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')].concat(rx('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.',[SRC_NR])),
       ['AEO/GEO visibility score', (s.geoScore??0)+'/100'].concat(rx('geoScore','Directional estimate of current AI-answer visibility — superseded by New Reward\'s internal audit.',[SRC_NR])),
       ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Published 2026 first-year customer value baseline for this vertical.':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:(SRC_SITE?[SRC_SITE,SRC_PRICE]:'Their published pricing'))),
-      ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'].concat(rx('years','How long a typical customer keeps paying — sets churn; LTV shown but never projected on.',[SRC_CHURN])),
+      ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'].concat(rx('years','How long a typical customer keeps paying — sets churn; LTV shown but never projected on.',[BM,SRC_CHURN])),
       ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)')].concat(rx('convrate', s.convrate>0?'Visitor-to-customer rate — New Reward vertical canonical unless a named fact moved it.':'New Reward vertical canonical visitor-to-customer rate.', [BM,SRC_WSC])),
-      ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')].concat(rx('margin','Published vertical range, middle, snapped to 5s — sizes the revenue share fairly.',[SRC_STERN])),
-      ['Acquisition budget', (s.acq??0)+'%'].concat(rx('acq','What this vertical sensibly spends to win a customer.',[SRC_CAC])),
+      ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')].concat(rx('margin','Published vertical range, middle, snapped to 5s — sizes the revenue share fairly.',[BM,SRC_STERN])),
+      ['Acquisition budget', (s.acq??0)+'%'].concat(rx('acq','What this vertical sensibly spends to win a customer.',[BM,SRC_CAC])),
       ['Sales commission', (s.commission??0)+'%'].concat(rx('commission','Comp already paid to staff/reps — pulls our share down.',[BM])),
       ['Engagement intensity', q.intensityLabel+(q.seoIntensity?' · SEO '+q.seoIntensity.label:'')+(q.geoIntensity?' · GEO '+q.geoIntensity.label:''), 'Computed from current visibility — lower scores mean more build work.', [SRC_CALC1]],
       ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')', 'Computed from competitor strength, industry, footprint, ad cost, and demand.', [SRC_CALC2]]
