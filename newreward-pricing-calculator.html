@@ -3068,7 +3068,7 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
    locations, and demand can never drift apart. ---- */
 let MKTS=[];        // [{n:'Salt Lake City', v:1200}, ...]
 let mktsSync=false; // guards against units<->chips update loops
-function mktsMax(){ const f=document.getElementById('footprint').value; if(f==='multi') return 5; if(f==='local'||f==='metro') return 1; if(f==='national'){ const u=parseInt(document.getElementById('units').value,10)||1; return (u<=10||MKTS.length&&MKTS.length<=10)?10:0; } return 0; }
+function mktsMax(){ const f=document.getElementById('footprint').value; if(f==='multi') return 5; if(f==='local'||f==='metro') return 1; if(f==='national'){ const u=parseInt(document.getElementById('units').value,10)||1; return u<=10?10:0; } return 0; }
 function mktsParse(str){ try{ return String(str).split('|').map(function(t){ const k=t.split('~'); return {n:(k[0]||'').trim(), v:Math.max(0,Math.round(parseFloat(String(k[1]||'').replace(/,/g,''))||0))}; }).filter(function(m){return m.n||m.v;}).slice(0,5); }catch(e){ return []; } }
 function mktsSerialize(){ return MKTS.map(function(m){ return String(m.n||'').replace(/[~|]/g,' ').trim()+'~'+(m.v||0); }).join('|'); }
 function mktsTotal(){ return MKTS.reduce(function(a,m){ return a+(m.v||0); },0); }
