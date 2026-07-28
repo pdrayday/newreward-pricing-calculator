@@ -1701,15 +1701,26 @@ function renderEventChart(q,n,ep,el){
      minimum visible size at big-contract scales (exact figures are on the chart and tooltip) */
   const isMonthly=custRate(q.newCust).monthly && !q.contractStyle;
   const fewWins=ep.winsYr<=8;
-  const yPts=[];
+  const yPts=[], yBaseArr=[];
+  let maxDelta=0;
+  if(q.contractStyle) for(let i=0;i<12;i++){ const fo=(i+1)<n.rampMonth?n.price:n.series.perfPrice; if(ep.wins[i]>0) maxDelta=Math.max(maxDelta, Math.max(0,lineInv[i]-fo)); }
   for(let i=0;i<12;i++){
-    if(!q.contractStyle){ yPts.push(Math.min(py(lineInv[i]), Y1-2.5)); continue; }   // landed bill: smooth climb
+    if(!q.contractStyle){ yPts.push(Math.min(py(lineInv[i]), Y1-2.5)); yBaseArr.push(null); continue; }   // landed bill: smooth climb
     const feeOnly=(i+1)<n.rampMonth?n.price:n.series.perfPrice;
     const yBase=Math.min(py(feeOnly), Y1-2.5);
-    yPts.push(ep.wins[i]>0 ? Math.min(py(lineInv[i]), yBase-3.5) : yBase);
+    yBaseArr.push(yBase);
+    if(ep.wins[i]>0){
+      /* SPIKE on every win month — height tracks that month's bill, so a $33k share month
+         towers over a $9k one, and the line visibly pulses with the wins */
+      const amp=maxDelta>0?Math.max(0,lineInv[i]-feeOnly)/maxDelta:1;
+      yPts.push(Math.min(py(lineInv[i]), yBase-4-16*amp));
+    } else yPts.push(yBase);
   }
   let dA='M'+(X0+gw/2).toFixed(1)+','+yPts[0].toFixed(1);
-  for(let i=1;i<12;i++) dA+=' L'+(X0+i*gw+gw/2).toFixed(1)+','+yPts[i].toFixed(1);
+  for(let i=1;i<12;i++){
+    if(q.contractStyle){ dA+=' L'+(X0+i*gw).toFixed(1)+','+Math.max(yBaseArr[i-1],yBaseArr[i]).toFixed(1); }   // dip to the fee baseline between months — each win reads as its own spike
+    dA+=' L'+(X0+i*gw+gw/2).toFixed(1)+','+yPts[i].toFixed(1);
+  }
   g+='<path class="cost-line" d="'+dA+'" fill="none" stroke-width="2.2"></path>';
   /* on sparse charts, print the bill right at each win so the step is unmistakable */
   if(q.contractStyle && fewWins){
@@ -2746,16 +2757,22 @@ function buildPDF(mode){
     doc.text(String(i2+1),cx,pB+5.4,{align:'center'});
   }
   /* rev-share billing line */
-  const pYs=[];
+  const pYs=[], pYb=[];
+  let pMaxD=0;
+  if(q.contractStyle) for(let i2=0;i2<12;i2++){ const fo=(i2+1)<n.rampMonth?n.price:n.series.perfPrice; if(pEp.wins[i2]>0) pMaxD=Math.max(pMaxD, Math.max(0,pInv[i2]-fo)); }
   for(let i2=0;i2<12;i2++){
-    if(!q.contractStyle){ pYs.push(Math.min(pyY(pInv[i2]), pB-1.5)); continue; }
+    if(!q.contractStyle){ pYs.push(Math.min(pyY(pInv[i2]), pB-1.5)); pYb.push(null); continue; }
     const feeOnly=(i2+1)<n.rampMonth?n.price:n.series.perfPrice;
     const yb=Math.min(pyY(feeOnly), pB-1.5);
-    pYs.push(pEp.wins[i2]>0 ? Math.min(pyY(pInv[i2]), yb-2.2) : yb);
+    pYb.push(yb);
+    if(pEp.wins[i2]>0){ const amp=pMaxD>0?Math.max(0,pInv[i2]-feeOnly)/pMaxD:1; pYs.push(Math.min(pyY(pInv[i2]), yb-2-7*amp)); }
+    else pYs.push(yb);
   }
   doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.75);
   for(let i2=1;i2<12;i2++){
-    doc.line(pL2+(i2-1)*pgw+pgw/2,pYs[i2-1],pL2+i2*pgw+pgw/2,pYs[i2]);
+    const xA=pL2+(i2-1)*pgw+pgw/2, xB=pL2+i2*pgw+pgw/2;
+    if(q.contractStyle){ const bx=pL2+i2*pgw, by=Math.max(pYb[i2-1],pYb[i2]); doc.line(xA,pYs[i2-1],bx,by); doc.line(bx,by,xB,pYs[i2]); }
+    else doc.line(xA,pYs[i2-1],xB,pYs[i2]);
   }
   doc.setFontSize(5.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   if(!q.contractStyle){
