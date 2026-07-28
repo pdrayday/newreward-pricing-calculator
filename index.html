@@ -2188,7 +2188,7 @@ function researchWithAI(){
   const mktFoot=document.getElementById('footprint').value;
   const prompt='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs.\n\n'
     +'Business website: '+url+'\n\n'
-    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+(mktFoot==='multi'?', set footprint=multi and units='+mktList.length:'')+', size capacity to the locations serving '+(mktList.length>1?'these markets':'this market')+' only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link.\n\n':'')
+    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+((mktFoot==='multi'||mktFoot==='national')?', set footprint='+mktFoot+' and units='+mktList.length:'')+', size capacity to the locations serving '+(mktList.length>1?'these markets':'this market')+' only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link.\n\n':'')
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'REPRODUCIBILITY CONTRACT — TREAT THIS LIKE A DETERMINISTIC FUNCTION. The same business researched twice minutes apart MUST produce the SAME table and the SAME link, field for field. Three rules make that true: (1) DERIVE, never impressionistically estimate — every value must come from a named source or a stated calculation, and two runs from the same facts land on the same number. (2) SNAP every numeric field to its ladder below — ladders exist so independent runs converge; never output a value between rungs. (3) STICK — if a prior estimate for this business exists anywhere (an earlier prefilled link, a prior table, a figure the user states), reuse it VERBATIM for every field, changing only a field where you can name the specific NEW fact that moved it, and say so in the Why column. Differences are expected months apart as markets move; minutes apart they are an error. ONE EXCEPTION: seoScore and geoScore are directional estimates only and exempt from this contract — New Reward runs its own internal visibility audit that supersedes them before anything is presented, so run-to-run variance on those two fields is acceptable.\n\n'
     +'Classification rules — follow exactly:\n'
@@ -2227,7 +2227,7 @@ function researchWithAI(){
     +'- footprint: local | multi | metro | national | nongeo\n'
     +'- compstr: weak | moderate | strong | dominant\n'
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool\n'
-    +'- markets (REQUIRED for local, multi, and metro footprints): City~VOL|City~VOL, URI-encoded — for local give the ONE city and its cluster volume, for metro the ONE metro/region, for multi one entry per market in scope; VOL = that market\'s own cluster searches/mo. The calculator pre-fills each named market with its demand under Locations and sums them into the phrase volume, so NEVER omit this for a geo footprint.';
+    +'- markets (REQUIRED for local, multi, and metro footprints; for national ONLY when the business has 10 or fewer locations): City~VOL|City~VOL, URI-encoded — for local give the ONE city and its cluster volume, for metro the ONE metro/region, for multi/national one entry per market in scope; VOL = that market\'s own cluster searches/mo. The calculator pre-fills each named market with its demand under Locations and sums them into the phrase volume, so never omit it where required. For national with MORE than 10 locations, and ALWAYS for nongeo, OMIT &markets= — but still derive the volume per-market and show that logic in the Why (e.g. "~600/mo average metro cluster x 15 branches").';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     /* Plain NEW CHAT, never Claude Code: the claude.ai/new universal link opens a fresh chat in
@@ -3051,7 +3051,7 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
    locations, and demand can never drift apart. ---- */
 let MKTS=[];        // [{n:'Salt Lake City', v:1200}, ...]
 let mktsSync=false; // guards against units<->chips update loops
-function mktsMax(){ const f=document.getElementById('footprint').value; return f==='multi'?5:((f==='local'||f==='metro')?1:0); }
+function mktsMax(){ const f=document.getElementById('footprint').value; if(f==='multi') return 5; if(f==='local'||f==='metro') return 1; if(f==='national'){ const u=parseInt(document.getElementById('units').value,10)||1; return (u<=10||MKTS.length&&MKTS.length<=10)?10:0; } return 0; }
 function mktsParse(str){ try{ return String(str).split('|').map(function(t){ const k=t.split('~'); return {n:(k[0]||'').trim(), v:Math.max(0,Math.round(parseFloat(String(k[1]||'').replace(/,/g,''))||0))}; }).filter(function(m){return m.n||m.v;}).slice(0,5); }catch(e){ return []; } }
 function mktsSerialize(){ return MKTS.map(function(m){ return String(m.n||'').replace(/[~|]/g,' ').trim()+'~'+(m.v||0); }).join('|'); }
 function mktsTotal(){ return MKTS.reduce(function(a,m){ return a+(m.v||0); },0); }
@@ -3062,12 +3062,13 @@ function drawMkts(){
   const f=document.getElementById('footprint').value, mx=mktsMax();
   panel.hidden=!mx;
   if(!mx) return;
-  if(MKTS.length===0){ const seed=f==='multi'?Math.min(5,Math.max(2,parseInt(document.getElementById('units').value,10)||2)):1; for(let i=0;i<seed;i++) MKTS.push({n:'',v:0}); }
+  if(MKTS.length===0){ const u=parseInt(document.getElementById('units').value,10)||2; const seed=f==='multi'?Math.min(5,Math.max(2,u)):(f==='national'?Math.min(10,Math.max(2,u)):1); for(let i=0;i<seed;i++) MKTS.push({n:'',v:0}); }
   if(MKTS.length>mx) MKTS.length=mx;
   document.getElementById('mkts-label').textContent = f==='multi'
     ? 'Markets in scope — one per city; each market\'s demand sums into the phrase volume'
     : (f==='metro' ? 'Region in scope — name the metro/region; its researched demand sizes the phrase volume'
-                   : 'Market in scope — name the city; its researched demand sizes the phrase volume');
+    : (f==='national' ? 'Branch markets in scope — one per city (listed only for networks of 10 or fewer locations)'
+                   : 'Market in scope — name the city; its researched demand sizes the phrase volume'));
   rows.innerHTML=MKTS.map(function(m,i){
     return '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
       +(mx>1?'<button type="button" class="mkt-x" data-i="'+i+'" title="remove this market (subtracts a location)" style="flex:0 0 28px;height:32px;background:none;border:1px solid rgba(150,140,120,.5);border-radius:8px;color:inherit;cursor:pointer;font-size:15px;line-height:1">×</button>':'')
@@ -3075,7 +3076,7 @@ function drawMkts(){
       +'<input type="text" class="mkt-v" data-i="'+i+'" value="'+(m.v?m.v.toLocaleString('en-US'):'')+'" placeholder="searches/mo" inputmode="numeric" autocomplete="off" style="flex:0 0 118px">'
       +'</div>';
   }).join('');
-  document.getElementById('mkts-add').style.display = (f==='multi'&&MKTS.length<5)?'':'none';
+  document.getElementById('mkts-add').style.display = ((f==='multi'&&MKTS.length<5)||(f==='national'&&MKTS.length<10))?'':'none';
   mktsTotalLabel();
 }
 function mktsTotalLabel(){
@@ -3085,7 +3086,8 @@ function mktsTotalLabel(){
 }
 function mktsApply(){   // chips -> units (multi only) + volume, then re-render
   mktsSync=true;
-  if(document.getElementById('footprint').value==='multi'){
+  const fpv=document.getElementById('footprint').value;
+  if(fpv==='multi'||fpv==='national'){
     const u=document.getElementById('units');
     if(MKTS.length && String(MKTS.length)!==String(u.value)) u.value=MKTS.length;
   }
@@ -3113,10 +3115,15 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
     if(MKTS.length>=mktsMax()) return; MKTS.push({n:'',v:0}); mktsApply();
   });
   document.getElementById('units').addEventListener('input',function(){
-    if(mktsSync||document.getElementById('footprint').value!=='multi') return;
-    const u=Math.min(5,Math.max(1,parseInt(this.value,10)||1));
-    while(MKTS.length<u) MKTS.push({n:'',v:0});
-    while(MKTS.length>u) MKTS.pop();
+    if(mktsSync) return;
+    const f=document.getElementById('footprint').value;
+    if(f!=='multi'&&f!=='national') return;
+    const mx=f==='multi'?5:10;
+    const u=Math.max(1,parseInt(this.value,10)||1);
+    if(f==='national'&&u>10){ drawMkts(); return; }   // too many to list — panel hides, backend still models per-market
+    const uu=Math.min(mx,u);
+    while(MKTS.length<uu) MKTS.push({n:'',v:0});
+    while(MKTS.length>uu) MKTS.pop();
     drawMkts();
   });
   document.getElementById('footprint').addEventListener('change',function(){ MKTS.length=Math.min(MKTS.length,mktsMax()||MKTS.length); drawMkts(); });
