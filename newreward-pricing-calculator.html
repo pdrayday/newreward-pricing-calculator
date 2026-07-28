@@ -663,6 +663,8 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 #o-chart rect,.cz-body rect,#o-chart path,.cz-body path{cursor:crosshair}
 #o-chart .be-label,.cz-body .be-label{fill:#eec77c}
 #o-chart .cost-line,.cz-body .cost-line{stroke:#ffffff}
+#o-chart .bar-cost,.cz-body .bar-cost{fill:#ffffff}
+[data-theme="ivory"] #o-chart .bar-cost,[data-theme="ivory"] .cz-body .bar-cost{fill:#14100a}
 [data-theme="ivory"] #o-chart .cost-line,[data-theme="ivory"] .cz-body .cost-line{stroke:#14100a}
 /* cost bars: white fill + bold black outline in BOTH themes so they never blend with revenue */
 #o-chart .bar-cost,.cz-body .bar-cost{fill:#ffffff!important;stroke:#000000!important;stroke-width:2!important}
@@ -1697,48 +1699,44 @@ function renderEventChart(q,n,ep,el){
     const cx=X0+i*gw+gw/2;
     if(ep.rev[i]>0){
       const rh=Math.max(ep.rev[i]/maxV*(Y1-Y0),2);
-      g+='<rect class="bar-rev" x="'+(cx-7.5)+'" y="'+(Y1-rh).toFixed(1)+'" width="15" height="'+rh.toFixed(1)+'" rx="2" fill="url(#gg)"></rect>';
+      g+='<rect class="bar-rev" x="'+(cx-10.5).toFixed(1)+'" y="'+(Y1-rh).toFixed(1)+'" width="13" height="'+rh.toFixed(1)+'" rx="2" fill="url(#gg)"></rect>';
     }
     g+='<text x="'+cx+'" y="'+(Y1+13)+'" text-anchor="middle" font-size="8.5">'+(i+1)+'</text>';
   }
-  /* the bill line: always visible, and it STEPS UP with every win — the step is drawn at a
-     minimum visible size at big-contract scales (exact figures are on the chart and tooltip) */
+  /* the bill, drawn as its own BAR beside each month's revenue — always visible: at
+     big-contract scales the cost bar is height-normalized (a win month's share bar towers
+     over a fee-only month; the exact figures are printed and in the tooltip) */
   const isMonthly=custRate(q.newCust).monthly && !q.contractStyle;
   const fewWins=ep.winsYr<=8;
-  const yPts=[], yBaseArr=[];
+  const costH=[];
   let maxDelta=0;
   if(q.contractStyle) for(let i=0;i<12;i++){ const fo=(i+1)<n.rampMonth?n.price:n.series.perfPrice; if(ep.wins[i]>0) maxDelta=Math.max(maxDelta, Math.max(0,lineInv[i]-fo)); }
   for(let i=0;i<12;i++){
-    if(!q.contractStyle){ yPts.push(Math.min(py(lineInv[i]), Y1-2.5)); yBaseArr.push(null); continue; }   // landed bill: smooth climb
+    const trueH=lineInv[i]/maxV*(Y1-Y0);
+    if(!q.contractStyle){ costH.push(Math.max(trueH, lineInv[i]>0?2:0)); continue; }
     const feeOnly=(i+1)<n.rampMonth?n.price:n.series.perfPrice;
-    const yBase=Math.min(py(feeOnly), Y1-2.5);
-    yBaseArr.push(yBase);
-    if(ep.wins[i]>0){
-      /* SPIKE on every win month — height tracks that month's bill, so a $33k share month
-         towers over a $9k one, and the line visibly pulses with the wins */
-      const amp=maxDelta>0?Math.max(0,lineInv[i]-feeOnly)/maxDelta:1;
-      yPts.push(Math.min(py(lineInv[i]), yBase-4-16*amp));
-    } else yPts.push(yBase);
+    const baseH=Math.max(feeOnly/maxV*(Y1-Y0), 2.5);
+    if(ep.wins[i]>0){ const amp=maxDelta>0?Math.max(0,lineInv[i]-feeOnly)/maxDelta:1; costH.push(Math.max(trueH, baseH+4+16*amp)); }
+    else costH.push(baseH);
   }
-  let dA='M'+(X0+gw/2).toFixed(1)+','+yPts[0].toFixed(1);
-  for(let i=1;i<12;i++){
-    if(q.contractStyle){ dA+=' L'+(X0+i*gw).toFixed(1)+','+Math.max(yBaseArr[i-1],yBaseArr[i]).toFixed(1); }   // dip to the fee baseline between months — each win reads as its own spike
-    dA+=' L'+(X0+i*gw+gw/2).toFixed(1)+','+yPts[i].toFixed(1);
+  for(let i=0;i<12;i++){
+    if(!(costH[i]>0)) continue;
+    const cx=X0+i*gw+gw/2;
+    g+='<rect class="bar-cost" x="'+(cx+3.2).toFixed(1)+'" y="'+(Y1-costH[i]).toFixed(1)+'" width="6.6" height="'+costH[i].toFixed(1)+'" rx="1.5"></rect>';
   }
-  g+='<path class="cost-line" d="'+dA+'" fill="none" stroke-width="2.2"></path>';
   /* on sparse charts, print the bill right at each win so the step is unmistakable */
   if(q.contractStyle && fewWins){
     for(let i=0;i<12;i++){ if(ep.wins[i]>0){
       const cx=X0+i*gw+gw/2;
       const bt=Y1-Math.max(ep.rev[i]/maxV*(Y1-Y0),2);
       g+='<text x="'+cx.toFixed(1)+'" y="'+(bt-3).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(ep.rev[i])+'</text>';
-      g+='<text x="'+cx.toFixed(1)+'" y="'+(yPts[i]-3).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+' bill</text>';
+      g+='<text x="'+(cx+6.5).toFixed(1)+'" y="'+(Y1-costH[i]-2.5).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+' bill</text>';
     }}
   } else if(!q.contractStyle){
     const rm2=n.rampMonth;
     if(rm2>=1&&rm2<=12){
-      g+='<text x="'+(X0+(rm2-1)*gw+gw/2).toFixed(1)+'" y="'+(yPts[rm2-1]-4).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[rm2-1])+'/mo</text>';
-      g+='<text x="'+(X1-2)+'" y="'+(yPts[11]-4).toFixed(1)+'" text-anchor="end" font-size="8">'+fmtK(lineInv[11])+'/mo bill</text>';
+      g+='<text x="'+(X0+(rm2-1)*gw+gw/2).toFixed(1)+'" y="'+(Y1-costH[rm2-1]-4).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[rm2-1])+'/mo</text>';
+      g+='<text x="'+(X1-2)+'" y="'+(Y1-costH[11]-4).toFixed(1)+'" text-anchor="end" font-size="8">'+fmtK(lineInv[11])+'/mo bill</text>';
     }
     /* crossover: first month the value won clears the actual bill */
     let mPos=-1; for(let i=0;i<12;i++){ if(ep.rev[i]>0&&ep.rev[i]>=lineInv[i]){ mPos=i; break; } }
@@ -2150,7 +2148,7 @@ function render(){
         let rampEnd=n.rampMonth-1;
         n.series.invoice.forEach(function(v,i){ if(i+1>=n.rampMonth && v<n.series.ongoingCost-0.5) rampEnd=i+1; });
         const hasRamp=rampEnd>=n.rampMonth;
-        return '<p><b>The cost lines on the chart, in exact dollars:</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build &mdash; and any customers won during the build are <span class="sm-big">share-free</span>. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins &mdash; billed only when a win lands: one proven win adds '+fmt$(perWin)+' ('+n.share+'% &times; '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(eventPlan(q,n).feeWaive?' &mdash; and at this contract size <span class="sm-big">the fixed fee is waived in any win month</span>: you pay the share only':'')+', and a month with no wins bills just the fixed fee. '
+        return '<p><b>The cost bars on the chart, in exact dollars:</b> months 1&ndash;'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build &mdash; and any customers won during the build are <span class="sm-big">share-free</span>. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins &mdash; billed only when a win lands: one proven win adds '+fmt$(perWin)+' ('+n.share+'% &times; '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(eventPlan(q,n).feeWaive?' &mdash; and at this contract size <span class="sm-big">the fixed fee is waived in any win month</span>: you pay the share only':'')+', and a month with no wins bills just the fixed fee. '
         +((!q.contractStyle&&crM.monthly)
           ? 'A ramped month lands about '+crM.v+' wins &mdash; some months a couple more, some fewer &mdash; and each win adds '+fmt$(perWin)+' of share <span class="sm-big">spread across its first twelve months</span>, billed only as that customer actually spends (a typical ramped month: &asymp;<span class="sm-big">'+fmt$(n.series.ongoingCost)+'/mo all-in</span>). '
           : 'At the modeled pace ('+crM.txt+' once fully ramped &mdash; year one lands fewer while we build), most months bill only the fixed '+fmt$(n.series.perfPrice)+' &mdash; the chart places each modeled win in an illustrative month (the count is modeled; the exact timing will vary), and '+(eventPlan(q,n).feeWaive?'in a win month the fixed fee is <span class="sm-big">waived</span> &mdash; that month bills only the '+fmt$(perWin)+' share':'a win month bills the fee plus '+fmt$(perWin))+'. ')
@@ -2735,7 +2733,7 @@ function buildPDF(mode){
   doc.setFillColor(212,162,74); doc.rect(L,32.6,4.4,4.4,'F');
   doc.setFont('helvetica','normal'); doc.setFontSize(8.6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('New revenue / month',L+6.4,36);
-  doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.7); doc.line(L+58,34.4,L+64,34.4);
+  doc.setFillColor(DARK[0],DARK[1],DARK[2]); doc.rect(L+58,32.6,4.4,4.4,'F');
   doc.text('Total cost (fixed + share)',L+66.4,36);
 
   const pT=46, pB=126, pL2=L+18, pR2=R-4, pgw=(pR2-pL2)/12;
@@ -2756,28 +2754,28 @@ function buildPDF(mode){
   for(let i2=0;i2<12;i2++){
     const cx=pL2+i2*pgw+pgw/2;
     const rh=Math.max(pRev[i2]/pMax*(pB-pT), pRev[i2]>0?1:0);
-    if(rh>0){ doc.setFillColor(212,162,74); doc.rect(cx-4.6,pB-rh,9.2,rh,'F'); }
+    if(rh>0){ doc.setFillColor(212,162,74); doc.rect(cx-6.2,pB-rh,7.6,rh,'F'); }
     if(pRev[i2]>0){ doc.setFontSize(5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.text(fmtK(pRev[i2]),cx,pB-rh-1.2,{align:'center'}); }
     doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
     doc.text(String(i2+1),cx,pB+5.4,{align:'center'});
   }
   /* rev-share billing line */
-  const pYs=[], pYb=[];
+  const pCh=[];
   let pMaxD=0;
   if(q.contractStyle) for(let i2=0;i2<12;i2++){ const fo=(i2+1)<n.rampMonth?n.price:n.series.perfPrice; if(pEp.wins[i2]>0) pMaxD=Math.max(pMaxD, Math.max(0,pInv[i2]-fo)); }
   for(let i2=0;i2<12;i2++){
-    if(!q.contractStyle){ pYs.push(Math.min(pyY(pInv[i2]), pB-1.5)); pYb.push(null); continue; }
+    const trueH=pInv[i2]/pMax*(pB-pT);
+    if(!q.contractStyle){ pCh.push(Math.max(trueH, pInv[i2]>0?0.8:0)); continue; }
     const feeOnly=(i2+1)<n.rampMonth?n.price:n.series.perfPrice;
-    const yb=Math.min(pyY(feeOnly), pB-1.5);
-    pYb.push(yb);
-    if(pEp.wins[i2]>0){ const amp=pMaxD>0?Math.max(0,pInv[i2]-feeOnly)/pMaxD:1; pYs.push(Math.min(pyY(pInv[i2]), yb-2-7*amp)); }
-    else pYs.push(yb);
+    const baseH=Math.max(feeOnly/pMax*(pB-pT), 1.1);
+    if(pEp.wins[i2]>0){ const amp=pMaxD>0?Math.max(0,pInv[i2]-feeOnly)/pMaxD:1; pCh.push(Math.max(trueH, baseH+1.8+7*amp)); }
+    else pCh.push(baseH);
   }
-  doc.setDrawColor(DARK[0],DARK[1],DARK[2]); doc.setLineWidth(.75);
-  for(let i2=1;i2<12;i2++){
-    const xA=pL2+(i2-1)*pgw+pgw/2, xB=pL2+i2*pgw+pgw/2;
-    if(q.contractStyle){ const bx=pL2+i2*pgw, by=Math.max(pYb[i2-1],pYb[i2]); doc.line(xA,pYs[i2-1],bx,by); doc.line(bx,by,xB,pYs[i2]); }
-    else doc.line(xA,pYs[i2-1],xB,pYs[i2]);
+  doc.setFillColor(DARK[0],DARK[1],DARK[2]);
+  for(let i2=0;i2<12;i2++){
+    if(!(pCh[i2]>0)) continue;
+    const cxB=pL2+i2*pgw+pgw/2;
+    doc.rect(cxB+1.8,pB-pCh[i2],3.4,pCh[i2],'F');
   }
   doc.setFontSize(5.6); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   if(!q.contractStyle){
@@ -2786,14 +2784,14 @@ function buildPDF(mode){
     doc.setFontSize(4.8);
     for(let i2=0;i2<12;i2++){
       const cx2=pL2+i2*pgw+pgw/2;
-      doc.text(fmtK(pInv[i2])+(i2===11?' bill':''),cx2,pYs[i2]+3.1,{align:'center'});
+      doc.text(fmtK(pInv[i2])+(i2===11?' bill':''),cx2+3.5,pB-pCh[i2]-1.0,{align:'center'});
     }
   } else if(pEp.winsYr<=8){
     for(let i2=0;i2<12;i2++){ if(pEp.wins[i2]>0){
-      doc.text(fmt$(pInv[i2])+' bill',pL2+i2*pgw+pgw/2,pYs[i2]-1.6,{align:'center'});
+      doc.text(fmt$(pInv[i2])+' bill',pL2+i2*pgw+pgw/2+3.5,pB-pCh[i2]-1.6,{align:'center'});
     }}
   } else {
-    doc.text(fmt$(pInv[11])+' bill',pR2-1,pYs[11]-1.4,{align:'right'});
+    doc.text(fmt$(pInv[11])+' bill',pR2-1,pB-pCh[11]-1.4,{align:'right'});
   }
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('month',(pL2+pR2)/2,pB+10.2,{align:'center'});
@@ -2837,18 +2835,18 @@ function buildPDF(mode){
   };
   if(!q.contractStyle){
     pdDraw('The gold bars','are the customers this program is modeled to win each month — '+pEp.winsYr+' this year, each worth '+fmt$(q.yearlyValue)+' in first-year value; the count varies month to month, and the first wins land share-free during the build.');
-    pdDraw('The cost line','is the actual bill: the full fee during the build, then the reduced fee plus '+n.share+'% of what those customers actually spend each month — it climbs with collections instead of spiking per win. Year one: '+fmtK(n.series.y1Created)+' in first-year value won against '+fmt$(pCumC[11])+' billed, with '+fmtK(pCumR[11])+' collected in-year.');
+    pdDraw('The dark cost bars','is the actual bill: the full fee during the build, then the reduced fee plus '+n.share+'% of what those customers actually spend each month — it climbs with collections instead of spiking per win. Year one: '+fmtK(n.series.y1Created)+' in first-year value won against '+fmt$(pCumC[11])+' billed, with '+fmtK(pCumR[11])+' collected in-year.');
   } else if(pEp.mode==='event'){
     pdDraw('The gold bars','are the contracts this program is modeled to win — '+pEp.winsYr+' new customer'+(pEp.winsYr>1?'s':'')+' this year, each worth '+fmt$(q.yearlyValue)+', placed in illustrative months (the count is modeled; the exact timing will vary).');
-    pdDraw('The cost line','is the actual bill: a no-win month bills just '+fmt$(n.series.perfPrice)+'; '+(pEp.feeWaive?'in a win month the fixed fee is WAIVED — that month bills only the '+fmt$(pEp.perWin)+' share against the contract signed':'a win month adds '+fmt$(pEp.perWin)+' of share against the contract signed')+'. Year one under this pattern totals '+fmt$(pEp.eventY1)+'.');
+    pdDraw('The dark cost bars','is the actual bill: a no-win month bills just '+fmt$(n.series.perfPrice)+'; '+(pEp.feeWaive?'in a win month the fixed fee is WAIVED — that month bills only the '+fmt$(pEp.perWin)+' share against the contract signed':'a win month adds '+fmt$(pEp.perWin)+' of share against the contract signed')+'. Year one under this pattern totals '+fmt$(pEp.eventY1)+'.');
   } else {
   pdDraw('The gold bars','are the new revenue the program wins each month.');
-  pdDraw('The cost line','is your total monthly bill — the fixed fee while we build, then the reduced fee plus the share as wins land.');
+  pdDraw('The dark cost bars','is your total monthly bill — the fixed fee while we build, then the reduced fee plus the share as wins land.');
   }
   if(false) pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   else if(q.contractStyle&&pEp.winsYr<=4) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract covers the program many times over — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
   else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
-  pdDraw('The cost lines, in exact dollars:','months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build — and any customers won during the build are share-free. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(pEp.feeWaive?' — and at this contract size the fixed fee is WAIVED in any win month: the share only':'')+', and a month with no wins bills just the fixed fee. '
+  pdDraw('The cost bars, in exact dollars:','months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build — and any customers won during the build are share-free. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(pEp.feeWaive?' — and at this contract size the fixed fee is WAIVED in any win month: the share only':'')+', and a month with no wins bills just the fixed fee. '
     +((pdCr.monthly&&!q.contractStyle)
       ? 'A ramped month lands about '+pdCr.v+' wins — some months a couple more, some fewer — and each win adds '+pdPerWin+' of share spread across its first twelve months, billed only as that customer actually spends (a typical ramped month: ~'+fmt$(n.series.ongoingCost)+'/mo all-in). '
       : 'At the modeled pace ('+pdCr.txt+' once fully ramped — year one lands fewer while we build), most months bill only the fixed '+fmt$(n.series.perfPrice)+' — the chart places each modeled win in an illustrative month (the count is modeled; the exact timing will vary), and '+(pEp.feeWaive?'in a win month the fixed fee is WAIVED — that month bills only the '+pdPerWin+' share':'a win month bills the fee plus '+pdPerWin)+'. ')
