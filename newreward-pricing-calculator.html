@@ -2595,7 +2595,7 @@ function buildPDF(mode){
     const SRC_SEM={u:'https://www.semrush.com/',d:'semrush.com'};
     const SRC_GSC={u:'https://search.google.com/search-console/about',d:'Google Search Console'};
     const SRC_TR={u:'https://trends.google.com/trends/',d:'Google Trends'};
-    const SRC_NR={u:'https://www.newreward.com/scan',d:'newreward.com/scan — New Reward visibility audit'};
+    const SRC_NR={u:'https://www.newreward.com/scan',d:'Internal visibility audit run by New Reward — newreward.com/scan'};
     const SRC_OFF={u:'https://www.newreward.com/offerings',d:'newreward.com/offerings — program services'};
     const SRC_CALC1={u:'https://pdrayday.github.io/newreward-pricing-calculator/',d:'Calculator — from the scores above'};
     const SRC_CALC2={u:'https://pdrayday.github.io/newreward-pricing-calculator/',d:'Calculator — from the inputs above'};
@@ -2611,10 +2611,11 @@ function buildPDF(mode){
     const norm = function(x){ if(x&&typeof x==='object'&&x.u) return {u:x.u,d:x.d||srcDisp(x.u),link:true};
       const t=String(x), isU=/^https?:\/\//.test(t); return {u:t,d:isU?srcDisp(t):t,link:isU}; };
     const rx = function(f,fbW,fbS){ const r=RR[f]; return [ (r&&r.w)?r.w:fbW, (r&&r.s&&r.s.length)?r.s:fbS ]; };
+    const rxW = function(f,fbW){ const r=RR[f]; return (r&&r.w)?r.w:fbW; };   // why from research, source forced by the row
     const BM='2026 vertical baseline (auto) — replaced by client-specific research on quoted links';
     const IR=[
       ['Company', s.client||'—'].concat(rx('client','The business this proposal was researched and priced for.',SRC_SITE?[SRC_SITE]:'Provided / researched')),
-      ['Website', (s.website||'—')].concat(rx('website','The site the program optimizes and measures.',SRC_SITE?[SRC_SITE]:'Provided / researched')),
+      ['Website', (s.website||'—'), rxW('website','The site the program optimizes and measures.'), SRC_SITE?[SRC_SITE]:'Provided / researched'],
       ['Search phrase', s.phrase||'—'].concat(rx('phrase','The anchor money phrase; the quote is sized on the full phrase cluster, not this one query.',SRC_SERP?[SRC_SERP]:'Provided / researched')),
       ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'].concat(rx('scope','The services in this program.',[SRC_OFF])),
       ['Industry model', selText('industry')].concat(rx('industry','The business type — sets every blank-field benchmark.',SRC_SITE?[SRC_SITE]:'Matched from their actual offering')),
@@ -2626,8 +2627,8 @@ function buildPDF(mode){
       ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' (cap '+q.capStretch+'/mo)'+(q.capApplied?'':' — demand is the limiter, not capacity')].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch.', s.capacity>0?(SRC_SITE?['Team / operations research',SRC_SITE]:'Team / operations research'):BM)),
       ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', [SRC_WS])),
       ['Average search rank', String(s.rank??'—')].concat(rx('rank','Their average Google position for money phrases today.',SRC_SERP?[SRC_SERP]:'Checked rankings')),
-      ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':'')].concat(rx('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.',[SRC_NR])),
-      ['AEO/GEO visibility score', (s.geoScore??0)+'/100'].concat(rx('geoScore','Directional estimate of current AI-answer visibility — superseded by New Reward\'s internal audit.',[SRC_NR])),
+      ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':''), rxW('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.'), [SRC_NR]],
+      ['AEO/GEO visibility score', (s.geoScore??0)+'/100', rxW('geoScore','Directional estimate of current AI-answer visibility — superseded by New Reward\'s internal audit.'), [SRC_NR]],
       ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Published 2026 first-year customer value baseline for this vertical.':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:(SRC_SITE?[SRC_SITE,SRC_PRICE]:'Their published pricing'))),
       ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'].concat(rx('years','How long a typical customer keeps paying — sets churn; LTV shown but never projected on.',['Vertical purchase-cycle norm',SRC_CHURN])),
       ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)')].concat(rx('convrate', s.convrate>0?'Visitor-to-customer rate — calculator vertical canonical unless a named fact moved it.':'Calculator vertical canonical visitor-to-customer rate.', ['Calculator canonical (reproducibility contract)',SRC_WSC])),
