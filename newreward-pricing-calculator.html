@@ -730,7 +730,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">The client's current website. Used as the subject of the visibility audit and quote.</span></button>
         </label>
         <div class="fwrap"><input type="url" id="website" placeholder="https://example.com"></div>
-        <button class="research-btn no-print" type="button" onclick="researchWithAI()" title="Generate an AI research prompt for this site and open it — paste, then click the link it returns to auto-fill every input.">&#128269; Auto-research inputs from website</button>
+        <button class="research-btn no-print" type="button" onclick="researchWithAI()" title="Generate an AI research prompt for this site and open it — paste, then click the link it returns to auto-fill every input.">Auto-research inputs from website</button>
         <div class="auto-note" id="note-research"></div>
       </div>
     </div>
@@ -793,18 +793,16 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         </label>
         <div class="fwrap"><input type="number" id="units" class="has-suffix" value="1" min="1" max="25"><span class="suffix">units</span></div>
         <div class="auto-note" id="note-units"></div>
+        
       </div>
-      <div class="fgroup">
-        <label class="flabel">Competitor strength
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how entrenched the businesses already ranking are — their domain authority and backlink strength. Stronger incumbents take more links and content to overtake, so this raises market difficulty, the cost to deliver, and the ramp time.<br><br><b>How to gauge it (no tools needed):</b> Google the client's main money phrase and look at who ranks on page one:<br>• <b>weak</b> — mostly small, dated, or very few real websites.<br>• <b>moderate</b> — a mix of established local competitors with real sites.<br>• <b>strong</b> — well-known regional players and big directories (Yelp, Angi, WebMD).<br>• <b>dominant</b> — national brands or household names own the top results (Amazon, major chains).<br>When unsure, choose moderate.</span></button>
-        </label>
-        <div class="fwrap"><select id="compstr">
-          <option value="weak">Weak — few / low-authority</option>
-          <option value="moderate" selected>Moderate — established local</option>
-          <option value="strong">Strong — entrenched leaders</option>
-          <option value="dominant">Dominant — national brands</option>
-        </select></div>
-      </div>
+      <div class="fgroup" style="align-self:end"><div id="mkts" hidden style="margin-top:8px">
+          <div style="font-size:12px;opacity:.75;margin-bottom:2px">Markets in scope — one per city; each market's demand sums into the phrase volume</div>
+          <div id="mkts-rows"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap">
+            <button type="button" id="mkts-add" style="background:none;border:1px solid rgba(150,140,120,.5);border-radius:8px;color:inherit;cursor:pointer;padding:5px 12px;font-size:12px">+ add market</button>
+            <span id="mkts-total" style="font-size:12px;opacity:.85"></span>
+          </div>
+        </div></div>
     </div>
   </div>
 
@@ -835,7 +833,17 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         </label>
         <div class="fwrap"><input type="number" id="geoScore" class="has-suffix" value="22" min="0" max="100"><span class="suffix">/100</span></div>
       </div>
-      <div class="fgroup"></div>
+      <div class="fgroup">
+        <label class="flabel">Competitor strength
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox"><b>Why it matters:</b> how entrenched the businesses already ranking are — their domain authority and backlink strength. Stronger incumbents take more links and content to overtake, so this raises market difficulty, the cost to deliver, and the ramp time.<br><br><b>How to gauge it (no tools needed):</b> Google the client's main money phrase and look at who ranks on page one:<br>• <b>weak</b> — mostly small, dated, or very few real websites.<br>• <b>moderate</b> — a mix of established local competitors with real sites.<br>• <b>strong</b> — well-known regional players and big directories (Yelp, Angi, WebMD).<br>• <b>dominant</b> — national brands or household names own the top results (Amazon, major chains).<br>When unsure, choose moderate.</span></button>
+        </label>
+        <div class="fwrap"><select id="compstr">
+          <option value="weak">Weak — few / low-authority</option>
+          <option value="moderate" selected>Moderate — established local</option>
+          <option value="strong">Strong — entrenched leaders</option>
+          <option value="dominant">Dominant — national brands</option>
+        </select></div>
+      </div>
     </div>
     <div class="hintnote"><b>These scores also grade the engagement intensity.</b> The lower the visibility, the more catch-up build work required — so each channel is auto-graded Light, Standard, or Intensive, which raises the cost to deliver and lengthens the ramp. The grade shows in the results panel.</div>
   </div>
@@ -1482,6 +1490,7 @@ function readState(){
     industry: document.getElementById('industry').value,
     footprint: document.getElementById('footprint').value,
     volume: num('volume'), volsource: document.getElementById('volsource').value,
+    markets: (document.getElementById('footprint').value==='multi'&&typeof MKTS!=='undefined'&&MKTS.length)? MKTS.filter(function(m){return (m.n&&m.n.trim())||m.v>0;}) : null,
     cpc: num('cpc'),
     seo: document.getElementById('scopeSeo').checked,
     geo: document.getElementById('scopeGeo').checked,
@@ -2169,8 +2178,10 @@ function researchWithAI(){
   const note=document.getElementById('note-research');
   if(!url){ note.innerHTML='<b style="color:var(--gold-bright)">Enter the client’s website above first.</b>'; return; }
   const base=location.origin+location.pathname;
+  const mktList=(document.getElementById('footprint').value==='multi'&&typeof mktsNames==='function')?mktsNames():[];
   const prompt='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs.\n\n'
     +'Business website: '+url+'\n\n'
+    +(mktList.length? 'CLIENT-SPECIFIED MARKETS — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY these markets, even if the business operates in more. Research EACH market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why (e.g. "Salt Lake City ~1,200 + St. George ~250"), set footprint=multi, units='+mktList.length+', volume=the SUM of the per-market clusters, size capacity to the locations serving these markets only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link.\n\n':'')
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'REPRODUCIBILITY CONTRACT — TREAT THIS LIKE A DETERMINISTIC FUNCTION. The same business researched twice minutes apart MUST produce the SAME table and the SAME link, field for field. Three rules make that true: (1) DERIVE, never impressionistically estimate — every value must come from a named source or a stated calculation, and two runs from the same facts land on the same number. (2) SNAP every numeric field to its ladder below — ladders exist so independent runs converge; never output a value between rungs. (3) STICK — if a prior estimate for this business exists anywhere (an earlier prefilled link, a prior table, a figure the user states), reuse it VERBATIM for every field, changing only a field where you can name the specific NEW fact that moved it, and say so in the Why column. Differences are expected months apart as markets move; minutes apart they are an error. ONE EXCEPTION: seoScore and geoScore are directional estimates only and exempt from this contract — New Reward runs its own internal visibility audit that supersedes them before anything is presented, so run-to-run variance on those two fields is acceptable.\n\n'
     +'Classification rules — follow exactly:\n'
@@ -2208,7 +2219,8 @@ function researchWithAI(){
     +'- industry: local | highticket | ultra | b2b | ecom\n'
     +'- footprint: local | multi | metro | national | nongeo\n'
     +'- compstr: weak | moderate | strong | dominant\n'
-    +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool';
+    +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool\n'
+    +'- markets (multi footprint only): City~VOL|City~VOL, URI-encoded — one entry per market in scope, VOL = that market\'s own cluster searches/mo. The calculator lists each market with its demand, sums them into the phrase volume, and keeps units in step.';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     /* Plain NEW CHAT, never Claude Code: the claude.ai/new universal link opens a fresh chat in
@@ -2597,8 +2609,8 @@ function buildPDF(mode){
       ['Industry model', selText('industry')].concat(rx('industry','The business type — sets every blank-field benchmark.',SRC_SITE?[SRC_SITE]:'Matched from their actual offering')),
       ['Market footprint', selText('footprint')].concat(rx('footprint','How wide the program fights — demand, competitors, and pages scale with it.',SRC_SITE?[SRC_SITE]:'Matched from their service area')),
       ['Competitor strength', selText('compstr')].concat(rx('compstr','Decided by rule from who actually holds the top results.',SRC_SERP?[SRC_SERP,SRC_KD]:['Live SERP review',SRC_KD])),
-      ['Locations / service lines', String(q.units)].concat(rx('units','Locations or distinct service lines the program must cover.',SRC_SITE?[SRC_SITE]:'Their site / listings')),
-      ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'2026 demand baseline for this vertical at this footprint.':'Researched cluster demand, band-snapped for reproducibility.', q.volIsAuto?[SRC_KWPV]:[VSRC[s.volsource]||SRC_KWPV])),
+      ['Locations / service lines', String(q.units)+((s.markets&&s.markets.length)?' — '+s.markets.map(function(m){return m.n;}).filter(Boolean).join(', '):'')].concat(rx('units','Locations or distinct service lines the program must cover.',SRC_SITE?[SRC_SITE]:'Their site / listings')),
+      ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'2026 demand baseline for this vertical at this footprint.':('Researched cluster demand, band-snapped for reproducibility.'+((s.markets&&s.markets.some(function(m){return m.v>0;}))?' Split: '+s.markets.map(function(m){return (m.n||'market')+' '+(m.v||0).toLocaleString();}).join(' · ')+'.':'')), q.volIsAuto?[SRC_KWPV]:[VSRC[s.volsource]||SRC_KWPV])),
       ['Volume source', selText('volsource')].concat(rx('volsource','Where the demand number came from; estimates are confidence-weighted in the math.',VSRC[s.volsource]?[VSRC[s.volsource]]:'—')),
       ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' (cap '+q.capStretch+'/mo)'+(q.capApplied?'':' — demand is the limiter, not capacity')].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +30% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +30% stretch.', s.capacity>0?(SRC_SITE?['Team / operations research',SRC_SITE]:'Team / operations research'):BM)),
       ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', [SRC_WS])),
@@ -3032,6 +3044,73 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
    Auto volume already scales (industry baseline × footprint reach). If a volume was entered
    MANUALLY, changing the footprint rescales it proportionally by the reach ratio — and flags
    it under the field so the rep can replace it with a researched figure. */
+/* ---- MARKETS IN SCOPE (2–5 market footprint): one chip per city, each with its own
+   researched demand. The chips ARE the scope: their count drives units, the sum of their
+   demand drives phrase volume, and their names travel into the auto-research prompt and
+   the quote link — so footprint, locations, and demand can never drift apart. ---- */
+let MKTS=[];        // [{n:'Salt Lake City', v:1200}, ...]
+let mktsSync=false; // guards against units↔chips update loops
+function mktsParse(str){ try{ return String(str).split('|').map(function(t){ const k=t.split('~'); return {n:(k[0]||'').trim(), v:Math.max(0,Math.round(parseFloat(String(k[1]||'').replace(/,/g,''))||0))}; }).filter(function(m){return m.n||m.v;}).slice(0,5); }catch(e){ return []; } }
+function mktsSerialize(){ return MKTS.map(function(m){ return String(m.n||'').replace(/[~|]/g,' ').trim()+'~'+(m.v||0); }).join('|'); }
+function mktsTotal(){ return MKTS.reduce(function(a,m){ return a+(m.v||0); },0); }
+function mktsNames(){ return MKTS.map(function(m){ return String(m.n||'').trim(); }).filter(Boolean); }
+function drawMkts(){
+  const panel=document.getElementById('mkts'), rows=document.getElementById('mkts-rows');
+  if(!panel) return;
+  const on=document.getElementById('footprint').value==='multi';
+  panel.hidden=!on;
+  if(!on) return;
+  if(MKTS.length===0){ const u=Math.min(5,Math.max(2,parseInt(document.getElementById('units').value,10)||2)); for(let i=0;i<u;i++) MKTS.push({n:'',v:0}); }
+  rows.innerHTML=MKTS.map(function(m,i){
+    return '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
+      +'<button type="button" class="mkt-x" data-i="'+i+'" title="remove this market (subtracts a location)" style="flex:0 0 28px;height:32px;background:none;border:1px solid rgba(150,140,120,.5);border-radius:8px;color:inherit;cursor:pointer;font-size:15px;line-height:1">×</button>'
+      +'<input type="text" class="mkt-n" data-i="'+i+'" value="'+String(m.n||'').replace(/"/g,'&quot;')+'" placeholder="City / market" autocomplete="off" style="flex:1;min-width:0">'
+      +'<input type="text" class="mkt-v" data-i="'+i+'" value="'+(m.v?m.v.toLocaleString('en-US'):'')+'" placeholder="searches/mo" inputmode="numeric" autocomplete="off" style="flex:0 0 118px">'
+      +'</div>';
+  }).join('');
+  mktsTotalLabel();
+}
+function mktsTotalLabel(){
+  const t=mktsTotal(), el=document.getElementById('mkts-total');
+  el.textContent = t>0 ? 'combined: '+t.toLocaleString()+' searches/mo → phrase volume'
+                       : (MKTS.length? MKTS.length+' market'+(MKTS.length>1?'s':'')+' in scope — add each market\'s demand to size the volume' : '');
+}
+function mktsApply(){   // chips → units + volume, then re-render
+  mktsSync=true;
+  const u=document.getElementById('units');
+  if(MKTS.length && String(MKTS.length)!==String(u.value)) u.value=MKTS.length;
+  const t=mktsTotal();
+  if(t>0) document.getElementById('volume').value=t.toLocaleString('en-US');
+  mktsSync=false;
+  drawMkts(); render();
+}
+(function(){
+  const rows=document.getElementById('mkts-rows');
+  rows.addEventListener('input',function(e){
+    const i=+e.target.dataset.i; if(!(i>=0)||!MKTS[i]) return;
+    if(e.target.classList.contains('mkt-n')){ MKTS[i].n=e.target.value; return; }   // names don't move math — no redraw, no focus loss
+    if(e.target.classList.contains('mkt-v')){
+      MKTS[i].v=Math.max(0,Math.round(parseFloat(String(e.target.value).replace(/,/g,''))||0));
+      mktsSync=true; const t=mktsTotal(); if(t>0) document.getElementById('volume').value=t.toLocaleString('en-US'); mktsSync=false;
+      mktsTotalLabel(); render();
+    }
+  });
+  rows.addEventListener('click',function(e){
+    const b=e.target.closest('.mkt-x'); if(!b) return;
+    MKTS.splice(+b.dataset.i,1); mktsApply();
+  });
+  document.getElementById('mkts-add').addEventListener('click',function(){
+    if(MKTS.length>=5) return; MKTS.push({n:'',v:0}); mktsApply();
+  });
+  document.getElementById('units').addEventListener('input',function(){
+    if(mktsSync||document.getElementById('footprint').value!=='multi') return;
+    const u=Math.min(5,Math.max(1,parseInt(this.value,10)||1));
+    while(MKTS.length<u) MKTS.push({n:'',v:0});
+    while(MKTS.length>u) MKTS.pop();
+    drawMkts();
+  });
+  document.getElementById('footprint').addEventListener('change',drawMkts);
+})();
 (function(){
   const fp=document.getElementById('footprint'), volEl=document.getElementById('volume');
   let prevFoot=fp.value;
@@ -3112,6 +3191,9 @@ function applyPrefill(qs){
     } else el.value = p.get(id);
   });
   researchedQuote=true;   // arrived via a researched prefill link
+  /* per-market chips travel in the link: names + each market's researched demand */
+  if(p.has('markets')&&typeof mktsParse==='function'){ MKTS=mktsParse(p.get('markets')); }
+  if(typeof drawMkts==='function') drawMkts();
   /* remember the scope the volume was researched FOR — if footprint/units change later,
      the volume note offers a re-scaled demand figure so all three stay in step */
   if(p.has('volume') && parseFloat(String(p.get('volume')).replace(/,/g,''))>0){
@@ -3295,6 +3377,7 @@ function copyQuoteLink(){
     var v=String(el.value||'').trim().replace(/,/g,''); if(v!=='') p.set(id,v); });
   p.set('seo', document.getElementById('scopeSeo').checked?'1':'0');
   p.set('geo', document.getElementById('scopeGeo').checked?'1':'0');
+  if(document.getElementById('footprint').value==='multi'&&typeof MKTS!=='undefined'&&MKTS.some(function(m){return (m.n&&m.n.trim())||m.v>0;})) p.set('markets', mktsSerialize());
   if(typeof priceDirty!=='undefined'&&priceDirty){ var pv=(document.getElementById('o-price-edit').value||'').replace(/[^0-9.]/g,''); if(pv) p.set('negPrice',pv); }
   if(typeof shareDirty!=='undefined'&&shareDirty){ var sv=document.getElementById('o-share-edit').value; if(sv) p.set('negShare',sv); }
   if(typeof rampDirty!=='undefined'&&rampDirty){ var rv=document.getElementById('o-ramp-edit').value; if(rv) p.set('negRamp',rv); }
