@@ -2276,32 +2276,26 @@ function previewPDF(){ withJsPDF(function(){ buildPDF('preview'); }); }
 let ppUrl=null;
 function openPdfPreview(url){
   ppUrl=url;
-  /* Preview in a dedicated tab rendered with pdf.js: every link annotation in the PDF
-     becomes a real <a target="_blank">, so clicking a source ALWAYS opens a new tab —
-     the preview tab and the calculator tab are never navigated away. */
-  const w=window.open('','_blank');
-  if(!w){
-    if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'')) return;   // popup blocked on mobile — nothing safe to fall back to
-    document.getElementById('pp-frame').src=url;                            // desktop fallback: in-page viewer
-    document.getElementById('pdf-preview').hidden=false;
-    document.body.style.overflow='hidden';
-    return;
-  }
-  const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-    +'<title>New Reward — Proposal Preview</title><style>'
-    +'body{margin:0;background:#2e2a25;font:13px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif}'
-    +'#bar{position:sticky;top:0;z-index:5;background:#0a0806;color:#e8dfd0;display:flex;align-items:center;gap:12px;padding:10px 16px;box-shadow:0 1px 8px rgba(0,0,0,.4)}'
-    +'#bar b{color:#d4a24a;letter-spacing:.4px}'
-    +'#bar span{opacity:.7}'
-    +'#bar a{margin-left:auto;background:#d4a24a;color:#1a1104;text-decoration:none;font-weight:700;padding:6px 14px;border-radius:6px}'
-    +'#pages{display:flex;flex-direction:column;align-items:center;gap:16px;padding:18px 8px 40px}'
+  /* Preview IN the calculator tab — the familiar overlay with its Close button — rendered
+     with pdf.js inside the iframe, so every link annotation becomes a real <a target="_blank">:
+     sources always open a NEW tab, and neither the preview nor the calculator ever navigates
+     away. (pdf.js also renders fine on mobile, where raw PDFs in iframes never did.) */
+  const html=ppDoc(url);
+  const fr=document.getElementById('pp-frame');
+  fr.srcdoc=html;
+  document.getElementById('pdf-preview').hidden=false;
+  document.body.style.overflow='hidden';
+}
+function ppDoc(url){
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<style>body{margin:0;background:#2e2a25;font:13px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif}'
+    +'#pages{display:flex;flex-direction:column;align-items:center;gap:16px;padding:14px 8px 40px}'
     +'.pg{position:relative;box-shadow:0 3px 18px rgba(0,0,0,.55);background:#fff}'
     +'.pg canvas{display:block;width:100%;height:100%}'
     +'.pg a{position:absolute;display:block}'
     +'.pg a:hover{background:rgba(212,162,74,.18);outline:1px solid rgba(212,162,74,.6)}'
     +'#msg{color:#b8ae9e;text-align:center;padding:40px 16px}'
     +'</style></head><body>'
-    +'<div id="bar"><b>NEW REWARD</b> Proposal preview <span>— links open in a new tab</span><a href="'+url+'" download="NewReward-Proposal.pdf">Download PDF</a></div>'
     +'<div id="msg">Rendering preview…</div><div id="pages"></div>'
     +'<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>'
     +'<script>\n'
@@ -2313,7 +2307,7 @@ function openPdfPreview(url){
     +'  for(let p=1;p<=pdf.numPages;p++){\n'
     +'    const page=await pdf.getPage(p);\n'
     +'    const base=page.getViewport({scale:1});\n'
-    +'    const scale=Math.min(1.6, Math.max(0.6,(Math.min(window.innerWidth-24,860))/base.width));\n'
+    +'    const scale=Math.min(1.6, Math.max(0.5,(Math.min(window.innerWidth-20,860))/base.width));\n'
     +'    const vp=page.getViewport({scale:scale});\n'
     +'    const wrap=document.createElement("div"); wrap.className="pg"; wrap.style.width=vp.width+"px"; wrap.style.height=vp.height+"px";\n'
     +'    const c=document.createElement("canvas"); c.width=Math.floor(vp.width*dpr); c.height=Math.floor(vp.height*dpr); wrap.appendChild(c); host.appendChild(wrap);\n'
@@ -2329,11 +2323,10 @@ function openPdfPreview(url){
     +'  }\n'
     +'}).catch(function(e){ const m=document.getElementById("msg"); if(m) m.textContent="Could not render the preview — use the Download PDF button instead. ("+e.message+")"; });\n'
     +'<\/script></body></html>';
-  w.document.open(); w.document.write(html); w.document.close();
 }
 function closePdfPreview(){
   document.getElementById('pdf-preview').hidden=true;
-  document.getElementById('pp-frame').src='about:blank';
+  var ppf=document.getElementById('pp-frame'); ppf.removeAttribute('srcdoc'); ppf.src='about:blank';
   if(ppUrl){ try{URL.revokeObjectURL(ppUrl);}catch(e){} ppUrl=null; }
   document.body.style.overflow='';
 }
