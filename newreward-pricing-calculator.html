@@ -1573,6 +1573,18 @@ function eventPlan(q,n){
       used[j]=1; wins[elig[j]]++;
     }
   }
+  /* CAPACITY ALIGNMENT: whole-customer rounding can bunch wins above the delivery ceiling —
+     no single month may ever exceed the stretch cap (rounded up to a whole customer, since
+     2.6/mo means months of 2 and 3, never 4). Overflow slides into later months with
+     headroom; anything still left over is dropped — so the chart, the boxes, and the
+     capacity input always tell the same story. */
+  const capM=Math.max(1,Math.ceil(q.capStretch-1e-9));
+  {
+    let carry=0;
+    for(let i=0;i<12;i++){ wins[i]+=carry; carry=0; if(f[i]<=0){ carry+=wins[i]; wins[i]=0; continue; } if(wins[i]>capM){ carry=wins[i]-capM; wins[i]=capM; } }
+    for(let i=11;i>=0&&carry>0;i--){ if(f[i]>0&&wins[i]<capM){ const add=Math.min(capM-wins[i],carry); wins[i]+=add; carry-=add; } }
+  }
+  const Wc=wins.reduce(function(a,b){return a+b;},0);
   /* WIN-MONTH FEE WAIVER (deal-size rule): when a single win's share is at least 1.5× the
      reduced fee — big-contract businesses (ultra high-ticket, large B2B deals) — the fixed
      fee is waived in any month a win lands: that month bills the share ONLY. Sparse cadence
@@ -1588,7 +1600,7 @@ function eventPlan(q,n){
       : (wm>0&&feeWaive ? wm*perWin : n.series.perfPrice+wm*perWin);      // win month at deal scale: share only
     inv.push(bill); eventY1+=bill;
   }
-  return {mode:'event', winsYr:W, wins:wins, first:first, perWin:perWin, rev:rev, inv:inv, eventY1:eventY1, feeWaive:feeWaive};
+  return {mode:'event', winsYr:Wc, wins:wins, first:first, perWin:perWin, rev:rev, inv:inv, eventY1:eventY1, feeWaive:feeWaive};
 }
 let volScaleNote='';    // note under the volume field after a footprint/units change
 function renderChart(q,n){
