@@ -736,7 +736,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="fgroup" style="margin-bottom:4px">
       <label class="flabel">Search phrase or city
-        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" in Search Demand below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here.</span></button>
+        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" in the Service Scope &amp; Market section below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here.</span></button>
       </label>
       <div class="fwrap"><input type="text" id="phrase" placeholder="best med spa near me"></div>
     </div>
@@ -804,6 +804,17 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
           </div>
         </div></div>
     </div>
+    <div class="row2">
+      <div class="fgroup">
+        <label class="flabel" id="lbl-volume">Estimated phrase volume
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Total monthly searches for the target phrase plus its close and more-popular variants, combined — not just the one phrase above. Leave 0 and the calculator estimates it from the industry and footprint.</span></button>
+          <span class="flag-pill">▲ demand low</span>
+        </label>
+        <div class="fwrap"><input type="text" inputmode="numeric" autocomplete="off" id="volume" class="has-suffix" value="0"><span class="suffix">searches/mo</span></div>
+        <div class="auto-note" id="note-vol"></div>
+      </div>
+      <div class="fgroup"></div>
+    </div>
   </div>
 
   <!-- 03 CURRENT VISIBILITY -->
@@ -852,14 +863,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   <div class="section">
     <div class="sec-head"><div class="sec-num">04</div><div class="sec-title">Search Demand &amp; Market Value</div></div>
     <div class="row2">
-      <div class="fgroup">
-        <label class="flabel" id="lbl-volume">Estimated phrase volume
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Total monthly searches for the target phrase plus its close and more-popular variants, combined — not just the one phrase above. Leave 0 and the calculator estimates it from the industry and footprint.</span></button>
-          <span class="flag-pill">▲ demand low</span>
-        </label>
-        <div class="fwrap"><input type="text" inputmode="numeric" autocomplete="off" id="volume" class="has-suffix" value="0"><span class="suffix">searches/mo</span></div>
-        <div class="auto-note" id="note-vol"></div>
-      </div>
+      <div class="fgroup"></div>
       <div class="fgroup">
         <label class="flabel" id="lbl-volsource">Volume source
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Demand measured in Keyword Planner, Semrush, or GSC counts in full; other estimates are weighted conservatively so demand is never overstated.</span></button>
