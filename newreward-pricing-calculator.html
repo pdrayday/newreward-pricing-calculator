@@ -800,6 +800,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <div class="fgroup" style="align-self:end"><div id="mkts" hidden style="margin-top:8px">
           <div id="mkts-label" style="font-size:12px;opacity:.75;margin-bottom:2px">Markets in scope — one per city; each market's demand sums into the phrase volume</div>
           <div id="mkts-rows"></div>
+          <datalist id="mkts-lib"></datalist>
           <div style="display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap">
             <button type="button" id="mkts-add" style="background:none;border:1px solid rgba(150,140,120,.5);border-radius:8px;color:inherit;cursor:pointer;padding:5px 12px;font-size:12px">+ add market</button>
             <span id="mkts-total" style="font-size:12px;opacity:.85"></span>
@@ -1232,7 +1233,19 @@ function computeQuote(s){
   const comp = COMP[s.compstr] ?? COMP.moderate;
   const compN = comp.w;                                   // 0..1 competitor entrenchment / DA gap
   const units = clamp(Math.round(s.units??1), 1, 25);     // # locations or service lines
-  const unitsCost = 1 + 0.35*(Math.pow(units,0.70) - 1);  // more surface area, with economies of scale
+  /* demand-weighted delivery effort: when each market's own demand is known (the markets
+     panel / &markets= links), a market's slice of the work is part fixed presence (listings,
+     pages, GBP, reviews) and part proportional to how much market there is to win — so
+     dropping Provo (1,250/mo) moves the price more than dropping Park City (250/mo).
+     Without per-market data every unit weighs the same, exactly as before. */
+  let effUnits = units;
+  if(s.markets && s.markets.length && s.markets.some(function(m){return m.v>0;})){
+    const ref=Math.max(1, ind.vol);
+    effUnits=0;
+    s.markets.forEach(function(m){ effUnits += clamp(0.6 + 0.4*(m.v||0)/ref, 0.6, 2.0); });
+    effUnits=clamp(effUnits, 1, units*2);
+  }
+  const unitsCost = 1 + 0.35*(Math.pow(effUnits,0.70) - 1);  // more surface area, with economies of scale
 
   /* ---- effective demand volume ---- */
   const volIsAuto = !(s.volume>0);
@@ -1363,7 +1376,13 @@ function computeQuote(s){
     // band floor reads "below market". Cost drivers (units, intensity, competitors, rank, CPC)
     // still lift the price above the floor when the work genuinely costs more. Once the share
     // kicks in, the fixed drops 20–30% (tiered — see PERF_DISCOUNT in buildSeries).
-    const [mLo,mHi] = marketBand(s,nScopes);
+    let [mLo,mHi] = marketBand(s,nScopes);
+    /* per-market demand shifts the whole anchor band a bounded ±5%: five BIG markets are a
+       larger program than five tiny ones, and dropping Salt Lake City re-prices more than
+       dropping Park City. No per-market data -> effUnits === units -> exactly the published
+       band, so every quote without a markets list is untouched. */
+    const scopeAdj = 1 + 0.10*clamp((effUnits-units)/2, -0.5, 0.5);
+    mLo*=scopeAdj; mHi*=scopeAdj;
     /* the band ceiling is where TYPICAL programs land. When the cost drivers (dominant
        competitors, many locations, deep catch-up work) genuinely exceed it, the price keeps
        moving — up to +25% above the ceiling, scaled smoothly by the overrun — instead of
@@ -1378,7 +1397,7 @@ function computeQuote(s){
          path and the floor-premium path never cross (price stays monotone in the drivers).
          Without this, weak vs dominant and 1 vs 5 locations quote identically on
          national/non-geo programs. */
-      const drv = 0.12*compN + 0.08*clamp(((s.units||1)-1)/4, 0, 1);
+      const drv = 0.12*compN + 0.08*clamp((effUnits-1)/4, 0, 1);   // demand-weighted markets pull the floor with them
       p0 = Math.max(p0, mLo*(1 + drv));
     }
     price = Math.max(1500, Math.round(p0/50)*50);   // hard floor: $1,500/mo for every combination
@@ -2240,7 +2259,7 @@ function researchWithAI(){
     +'- footprint: local | multi | metro | national | nongeo\n'
     +'- compstr: weak | moderate | strong | dominant\n'
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool\n'
-    +'- markets (REQUIRED for local, multi, and metro footprints; for national ONLY when the business has 10 or fewer locations): City~VOL|City~VOL, URI-encoded — for local give the ONE city and its cluster volume, for metro the ONE metro/region, for multi/national one entry per market in scope; VOL = that market\'s own cluster searches/mo. The calculator pre-fills each named market with its demand under Locations and sums them into the phrase volume, so never omit it where required. For national with MORE than 10 locations, and ALWAYS for nongeo, OMIT &markets= — but still derive the volume per-market and show that logic in the Why (e.g. "~600/mo average metro cluster x 15 branches").';
+    +'- markets (REQUIRED for local, multi, and metro footprints; for national ONLY when the business has 10 or fewer locations): City~VOL|City~VOL, URI-encoded — for local give the ONE city and its cluster volume, for metro the ONE metro/region, for multi/national one entry per market in scope; VOL = that market\'s own cluster searches/mo. The calculator pre-fills each named market with its demand under Locations and sums them into the phrase volume, so never omit it where required. The per-market volumes also weight the delivery cost — a large market carries more of the fee than a small one, so removing markets re-prices honestly. For national with MORE than 10 locations, and ALWAYS for nongeo, OMIT &markets= — but still derive the volume per-market and show that logic in the Why (e.g. "~600/mo average metro cluster x 15 branches").';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     /* Plain NEW CHAT, never Claude Code: the claude.ai/new universal link opens a fresh chat in
@@ -3070,12 +3089,17 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
    the names travel into the auto-research prompt and the quote link — so footprint,
    locations, and demand can never drift apart. ---- */
 let MKTS=[];        // [{n:'Salt Lake City', v:1200}, ...]
+let MKTS_LIB={};    // market memory: every researched city -> its demand, so a removed market re-adds with one pick (no re-research)
 let mktsSync=false; // guards against units<->chips update loops
 function mktsMax(){ const f=document.getElementById('footprint').value; if(f==='multi') return 5; if(f==='local'||f==='metro') return 1; if(f==='national'){ const u=parseInt(document.getElementById('units').value,10)||1; return u<=10?10:0; } return 0; }
 function mktsParse(str){ try{ return String(str).split('|').map(function(t){ const k=t.split('~'); return {n:(k[0]||'').trim(), v:Math.max(0,Math.round(parseFloat(String(k[1]||'').replace(/,/g,''))||0))}; }).filter(function(m){return m.n||m.v;}).slice(0,5); }catch(e){ return []; } }
 function mktsSerialize(){ return MKTS.map(function(m){ return String(m.n||'').replace(/[~|]/g,' ').trim()+'~'+(m.v||0); }).join('|'); }
 function mktsTotal(){ return MKTS.reduce(function(a,m){ return a+(m.v||0); },0); }
 function mktsNames(){ return MKTS.map(function(m){ return String(m.n||'').trim(); }).filter(Boolean); }
+function renderMktsLib(){
+  const dl=document.getElementById('mkts-lib'); if(!dl) return;
+  dl.innerHTML=Object.keys(MKTS_LIB).map(function(k){return '<option value="'+k.replace(/"/g,'&quot;')+'"></option>';}).join('');
+}
 function drawMkts(){
   const panel=document.getElementById('mkts'), rows=document.getElementById('mkts-rows');
   if(!panel) return;
@@ -3092,7 +3116,7 @@ function drawMkts(){
   rows.innerHTML=MKTS.map(function(m,i){
     return '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
       +(mx>1?'<button type="button" class="mkt-x" data-i="'+i+'" title="remove this market (subtracts a location)" style="flex:0 0 28px;height:32px;background:none;border:1px solid rgba(150,140,120,.5);border-radius:8px;color:inherit;cursor:pointer;font-size:15px;line-height:1">×</button>':'')
-      +'<input type="text" class="mkt-n" data-i="'+i+'" value="'+String(m.n||'').replace(/"/g,'&quot;')+'" placeholder="'+(f==='metro'?'Metro / region':'City / market')+'" autocomplete="off" style="flex:1;min-width:0">'
+      +'<input type="text" class="mkt-n" list="mkts-lib" data-i="'+i+'" value="'+String(m.n||'').replace(/"/g,'&quot;')+'" placeholder="'+(f==='metro'?'Metro / region':'City / market')+'" autocomplete="off" style="flex:1;min-width:0">'
       +'<input type="text" class="mkt-v" data-i="'+i+'" value="'+(m.v?m.v.toLocaleString('en-US'):'')+'" placeholder="searches/mo" inputmode="numeric" autocomplete="off" style="flex:0 0 118px">'
       +'</div>';
   }).join('');
@@ -3120,9 +3144,22 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
   const rows=document.getElementById('mkts-rows');
   rows.addEventListener('input',function(e){
     const i=+e.target.dataset.i; if(!(i>=0)||!MKTS[i]) return;
-    if(e.target.classList.contains('mkt-n')){ MKTS[i].n=e.target.value; return; }   // names don't move math — no redraw, no focus loss
+    if(e.target.classList.contains('mkt-n')){
+      MKTS[i].n=e.target.value;
+      /* market memory: picking or typing a previously researched city auto-fills its demand */
+      const t=e.target.value.trim().toLowerCase();
+      const hit=Object.keys(MKTS_LIB).find(function(k){return k.toLowerCase()===t;});
+      if(hit && !(MKTS[i].v>0)){
+        MKTS[i].v=MKTS_LIB[hit];
+        const vEl=rows.querySelectorAll('.mkt-v')[i]; if(vEl) vEl.value=MKTS_LIB[hit].toLocaleString('en-US');
+        mktsSync=true; const tt=mktsTotal(); if(tt>0) document.getElementById('volume').value=tt.toLocaleString('en-US'); mktsSync=false;
+        mktsTotalLabel(); render();
+      }
+      return;   // names alone don't move math — no redraw, no focus loss
+    }
     if(e.target.classList.contains('mkt-v')){
       MKTS[i].v=Math.max(0,Math.round(parseFloat(String(e.target.value).replace(/,/g,''))||0));
+      if(MKTS[i].n&&MKTS[i].n.trim()&&MKTS[i].v>0){ MKTS_LIB[MKTS[i].n.trim()]=MKTS[i].v; renderMktsLib(); }
       mktsSync=true; const t=mktsTotal(); if(t>0) document.getElementById('volume').value=t.toLocaleString('en-US'); mktsSync=false;
       mktsTotalLabel(); render();
     }
@@ -3230,7 +3267,11 @@ function applyPrefill(qs){
   });
   researchedQuote=true;   // arrived via a researched prefill link
   /* per-market chips travel in the link: names + each market's researched demand */
-  if(p.has('markets')&&typeof mktsParse==='function'){ MKTS=mktsParse(p.get('markets')); }
+  if(p.has('markets')&&typeof mktsParse==='function'){
+    MKTS=mktsParse(p.get('markets'));
+    MKTS.forEach(function(m){ if(m.n&&m.v>0) MKTS_LIB[m.n]=m.v; });
+    if(typeof renderMktsLib==='function') renderMktsLib();
+  }
   if(typeof drawMkts==='function') drawMkts();
   /* remember the scope the volume was researched FOR — if footprint/units change later,
      the volume note offers a re-scaled demand figure so all three stay in step */
