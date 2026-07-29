@@ -1422,7 +1422,7 @@ function computeQuote(s){
   share += shAcq>=20?1 : shAcq>=12?0.5 : shAcq>=8?0 : -0.5;
   const shComm = s.commission??8;                                         // comp they already pay stacks with ours
   share += shComm>=12?-1 : shComm>=8?-0.5 : 0;
-  share += 1;                                                             // new-net-revenue basis (growth above baseline) — scaled so we scale when they scale
+  share += s.industry==='ultra' ? 1 : 1.5;                                // new-net-revenue basis — scaled so we scale when they scale (ultra keeps the lighter bump: huge tickets)
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;                  // very large deals take a slightly lower %
   share = clamp(Math.round(share*2)/2, s.industry==='ultra' ? 1 : 2, 10);
 
@@ -2222,7 +2222,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-10';
+const BUILD='NR-20260728-11';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
