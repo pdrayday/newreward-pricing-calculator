@@ -1758,6 +1758,8 @@ function renderEventChart(q,n,ep,el){
       const bt=Y1-Math.max(ep.rev[i]/maxV*(Y1-Y0),2);
       g+='<text x="'+cx.toFixed(1)+'" y="'+(bt-3).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(ep.rev[i])+'</text>';
     }}
+  }
+  if(q.contractStyle){
     /* three representative bills only — a build month, a win month, a no-win share month;
        labelling every white bar clumps at this size (the PDF labels them all) */
     const lbl=[];
@@ -1768,7 +1770,7 @@ function renderEventChart(q,n,ep,el){
       const cx=X0+i*gw+gw/2;
       g+='<text x="'+(cx+6.5).toFixed(1)+'" y="'+(Y1-costH[i]-2.5).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+p[1]+'</text>';
     });
-  } else if(!q.contractStyle){
+  } else {
     const rm2=n.rampMonth;
     if(rm2>=1&&rm2<=12){
       g+='<text x="'+(X0+(rm2-1)*gw+gw/2).toFixed(1)+'" y="'+(Y1-costH[rm2-1]-4).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[rm2-1])+'/mo</text>';
@@ -2220,7 +2222,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-9';
+const BUILD='NR-20260728-10';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
