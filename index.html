@@ -2211,7 +2211,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-2';
+const BUILD='NR-20260728-3';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2422,7 +2422,7 @@ document.addEventListener('mousemove',function(e){
       if(chartSeries.contract){
         body=wins>0
           ? '<b>'+wins+' new customer'+(wins>1?'s':'')+'</b> &mdash; <b>'+fmt$(chartSeries.rev[m-1])+'</b> signed'
-            +'<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> '+(chartSeries.feeWaive?'(share only — fee waived)':'(fee + '+fmt$(wins*chartSeries.perWin)+' share)')
+            +'<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> '+(m<chartSeries.ramp?'(fee only — build months; these wins are share-free)':(chartSeries.feeWaive?'(share only — fee waived)':'(fee + '+fmt$(wins*chartSeries.perWin)+' share)'))
           : 'No win modeled this month<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> (fee only)';
       } else {
         body=(wins>0
