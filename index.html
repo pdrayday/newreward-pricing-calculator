@@ -2222,7 +2222,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-11';
+const BUILD='NR-20260728-12';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2862,6 +2862,16 @@ function buildPDF(mode){
     for(let i2=0;i2<12;i2++){
       doc.text(fmtK(pInv[i2])+(i2===11?' bill':''),pL2+i2*pgw+pgw/2+3.5,pB-pCh[i2]-1.0,{align:'center'});
     }
+  }
+  /* rev-share start marker — the month the reduced fee + share begins */
+  if(n.rampMonth>=1&&n.rampMonth<=12){
+    const rsX=pL2+(n.rampMonth-1)*pgw;
+    doc.setDrawColor(146,112,36); doc.setLineWidth(0.3); doc.setLineDashPattern([1.4,1.1],0);
+    doc.line(rsX,pT-1,rsX,pB);
+    doc.setLineDashPattern([],0);
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.2); doc.setTextColor(146,112,36);
+    doc.text('REV SHARE STARTS — MO '+n.rampMonth,rsX+1.2,pT+0.4);
+    doc.setFont('helvetica','normal');
   }
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
   doc.text('month',(pL2+pR2)/2,pB+10.2,{align:'center'});
