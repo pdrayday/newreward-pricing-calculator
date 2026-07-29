@@ -2222,7 +2222,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-14';
+const BUILD='NR-20260728-15';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2241,10 +2241,10 @@ function researchWithAI(){
   const note=document.getElementById('note-research');
   if(!url){ note.innerHTML='<b style="color:var(--gold-bright)">Enter the client’s website above first.</b>'; return; }
   const base=location.origin+location.pathname;
-  const mktList=(typeof mktsMax==='function'&&mktsMax()>0)?mktsNames():[];
+  const mktList=(typeof mktsMax==='function'&&mktsMax()>0&&typeof mktsUserEdited!=='undefined'&&mktsUserEdited)?mktsNames():[];   // only a scope the rep set BY HAND this session is client-fixed
   const ps=readState();
   const prior=(ps.volume>0||ps.yearly>0||ps.aov>0||(typeof researchedQuote!=='undefined'&&researchedQuote))?
-    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. The REPRODUCIBILITY CONTRACT requires you to REUSE THEM VERBATIM, changing a field ONLY where you can name the specific NEW fact that moved it (and say so in that field\'s Why). seoScore/geoScore are exempt. PRECEDENCE: the borderless rule outranks this prior — if this business is B2B/SaaS (ALWAYS borderless, no exceptions) or otherwise sells borderless (e-com/DTC), discard any geo footprint/units/markets shown here and classify footprint=nongeo units=1.\n'
+    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. The REPRODUCIBILITY CONTRACT requires you to REUSE THEM VERBATIM, changing a field ONLY where you can name the specific NEW fact that moved it (and say so in that field\'s Why). seoScore/geoScore are exempt. SCOPE IS ALSO EXEMPT: the prior\'s footprint/units/markets/volume describe the PREVIOUS QUOTE\'S scope, which may have been deliberately narrowed for that pitch (a start-small quote). Unless THIS prompt contains a CLIENT-SPECIFIED MARKETS block, scope the FULL company fresh — footprint, units, markets, and volume re-derived from everything the business actually operates, as if pitching the whole company for the first time. When a market from the prior reappears in your fresh scope, REUSE its per-market demand VERBATIM, and reuse every economics fact (customer value, retention, conversion, margin, CPC, acquisition, commission; capacity re-sized to the full scope) verbatim unless a named NEW fact moved it. PRECEDENCE: the borderless rule outranks this prior — if this business is B2B/SaaS (ALWAYS borderless, no exceptions) or otherwise sells borderless (e-com/DTC), discard any geo footprint/units/markets shown here and classify footprint=nongeo units=1.\n'
     +'industry='+ps.industry+' footprint='+ps.footprint+' units='+ps.units
     +(ps.volume>0?' volume='+ps.volume:'')
     +((typeof mktsSerialize==='function'&&mktsMax()>0&&MKTS.some(function(m){return (m.n&&m.n.trim())||m.v>0;}))?' markets='+mktsSerialize():'')
@@ -2267,7 +2267,7 @@ function researchWithAI(){
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
     +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets), set units to the NUMBER OF MARKETS, and size the volume across exactly those markets; units>1 with footprint=local is only correct when every location shares ONE market.\n'
-    +'- STARTING SCOPE: if the client has stated they want to BEGIN with fewer markets than they operate (e.g. 2 of their 5 cities), quote the STARTING scope — footprint, units, capacity, AND volume all sized to those starting markets only — and note the full-footprint expansion upside in the Why column. Footprint, units, and volume must always describe the SAME scope; never mix a full-footprint volume with a reduced-market quote.\n'
+    +'- STARTING SCOPE: if the client has stated they want to BEGIN with fewer markets than they operate (e.g. 2 of their 5 cities), quote the STARTING scope — footprint, units, capacity, AND volume all sized to those starting markets only — and note the full-footprint expansion upside in the Why column. Footprint, units, and volume must always describe the SAME scope; never mix a full-footprint volume with a reduced-market quote. This applies ONLY when the starting scope is stated in THIS prompt (the CLIENT-SPECIFIED MARKETS block); NEVER infer a reduced scope from a PRIOR ESTIMATE or an earlier quote — absent that block, always quote the FULL footprint.\n'
     +'- volume: the COMBINED phrase-cluster demand across ALL locations/service lines counted in units — a 2-location business serving two cities needs both cities\' demand added together.\n'
     +'- convrate: for everyday call-heavy local services 2.5-4 is realistic; high-ticket quote-driven services run ~1-2; reserve sub-1 rates for B2B and ultra-high-ticket contracts.\n'
     +'- compstr: decide by rule, not vibe. dominant = household-name national brands or very high-authority sites hold most of the top results. strong = established multi-year players with real authority hold them. moderate = a mixed field with visible gaps (the default). weak = thin, outdated, or few competitors. If torn between two labels, take the STRONGER one and name the competitor that justifies it.\n'
@@ -3225,6 +3225,9 @@ function usMktEst(name){
   return Math.max(step,Math.round(v/step)*step);
 }
 let MKTS=[];        // [{n:'Salt Lake City', v:1200}, ...]
+let mktsUserEdited=false;  /* true only when the REP edits chips this session — a deliberate scope
+                              instruction. Chips loaded from a link are history, not intent: fresh
+                              research always scopes the FULL company. */
 let MKTS_LIB={};    // market memory: every researched city -> its demand, so a removed market re-adds with one pick (no re-research)
 let mktsSync=false; // guards against units<->chips update loops
 function mktsMax(){ const f=document.getElementById('footprint').value; if(f==='multi') return 5; if(f==='local'||f==='metro') return 1; if(f==='national'){ const u=parseInt(document.getElementById('units').value,10)||1; return u<=10?10:0; } return 0; }
@@ -3284,6 +3287,7 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
   const rows=document.getElementById('mkts-rows');
   rows.addEventListener('input',function(e){
     const i=+e.target.dataset.i; if(!(i>=0)||!MKTS[i]) return;
+    mktsUserEdited=true;
     if(e.target.classList.contains('mkt-n')){
       MKTS[i].n=e.target.value;
       /* market memory: picking or typing a previously researched city auto-fills its demand */
@@ -3307,10 +3311,11 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
   });
   rows.addEventListener('click',function(e){
     const b=e.target.closest('.mkt-x'); if(!b) return;
+    mktsUserEdited=true;
     MKTS.splice(+b.dataset.i,1); mktsApply();
   });
   document.getElementById('mkts-add').addEventListener('click',function(){
-    if(MKTS.length>=mktsMax()) return; MKTS.push({n:'',v:0}); mktsApply();
+    if(MKTS.length>=mktsMax()) return; mktsUserEdited=true; MKTS.push({n:'',v:0}); mktsApply();
   });
   document.getElementById('units').addEventListener('input',function(){
     if(mktsSync) return;
@@ -3432,6 +3437,7 @@ function applyPrefill(qs){
   /* per-market chips travel in the link: names + each market's researched demand */
   if(p.has('markets')&&typeof mktsParse==='function'){
     MKTS=mktsParse(p.get('markets'));
+    if(typeof mktsUserEdited!=='undefined') mktsUserEdited=false;   // loaded scope is prior data, not a scope instruction
     MKTS.forEach(function(m){ if(m.n&&m.v>0) MKTS_LIB[m.n]=m.v; });
     if(typeof renderMktsLib==='function') renderMktsLib();
   }
