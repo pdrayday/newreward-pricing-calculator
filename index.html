@@ -3184,6 +3184,7 @@ function drawMkts(){
   if(!mx) return;
   if(MKTS.length===0){ const u=parseInt(document.getElementById('units').value,10)||2; const seed=f==='multi'?Math.min(5,Math.max(2,u)):(f==='national'?Math.min(10,Math.max(2,u)):1); for(let i=0;i<seed;i++) MKTS.push({n:'',v:0}); }
   if(MKTS.length>mx) MKTS.length=mx;
+  if(f==='multi') while(MKTS.length<2) MKTS.push({n:'',v:0});   // a 2-5 market footprint always shows at least two rows
   document.getElementById('mkts-label').textContent = f==='multi'
     ? 'Markets in scope — one per city; each market\'s demand sums into the phrase volume'
     : (f==='metro' ? 'Region in scope — name the metro/region; its researched demand sizes the phrase volume'
