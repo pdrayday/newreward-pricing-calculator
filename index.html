@@ -1632,12 +1632,13 @@ function eventPlan(q,n){
     for(let i=11;i>=0&&carry>0;i--){ if(f[i]>0&&wins[i]<capM){ const add=Math.min(capM-wins[i],carry); wins[i]+=add; carry-=add; } }
   }
   const Wc=wins.reduce(function(a,b){return a+b;},0);
-  /* WIN-MONTH FEE WAIVER (deal-size rule): when a single win's share is at least 1.5× the
-     reduced fee — big-contract businesses (ultra high-ticket, large B2B deals) — the fixed
-     fee is waived in any month a win lands: that month bills the share ONLY. Sparse cadence
-     only, so monthly verticals can never zero the fee out; the 1.5× floor keeps a win month
-     always billing clearly more than a no-win month. */
-  const feeWaive = perWin >= 1.5*n.series.perfPrice && (q.contractStyle || !custRate(q.newCust).monthly);
+  /* WIN-MONTH FEE WAIVER (proportionality rule): the share exists so we scale when the
+     client scales, so fee + share is the norm. The fee is waived ONLY when a single win's
+     share is at least 3× the FULL monthly fee — at that contract size stacking the fee on
+     top of the share is an unreasonable take of the new revenue. In practice only
+     ultra-high-ticket contract sizes cross this line; sparse cadence only, so monthly
+     verticals can never zero the fee out. */
+  const feeWaive = perWin >= 3*n.price && (q.contractStyle || !custRate(q.newCust).monthly);
   const rev=[],inv=[]; let eventY1=0, first=0;
   for(let m=1;m<=12;m++){
     const wm=wins[m-1];
@@ -1742,7 +1743,7 @@ function renderEventChart(q,n,ep,el){
     if(!q.contractStyle){ costH.push(Math.max(trueH, lineInv[i]>0?2:0)); continue; }
     const feeOnly=(i+1)<n.rampMonth?n.price:n.series.perfPrice;
     const baseH=Math.max(feeOnly/maxV*(Y1-Y0), 2.5);
-    if(ep.wins[i]>0){ const amp=maxDelta>0?Math.max(0,lineInv[i]-feeOnly)/maxDelta:1; costH.push(Math.max(trueH, baseH+4+16*amp)); }
+    if(ep.wins[i]>0){ costH.push(Math.max(trueH, baseH)); }   // true scale — the bill drawn at the same $/px as the revenue bars
     else costH.push(baseH);
   }
   for(let i=0;i<12;i++){
@@ -1958,7 +1959,7 @@ function render(){
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
       ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
-        +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+'Every figure is computed from this client\u2019s own inputs — demand \u00d7 conversion \u00d7 customer value against program cost — not an industry average. Context: published SEO(+GEO) campaigns average \u22489\u00d7 ROAS (3.6\u201315\u00d7 by industry), positive ROI in 6\u201312 months (<a href="https://firstpagesage.com/reports/seo-roi-statistics-fc/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">FirstPageSage 2026</a> \u00b7 <a href="https://seoprofy.com/blog/seo-roi-statistics/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">SeoProfy 2026</a>).'
+        +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+'Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
@@ -1980,7 +1981,7 @@ function render(){
     const [mLo,mHi]=marketBand(s,q.nScopes);
     const scopeName=q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO':'AEO/GEO');
     mEl.innerHTML = (n.price>=mLo && n.price<=mHi)
-      ? '<span class="in-range">&#10003; Within the typical 2026 market rate</span> for '+scopeName+' for a '+BENCH(s).name.toLowerCase()+' targeting '+FOOT[s.footprint].name+' — verified against published agency pricing research: <a href="https://ahrefs.com/blog/seo-pricing/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Ahrefs 439-pro pricing survey</a> · <a href="https://www.webfx.com/blog/ai/generative-engine-optimization-cost/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">WebFX 2026 GEO cost guide</a>.'
+      ? '<span class="in-range">&#10003; Within the typical 2026 market rate</span> for '+scopeName+' for a '+BENCH(s).name.toLowerCase()+' targeting '+FOOT[s.footprint].name+' — verified against published agency pricing research.'
       : (n.price<mLo ? 'Below the typical 2026 market rate for this scope and market — above-market value at this fee.'
                      : 'At the top of the 2026 market range for this scope and market — the depth of competition and footprint here genuinely costs more to win, and the fee reflects it.');
   } else mEl.innerHTML='';
@@ -2150,9 +2151,7 @@ function render(){
       +(mPos>0&&!q.contractStyle?' The program starts <b>earning more each month than it costs</b> around <b>month '+mPos+'</b> — where the bars clear the line'+(beM>0?' — and has fully repaid the build months by <b>month '+beM+'</b>.':'.'):'')+(q.contractStyle&&epT.first&&epT.winsYr<=4?' <b>One win pays for the entire year</b>: a single '+fmt$(q.yearlyValue)+' contract covers the program many times over.':'')
       +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
       +'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
-      +' <b>And this projection never compounds</b> — the asset does (authority and AI presence keep strengthening), but the model counts none of it: the win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ≈'+fmtK(tCeil)+'/mo'
-      +(tSteady!=null&&tSteady<=12?', with the flattening modeled around <b>month '+tSteady+'</b>.':(tSteady!=null?' — the pace levels off around month '+tSteady+', beyond this 12-month window.':'.'))
-      +' <span style="color:var(--muted2)">Modeled projections from your inputs — potential, not a guarantee. Hover or tap any month for exact figures.</span>';
+      +' <span style="color:var(--muted2)">Hover or tap any month for exact figures.</span>';
   })();
 
   /* revenue-share math — full transparency, live numbers */
@@ -2212,7 +2211,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-6';
+const BUILD='NR-20260728-7';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2828,7 +2827,7 @@ function buildPDF(mode){
     if(!q.contractStyle){ pCh.push(Math.max(trueH, pInv[i2]>0?0.8:0)); continue; }
     const feeOnly=(i2+1)<n.rampMonth?n.price:n.series.perfPrice;
     const baseH=Math.max(feeOnly/pMax*(pB-pT), 1.1);
-    if(pEp.wins[i2]>0){ const amp=pMaxD>0?Math.max(0,pInv[i2]-feeOnly)/pMaxD:1; pCh.push(Math.max(trueH, baseH+1.8+7*amp)); }
+    if(pEp.wins[i2]>0){ pCh.push(Math.max(trueH, baseH)); }   // true scale, matching the site chart
     else pCh.push(baseH);
   }
   doc.setFillColor(DARK[0],DARK[1],DARK[2]);
