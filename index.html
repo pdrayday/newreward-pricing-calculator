@@ -798,7 +798,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         
       </div>
       <div class="fgroup" style="align-self:end"><div id="mkts" hidden style="margin-top:8px">
-          <div id="mkts-label" style="font-size:12px;opacity:.75;margin-bottom:2px">Markets in scope — one per city; each market's demand sums into the phrase volume</div>
+          <div id="mkts-label" style="font-size:12px;opacity:.75;margin-bottom:2px">Markets in scope — one per city; each market's demand sums into the phrase volume. Type any major U.S. city and a population-scaled demand estimate fills in — researched figures always override it.</div>
           <div id="mkts-rows"></div>
           <datalist id="mkts-lib"></datalist>
           <div style="display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap">
@@ -3079,6 +3079,80 @@ document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
    per city, where chip count drives units. Demand always sums into the phrase volume, and
    the names travel into the auto-research prompt and the quote link — so footprint,
    locations, and demand can never drift apart. ---- */
+/* ---- BUILT-IN U.S. MARKET LIBRARY ----
+   Every significant U.S. market (all 50 states + DC, incl. Alaska & Hawaii), population in
+   THOUSANDS (metro for anchor cities, city-proper for common suburbs). Powers instant
+   per-market demand estimates when a new city is typed into the markets panel: estimate =
+   the vertical's one-market demand baseline scaled by market size ((pop/400k)^0.85, capped),
+   snapped to the volume ladder. These are clearly ESTIMATES — any researched figure (from an
+   auto-research link or typed by hand) always overrides them. */
+const US_MKTS={
+'Birmingham, AL':1115,'Huntsville, AL':500,'Mobile, AL':430,'Montgomery, AL':385,'Tuscaloosa, AL':270,
+'Anchorage, AK':400,'Fairbanks, AK':95,'Juneau, AK':32,
+'Phoenix, AZ':4950,'Tucson, AZ':1050,'Mesa, AZ':510,'Scottsdale, AZ':240,'Chandler, AZ':280,'Gilbert, AZ':275,'Glendale, AZ':250,'Tempe, AZ':190,'Flagstaff, AZ':145,'Yuma, AZ':210,'Prescott, AZ':240,
+'Little Rock, AR':750,'Fayetteville, AR':560,'Fort Smith, AR':250,'Jonesboro, AR':135,
+'Los Angeles, CA':12870,'San Francisco, CA':4600,'San Diego, CA':3280,'Sacramento, CA':2400,'San Jose, CA':1950,'Fresno, CA':1010,'Bakersfield, CA':910,'Oxnard, CA':830,'Stockton, CA':790,'Modesto, CA':550,'Santa Rosa, CA':480,'Long Beach, CA':465,'Santa Barbara, CA':445,'Oakland, CA':440,'Salinas, CA':435,'Palm Springs, CA':465,'Anaheim, CA':345,'Riverside, CA':315,'Santa Ana, CA':310,'Irvine, CA':310,'Chula Vista, CA':280,'San Luis Obispo, CA':280,'Fremont, CA':230,'San Bernardino, CA':220,'Chico, CA':210,'Redding, CA':180,
+'Denver, CO':2990,'Colorado Springs, CO':760,'Aurora, CO':395,'Fort Collins, CO':370,'Boulder, CO':330,'Pueblo, CO':170,'Grand Junction, CO':160,
+'Hartford, CT':1210,'Bridgeport, CT':960,'New Haven, CT':860,'Stamford, CT':135,
+'Wilmington, DE':590,'Dover, DE':185,
+'Washington, DC':6300,
+'Miami, FL':6140,'Tampa, FL':3220,'Orlando, FL':2690,'Fort Lauderdale, FL':1950,'Jacksonville, FL':1600,'West Palm Beach, FL':1500,'Sarasota, FL':840,'Fort Myers, FL':790,'Lakeland, FL':725,'Daytona Beach, FL':670,'Pensacola, FL':510,'Port St. Lucie, FL':490,'Tallahassee, FL':390,'Naples, FL':385,'Ocala, FL':385,'Gainesville, FL':340,'St. Petersburg, FL':265,'Clearwater, FL':115,
+'Atlanta, GA':6100,'Augusta, GA':615,'Savannah, GA':405,'Columbus, GA':330,'Macon, GA':235,'Athens, GA':215,
+'Honolulu, HI':1000,'Kahului, HI':165,'Hilo, HI':45,'Kailua-Kona, HI':25,
+'Boise, ID':780,"Coeur d'Alene, ID":175,'Idaho Falls, ID':160,'Twin Falls, ID':115,'Pocatello, ID':95,
+'Chicago, IL':9460,'Peoria, IL':400,'Rockford, IL':335,'Champaign, IL':225,'Springfield, IL':205,'Bloomington, IL':170,
+'Indianapolis, IN':2110,'Fort Wayne, IN':425,'South Bend, IN':325,'Evansville, IN':315,'Lafayette, IN':225,
+'Des Moines, IA':715,'Davenport, IA':380,'Cedar Rapids, IA':275,'Iowa City, IA':175,'Sioux City, IA':145,
+'Wichita, KS':645,'Topeka, KS':235,'Overland Park, KS':200,'Lawrence, KS':120,
+'Louisville, KY':1290,'Lexington, KY':520,'Bowling Green, KY':180,'Owensboro, KY':120,
+'New Orleans, LA':1270,'Baton Rouge, LA':870,'Lafayette, LA':480,'Shreveport, LA':395,'Lake Charles, LA':210,
+'Portland, ME':555,'Bangor, ME':155,'Augusta, ME':125,
+'Baltimore, MD':2840,'Salisbury, MD':415,'Hagerstown, MD':295,'Frederick, MD':280,
+'Boston, MA':4900,'Worcester, MA':980,'Springfield, MA':700,
+'Detroit, MI':4390,'Grand Rapids, MI':1090,'Lansing, MI':540,'Flint, MI':400,'Ann Arbor, MI':375,'Kalamazoo, MI':260,'Saginaw, MI':190,'Traverse City, MI':155,
+'Minneapolis, MN':3690,'Duluth, MN':290,'Rochester, MN':225,'St. Cloud, MN':200,
+'Jackson, MS':590,'Gulfport, MS':420,'Hattiesburg, MS':170,
+'St. Louis, MO':2800,'Kansas City, MO':2200,'Springfield, MO':480,'Columbia, MO':210,'Joplin, MO':180,
+'Billings, MT':185,'Bozeman, MT':125,'Missoula, MT':120,'Kalispell, MT':110,'Great Falls, MT':84,'Helena, MT':84,
+'Omaha, NE':970,'Lincoln, NE':340,'Grand Island, NE':75,
+'Las Vegas, NV':2320,'Reno, NV':500,'Henderson, NV':320,'North Las Vegas, NV':280,'Carson City, NV':60,'Elko, NV':55,
+'Manchester, NH':425,'Concord, NH':155,'Portsmouth, NH':140,
+'Newark, NJ':2600,'Jersey City, NJ':700,'Trenton, NJ':385,'Atlantic City, NJ':275,
+'Albuquerque, NM':920,'Las Cruces, NM':220,'Santa Fe, NM':155,'Farmington, NM':125,
+'New York, NY':19500,'Buffalo, NY':1160,'Rochester, NY':1080,'Albany, NY':900,'Poughkeepsie, NY':700,'Syracuse, NY':660,'Utica, NY':290,'Binghamton, NY':245,'Ithaca, NY':105,
+'Charlotte, NC':2760,'Raleigh, NC':1450,'Greensboro, NC':780,'Winston-Salem, NC':680,'Durham, NC':650,'Fayetteville, NC':525,'Asheville, NC':470,'Hickory, NC':365,'Wilmington, NC':300,
+'Fargo, ND':250,'Bismarck, ND':135,'Grand Forks, ND':105,'Minot, ND':78,
+'Columbus, OH':2140,'Cleveland, OH':2060,'Cincinnati, OH':2260,'Dayton, OH':815,'Akron, OH':700,'Toledo, OH':640,'Youngstown, OH':540,'Canton, OH':400,
+'Oklahoma City, OK':1440,'Tulsa, OK':1020,'Lawton, OK':125,
+'Portland, OR':2510,'Salem, OR':435,'Eugene, OR':380,'Medford, OR':225,'Bend, OR':200,'Corvallis, OR':95,
+'Philadelphia, PA':6240,'Pittsburgh, PA':2440,'Allentown, PA':865,'Harrisburg, PA':590,'Scranton, PA':565,'Lancaster, PA':555,'York, PA':460,'Reading, PA':430,'Erie, PA':265,'State College, PA':160,
+'Providence, RI':1670,
+'Greenville, SC':930,'Columbia, SC':840,'Charleston, SC':800,'Myrtle Beach, SC':385,'Spartanburg, SC':330,'Hilton Head, SC':225,
+'Sioux Falls, SD':280,'Rapid City, SD':145,
+'Nashville, TN':2010,'Memphis, TN':1340,'Knoxville, TN':900,'Chattanooga, TN':570,'Clarksville, TN':330,'Johnson City, TN':310,
+'Dallas, TX':7640,'Houston, TX':7120,'San Antonio, TX':2600,'Austin, TX':2300,'Fort Worth, TX':960,'McAllen, TX':880,'El Paso, TX':870,'Killeen, TX':475,'Corpus Christi, TX':445,'Brownsville, TX':425,'Arlington, TX':395,'Beaumont, TX':395,'Lubbock, TX':325,'Plano, TX':290,'Waco, TX':280,'Amarillo, TX':270,'College Station, TX':270,'Laredo, TX':265,'Irving, TX':255,'Garland, TX':245,'Tyler, TX':235,'Frisco, TX':220,'Abilene, TX':180,'Midland, TX':175,'Odessa, TX':165,'Wichita Falls, TX':150,'San Angelo, TX':120,
+'Salt Lake City, UT':1260,'Provo, UT':700,'Ogden, UT':700,'St. George, UT':180,'Logan, UT':145,'Cedar City, UT':60,'Park City, UT':45,
+'Burlington, VT':225,'Rutland, VT':55,
+'Virginia Beach, VA':1800,'Richmond, VA':1310,'Roanoke, VA':315,'Lynchburg, VA':260,'Charlottesville, VA':220,'Harrisonburg, VA':135,
+'Seattle, WA':4020,'Tacoma, WA':930,'Spokane, WA':585,'Kennewick, WA':305,'Olympia, WA':295,'Yakima, WA':255,'Bellingham, WA':230,'Wenatchee, WA':120,
+'Huntington, WV':355,'Charleston, WV':255,'Morgantown, WV':140,'Wheeling, WV':135,
+'Milwaukee, WI':1570,'Madison, WI':690,'Green Bay, WI':330,'Appleton, WI':245,'Racine, WI':195,'Eau Claire, WI':175,'Oshkosh, WI':170,'Kenosha, WI':170,'Wausau, WI':165,'La Crosse, WI':140,
+'Cheyenne, WY':100,'Casper, WY':80,'Gillette, WY':47,'Laramie, WY':33
+};
+function usMktLookup(t){
+  t=String(t||'').trim().toLowerCase(); if(!t) return null;
+  const keys=Object.keys(US_MKTS);
+  let k=keys.find(function(x){return x.toLowerCase()===t;});
+  if(!k){ const hits=keys.filter(function(x){return x.toLowerCase().split(',')[0].trim()===t;}); if(hits.length===1) k=hits[0]; }
+  return k?{k:k,pop:US_MKTS[k]}:null;
+}
+function usMktEst(name){
+  const hit=usMktLookup(name); if(!hit) return null;
+  const ind=IND[document.getElementById('industry').value]||IND.local;
+  let v=ind.vol*Math.min(15,Math.pow(hit.pop/400,0.85));
+  const step=v>=5000?500:(v>=1500?250:50);
+  return Math.max(step,Math.round(v/step)*step);
+}
 let MKTS=[];        // [{n:'Salt Lake City', v:1200}, ...]
 let MKTS_LIB={};    // market memory: every researched city -> its demand, so a removed market re-adds with one pick (no re-research)
 let mktsSync=false; // guards against units<->chips update loops
@@ -3089,7 +3163,10 @@ function mktsTotal(){ return MKTS.reduce(function(a,m){ return a+(m.v||0); },0);
 function mktsNames(){ return MKTS.map(function(m){ return String(m.n||'').trim(); }).filter(Boolean); }
 function renderMktsLib(){
   const dl=document.getElementById('mkts-lib'); if(!dl) return;
-  dl.innerHTML=Object.keys(MKTS_LIB).map(function(k){return '<option value="'+k.replace(/"/g,'&quot;')+'"></option>';}).join('');
+  const seen={}; let out='';
+  Object.keys(MKTS_LIB).forEach(function(k){ seen[k.toLowerCase()]=1; out+='<option value="'+k.replace(/"/g,'&quot;')+'"></option>'; });
+  Object.keys(US_MKTS).forEach(function(k){ if(!seen[k.toLowerCase()]) out+='<option value="'+k.replace(/"/g,'&quot;')+'"></option>'; });
+  dl.innerHTML=out;
 }
 function drawMkts(){
   const panel=document.getElementById('mkts'), rows=document.getElementById('mkts-rows');
@@ -3140,9 +3217,10 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
       /* market memory: picking or typing a previously researched city auto-fills its demand */
       const t=e.target.value.trim().toLowerCase();
       const hit=Object.keys(MKTS_LIB).find(function(k){return k.toLowerCase()===t;});
-      if(hit && !(MKTS[i].v>0)){
-        MKTS[i].v=MKTS_LIB[hit];
-        const vEl=rows.querySelectorAll('.mkt-v')[i]; if(vEl) vEl.value=MKTS_LIB[hit].toLocaleString('en-US');
+      const fillV=hit?MKTS_LIB[hit]:usMktEst(e.target.value);
+      if(fillV && !(MKTS[i].v>0)){
+        MKTS[i].v=fillV;
+        const vEl=rows.querySelectorAll('.mkt-v')[i]; if(vEl) vEl.value=fillV.toLocaleString('en-US');
         mktsSync=true; const tt=mktsTotal(); if(tt>0) document.getElementById('volume').value=tt.toLocaleString('en-US'); mktsSync=false;
         mktsTotalLabel(); render();
       }
@@ -3175,6 +3253,7 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
     drawMkts();
   });
   document.getElementById('footprint').addEventListener('change',function(){ MKTS.length=Math.min(MKTS.length,mktsMax()||MKTS.length); drawMkts(); });
+  renderMktsLib();
   drawMkts();   // initial state (covers non-prefilled loads)
 })();
 (function(){
