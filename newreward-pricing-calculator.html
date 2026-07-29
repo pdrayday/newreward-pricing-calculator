@@ -2211,6 +2211,20 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
+const BUILD='NR-20260728-2';
+setTimeout(function(){try{
+  fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+    var m=t.match(/const BUILD='([^']+)'/);
+    if(m&&m[1]!==BUILD){
+      var b=document.createElement('div');
+      b.id='ver-banner';
+      b.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:99999;background:var(--gold-bright,#c9a227);color:#14100a;font:600 13px/1.5 Inter,sans-serif;padding:11px 16px;text-align:center;cursor:pointer;box-shadow:0 -4px 18px rgba(0,0,0,.35)';
+      b.innerHTML='&#9888;&nbsp; A newer calculator version is live — tap here to refresh before researching or quoting. Your link inputs are preserved.';
+      b.onclick=function(){var u=new URL(location.href);u.searchParams.set('cb',m[1]);location.replace(u.toString());};
+      document.body.appendChild(b);
+    }
+  }).catch(function(){});
+}catch(e){}},2500);
 function researchWithAI(){
   const url=document.getElementById('website').value.trim();
   const note=document.getElementById('note-research');
@@ -2219,7 +2233,7 @@ function researchWithAI(){
   const mktList=(typeof mktsMax==='function'&&mktsMax()>0)?mktsNames():[];
   const ps=readState();
   const prior=(ps.volume>0||ps.yearly>0||ps.aov>0||(typeof researchedQuote!=='undefined'&&researchedQuote))?
-    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. The REPRODUCIBILITY CONTRACT requires you to REUSE THEM VERBATIM, changing a field ONLY where you can name the specific NEW fact that moved it (and say so in that field\'s Why). seoScore/geoScore are exempt.\n'
+    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. The REPRODUCIBILITY CONTRACT requires you to REUSE THEM VERBATIM, changing a field ONLY where you can name the specific NEW fact that moved it (and say so in that field\'s Why). seoScore/geoScore are exempt. PRECEDENCE: the borderless rule outranks this prior — if this business sells borderless (B2B/SaaS/e-com delivered remotely), discard any geo footprint/units/markets shown here and classify footprint=nongeo units=1.\n'
     +'industry='+ps.industry+' footprint='+ps.footprint+' units='+ps.units
     +(ps.volume>0?' volume='+ps.volume:'')
     +((typeof mktsSerialize==='function'&&mktsMax()>0&&MKTS.some(function(m){return (m.n&&m.n.trim())||m.v>0;}))?' markets='+mktsSerialize():'')
@@ -2230,10 +2244,10 @@ function researchWithAI(){
     +(ps.capacity>0?' capacity='+ps.capacity:'')+(ps.rank!=null?' rank='+ps.rank:'')+'\n\n')
     :'';
   const mktFoot=document.getElementById('footprint').value;
-  const prompt='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs.\n\n'
+  const prompt='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs. [prompt build '+BUILD+']\n\n'
     +'Business website: '+url+'\n\n'
     +prior
-    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+((mktFoot==='multi'||mktFoot==='national')?', set footprint='+mktFoot+' and units='+mktList.length:'')+', size capacity to the locations serving '+(mktList.length>1?'these markets':'this market')+' only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link.\n\n':'')
+    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+((mktFoot==='multi'||mktFoot==='national')?', set footprint='+mktFoot+' and units='+mktList.length:'')+', size capacity to the locations serving '+(mktList.length>1?'these markets':'this market')+' only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link. BORDERLESS EXCEPTION — this block assumes a geo-bound business. If research shows this business sells BORDERLESS (SaaS, software development, B2B services delivered remotely, e-commerce/DTC — clients anywhere, offices are only offices), the named \"markets\" above are OFFICE LOCATIONS, not service markets: IGNORE this block — set footprint=nongeo and units=1, OMIT &markets= from the link, and state in the footprint row\'s Why that the borderless rule overrode the supplied market list. This exception OUTRANKS both this block and any PRIOR ESTIMATE.\n\n':'')
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'REPRODUCIBILITY CONTRACT — TREAT THIS LIKE A DETERMINISTIC FUNCTION. The same business researched twice minutes apart MUST produce the SAME table and the SAME link, field for field. Three rules make that true: (1) DERIVE, never impressionistically estimate — every value must come from a named source or a stated calculation, and two runs from the same facts land on the same number. (2) SNAP every numeric field to its ladder below — ladders exist so independent runs converge; never output a value between rungs. (3) STICK — if a prior estimate for this business exists anywhere (an earlier prefilled link, a prior table, a figure the user states), reuse it VERBATIM for every field, changing only a field where you can name the specific NEW fact that moved it, and say so in the Why column. Differences are expected months apart as markets move; minutes apart they are an error. ONE EXCEPTION: seoScore and geoScore are directional estimates only and exempt from this contract — New Reward runs its own internal visibility audit that supersedes them before anything is presented, so run-to-run variance on those two fields is acceptable.\n\n'
     +'Classification rules — follow exactly:\n'
