@@ -970,7 +970,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div id="share-math" class="share-math"></div>
   </div>
 
-  <div class="hintnote" style="margin-top:14px"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the quote assumptions.</div>
+  <div class="hintnote" style="margin-top:14px"><b>Blank fields are fine.</b> Leave LTV or phrase volume empty and the calculator fills them with researched industry benchmarks — the math appears under the field and in the customer math.</div>
 
 </div>
 
@@ -1052,7 +1052,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <span id="o-summary">Enter the client's basics and the quote builds itself.</span>
     </div>
 
-    <div class="o-assume" id="o-assume"></div>
 
     <svg class="wave" viewBox="0 0 400 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path d="M0 30 C 90 2, 170 38, 250 18 S 370 6, 400 22" fill="none" stroke="url(#g1)" stroke-width="1.1" opacity=".9"/>
@@ -2193,13 +2192,7 @@ function render(){
   }
   set('o-summary', txt);
 
-  /* assumptions */
-  const parts = [];
-  const crA = custRate(q.newCust);
-  parts.push('<b>Model:</b> '+q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
-    +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'
-    +(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')+' = '+crA.v+' customer'+(crA.v==='~1'?'':'s')+crA.unit+' × '+fmt$(q.yearlyValue)+'/yr');
-  document.getElementById('o-assume').innerHTML = 'QUOTE ASSUMPTIONS — '+parts.join(' &nbsp;·&nbsp; ');
+  /* quote-assumptions block removed — redundant with the new-customers math note */
 
   /* 1.3× ROI guardrail — flag the demand inputs when the return is too low */
   evalRoiGuardrail(s,q,n);
@@ -2634,7 +2627,7 @@ function buildPDF(mode){
     const rxW = function(f,fbW){ const r=RR[f]; return (r&&r.w)?r.w:fbW; };   // why from research, source forced by the row
     const BM='2026 vertical baseline (auto) — replaced by client-specific research on quoted links';
     const IR=[
-      ['Company', s.client||'—'].concat(rx('client','The business this proposal was researched and priced for.',SRC_SITE?[SRC_SITE]:'Provided / researched')),
+      ['Company', s.client||'—', rxW('client','The business this proposal was researched and priced for.'), (s.client&&s.client.trim())?[s.client.trim()]:'Provided / researched'],
       ['Website', (s.website||'—'), rxW('website','The site the program optimizes and measures.'), SRC_SITE?[SRC_SITE]:'Provided / researched'],
       ['Search phrase', s.phrase||'—'].concat(rx('phrase','The anchor money phrase; the quote is sized on the full phrase cluster, not this one query.',SRC_SERP?[SRC_SERP]:'Provided / researched')),
       ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'].concat(rx('scope','The services in this program.',[SRC_OFF])),
