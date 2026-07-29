@@ -3179,10 +3179,10 @@ function drawMkts(){
   if(MKTS.length>mx) MKTS.length=mx;
   if(f==='multi') while(MKTS.length<2) MKTS.push({n:'',v:0});   // a 2-5 market footprint always shows at least two rows
   document.getElementById('mkts-label').textContent = f==='multi'
-    ? 'Markets in scope — one per city; each market\'s demand sums into the phrase volume'
-    : (f==='metro' ? 'Region in scope — name the metro/region; its researched demand sizes the phrase volume'
-    : (f==='national' ? 'Branch markets in scope — one per city (listed only for networks of 10 or fewer locations)'
-                   : 'Market in scope — name the city; its researched demand sizes the phrase volume'));
+    ? 'Markets in scope — one per city; demand sums into the phrase volume. Type any major U.S. city for an instant demand estimate (researched figures override it).'
+    : (f==='metro' ? 'Region in scope — name the metro/region; its demand sizes the phrase volume. Typing a major U.S. metro fills an instant estimate.'
+    : (f==='national' ? 'Branch markets in scope — one per city (listed for networks of 10 or fewer locations). Typing a major U.S. city fills an instant demand estimate.'
+                   : 'Market in scope — name the city; its demand sizes the phrase volume. Typing a major U.S. city fills an instant estimate (researched figures override it).'));
   rows.innerHTML=MKTS.map(function(m,i){
     return '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
       +(mx>1?'<button type="button" class="mkt-x" data-i="'+i+'" title="remove this market (subtracts a location)" style="flex:0 0 28px;height:32px;background:none;border:1px solid rgba(150,140,120,.5);border-radius:8px;color:inherit;cursor:pointer;font-size:15px;line-height:1">×</button>':'')
