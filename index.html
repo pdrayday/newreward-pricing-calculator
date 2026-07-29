@@ -2224,7 +2224,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-17';
+const BUILD='NR-20260728-18';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3345,6 +3345,10 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
       const take=this.value==='local'?1:(this.value==='multi'?Math.min(5,pool.length):Math.min(10,pool.length));
       MKTS=pool.slice(0,take).map(function(m){return {n:m.n,v:m.v};});
       mktsUserEdited=true;   // choosing a footprint is a deliberate scope decision
+      if(this.value==='local'||this.value==='metro'){   // there, units = locations/service lines, not markets
+        const u=document.getElementById('units');
+        mktsSync=true; u.value=1; mktsSync=false;
+      }
       mktsApply();
     } else {
       MKTS.length=Math.min(MKTS.length,mktsMax()||MKTS.length); drawMkts();
@@ -3378,6 +3382,8 @@ b2bLock();
   fp.addEventListener('pointerdown',function(){ prevFoot=fp.value; });
   fp.addEventListener('change',function(){
     const nf=fp.value, v=parseFloat(String(volEl.value).replace(/,/g,''));
+    /* market chips with demand are the source of truth — their sum already re-scoped the volume */
+    if(typeof mktsTotal==='function' && mktsMax()>0 && mktsTotal()>0){ prevFoot=nf; render(); return; }
     if(v>0 && FOOT[prevFoot] && FOOT[nf] && nf!==prevFoot){
       const ratio=FOOT[nf].reach/FOOT[prevFoot].reach;
       const nv=Math.max(10,Math.round(v*ratio/10)*10);
