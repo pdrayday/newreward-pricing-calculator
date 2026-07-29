@@ -1368,11 +1368,19 @@ function computeQuote(s){
     // still lift the price above the floor when the work genuinely costs more. Once the share
     // kicks in, the fixed drops 20–30% (tiered — see PERF_DISCOUNT in buildSeries).
     let [mLo,mHi] = marketBand(s,nScopes);
-    /* per-market demand shifts the whole anchor band a bounded ±5%: five BIG markets are a
-       larger program than five tiny ones, and dropping Salt Lake City re-prices more than
-       dropping Park City. No per-market data -> effUnits === units -> exactly the published
-       band, so every quote without a markets list is untouched. */
-    const scopeAdj = 1 + 0.10*clamp((effUnits-units)/2, -0.5, 0.5);
+    /* SCOPE-SCALED ANCHOR: with per-market data, the anchor band scales with how much
+       program is actually being bought — the market count (on a 2-5 market footprint) and
+       the demand richness vs typical for that count. Two markets at half the demand price
+       like the smaller program they are (roughly -25 to -30%); five demand-rich markets
+       price above the midpoint. Bounded 0.70-1.30. Without a markets list the published
+       band applies untouched, so every existing quote is byte-identical. */
+    let scopeAdj=1;
+    if(s.markets && s.markets.length && s.markets.some(function(m){return m.v>0;})){
+      const bandScope = s.footprint==='multi' ? clamp(0.78+0.105*(effUnits-2), 0.72, 1.12) : 1;
+      const volRefS = ind.vol*effReach(s.footprint,units);
+      const dAdj = clamp(Math.pow(Math.max(0.05, vol/Math.max(1,volRefS)), 0.35), 0.85, 1.15);
+      scopeAdj = clamp(bandScope*dAdj, 0.70, 1.30);
+    }
     mLo*=scopeAdj; mHi*=scopeAdj;
     /* the band ceiling is where TYPICAL programs land. When the cost drivers (dominant
        competitors, many locations, deep catch-up work) genuinely exceed it, the price keeps
