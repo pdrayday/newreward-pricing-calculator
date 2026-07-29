@@ -738,7 +738,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </div>
     <div class="fgroup" style="margin-bottom:4px">
       <label class="flabel">Search phrase or city
-        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" in the Service Scope &amp; Market section below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here.</span></button>
+        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" in the Service Scope, Market Value &amp; Search Demand section below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here.</span></button>
       </label>
       <div class="fwrap"><input type="text" id="phrase" placeholder="best med spa near me"></div>
     </div>
@@ -746,7 +746,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
   <!-- 02 SERVICE SCOPE & MARKET (the cost-to-deliver levers) -->
   <div class="section">
-    <div class="sec-head"><div class="sec-num">02</div><div class="sec-title">Service Scope &amp; Market</div></div>
+    <div class="sec-head"><div class="sec-num">02</div><div class="sec-title">Service Scope, Market Value &amp; Search Demand</div></div>
     <div class="hintnote" style="margin-top:0"><b>These set the recommended price.</b> What you deliver (SEO / GEO), the industry, the market footprint, how many locations or service lines, and how strong the competitors are — together they drive the cost to deliver.</div>
     <label class="toggle-row" for="scopeSeo">
       <span class="tlabel">SEO included
@@ -816,6 +816,30 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="fwrap"><input type="text" inputmode="numeric" autocomplete="off" id="volume" class="has-suffix" value="0"><span class="suffix">searches/mo</span></div>
         <div class="auto-note" id="note-vol"></div>
       </div>
+      <div class="fgroup">
+        <label class="flabel">Typical search ad cost
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one click costs on Google Ads for this phrase (CPC). High ad prices signal a competitive, high-value market — and show what the client avoids paying once organic visibility takes over. Typical: $2–6 for everyday local, $8–25+ for legal, medical, finance, and SaaS terms.</span></button>
+        </label>
+        <div class="fwrap"><span class="prefix">$</span><input type="number" id="cpc" class="has-prefix" placeholder="auto" min="0" step="0.5"></div>
+        <div class="auto-note" id="note-cpc"></div>
+      </div>
+    </div>
+    <div class="row2" hidden>
+      <div class="fgroup" hidden aria-hidden="true">
+        <label class="flabel" id="lbl-volsource">Volume source
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Demand measured in Keyword Planner, Semrush, or GSC counts in full; other estimates are weighted conservatively so demand is never overstated.</span></button>
+          <span class="flag-pill">▲ verify</span>
+        </label>
+        <div class="fwrap"><select id="volsource">
+          <option value="none">Not checked yet</option>
+          <option value="kwp">Google Keyword Planner</option>
+          <option value="semrush">Semrush</option>
+          <option value="gsc">GSC</option>
+          <option value="trends">Google Trends</option>
+          <option value="aiprompt" selected>AI research estimate</option>
+          <option value="manual">Manual estimate</option>
+        </select></div>
+      </div>
       <div class="fgroup"></div>
     </div>
   </div>
@@ -862,42 +886,9 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="hintnote"><b>These scores also grade the engagement intensity.</b> The lower the visibility, the more catch-up build work required — so each channel is auto-graded Light, Standard, or Intensive, which raises the cost to deliver and lengthens the ramp. The grade shows in the results panel.</div>
   </div>
 
-  <!-- 04 SEARCH DEMAND -->
-  <div class="section">
-    <div class="sec-head"><div class="sec-num">04</div><div class="sec-title">Search Demand &amp; Market Value</div></div>
-    <div class="row2">
-      <div class="fgroup"></div>
-      <div class="fgroup">
-        <label class="flabel" id="lbl-volsource">Volume source
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the volume number came from. Demand measured in Keyword Planner, Semrush, or GSC counts in full; other estimates are weighted conservatively so demand is never overstated.</span></button>
-          <span class="flag-pill">▲ verify</span>
-        </label>
-        <div class="fwrap"><select id="volsource">
-          <option value="none">Not checked yet</option>
-          <option value="kwp">Google Keyword Planner</option>
-          <option value="semrush">Semrush</option>
-          <option value="gsc">GSC</option>
-          <option value="trends">Google Trends</option>
-          <option value="aiprompt">AI prompt test</option>
-          <option value="manual">Manual estimate</option>
-        </select></div>
-      </div>
-    </div>
-    <div class="row2">
-      <div class="fgroup">
-        <label class="flabel">Typical search ad cost
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What one click costs on Google Ads for this phrase (CPC). High ad prices signal a competitive, high-value market — and show what the client avoids paying once organic visibility takes over. Typical: $2–6 for everyday local, $8–25+ for legal, medical, finance, and SaaS terms.</span></button>
-        </label>
-        <div class="fwrap"><span class="prefix">$</span><input type="number" id="cpc" class="has-prefix" placeholder="auto" min="0" step="0.5"></div>
-        <div class="auto-note" id="note-cpc"></div>
-      </div>
-      <div class="fgroup"></div>
-    </div>
-  </div>
-
   <!-- 05 CLIENT ECONOMICS -->
   <div class="section">
-    <div class="sec-head"><div class="sec-num">05</div><div class="sec-title">Client Economics — Feasibility</div></div>
+    <div class="sec-head"><div class="sec-num">04</div><div class="sec-title">Client Economics — Feasibility</div></div>
     <div class="row2">
       <div class="fgroup" id="fg-yearly">
         <label class="flabel">Avg customer value / year
@@ -975,7 +966,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
   <!-- 06 THE REVENUE-SHARE MATH — full transparency -->
   <div class="section">
-    <div class="sec-head"><div class="sec-num">06</div><div class="sec-title">The Revenue-Share Math — Full Transparency</div></div>
+    <div class="sec-head"><div class="sec-num">05</div><div class="sec-title">The Revenue-Share Math — Full Transparency</div></div>
     <div id="share-math" class="share-math"></div>
   </div>
 
@@ -2285,7 +2276,7 @@ function resetAll(){
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
   document.getElementById('compstr').value='moderate';
-  document.getElementById('volsource').value='none';
+  document.getElementById('volsource').value='aiprompt';
   document.getElementById('scopeSeo').checked = true;
   document.getElementById('scopeGeo').checked = true;
   render();
