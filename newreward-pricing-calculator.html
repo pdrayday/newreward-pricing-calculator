@@ -1757,8 +1757,17 @@ function renderEventChart(q,n,ep,el){
       const cx=X0+i*gw+gw/2;
       const bt=Y1-Math.max(ep.rev[i]/maxV*(Y1-Y0),2);
       g+='<text x="'+cx.toFixed(1)+'" y="'+(bt-3).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(ep.rev[i])+'</text>';
-      g+='<text x="'+(cx+6.5).toFixed(1)+'" y="'+(Y1-costH[i]-2.5).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+' bill</text>';
     }}
+    /* three representative bills only — a build month, a win month, a no-win share month;
+       labelling every white bar clumps at this size (the PDF labels them all) */
+    const lbl=[];
+    if(n.rampMonth>=2) lbl.push([n.rampMonth-2,'']);
+    for(let i=n.rampMonth-1;i<12;i++){ if(ep.wins[i]>0){ lbl.push([i,' bill']); break; } }
+    for(let i=n.rampMonth-1;i<12;i++){ if(ep.wins[i]===0){ lbl.push([i,'']); break; } }
+    lbl.forEach(function(p){ const i=p[0]; if(i<0||i>11) return;
+      const cx=X0+i*gw+gw/2;
+      g+='<text x="'+(cx+6.5).toFixed(1)+'" y="'+(Y1-costH[i]-2.5).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+p[1]+'</text>';
+    });
   } else if(!q.contractStyle){
     const rm2=n.rampMonth;
     if(rm2>=1&&rm2<=12){
@@ -2211,7 +2220,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-8';
+const BUILD='NR-20260728-9';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2914,7 +2923,7 @@ function buildPDF(mode){
   pdDraw('This projection never compounds','— the visibility asset does, but these numbers count none of it. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.');
   hy+=1;
   doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Modeled projections from the cited inputs on page 2 — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.',L,hy,{maxWidth:W});
+  doc.text('Modeled projections from the cited inputs on page 3 — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.',L,hy,{maxWidth:W});
 
   /* footer band */
   doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
@@ -3101,6 +3110,7 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
 
+  doc.movePage(3,2);   // projection reads first: page 2 = projection, page 3 = cited inputs
   const name=(s.client||'client').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'')||'client';
   if(mode==='preview'){
     openPdfPreview(doc.output('bloburl'));    // rendered in-page — no file is created on disk
