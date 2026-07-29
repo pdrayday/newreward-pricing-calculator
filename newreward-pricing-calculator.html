@@ -2211,7 +2211,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-3';
+const BUILD='NR-20260728-4';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2233,7 +2233,7 @@ function researchWithAI(){
   const mktList=(typeof mktsMax==='function'&&mktsMax()>0)?mktsNames():[];
   const ps=readState();
   const prior=(ps.volume>0||ps.yearly>0||ps.aov>0||(typeof researchedQuote!=='undefined'&&researchedQuote))?
-    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. The REPRODUCIBILITY CONTRACT requires you to REUSE THEM VERBATIM, changing a field ONLY where you can name the specific NEW fact that moved it (and say so in that field\'s Why). seoScore/geoScore are exempt. PRECEDENCE: the borderless rule outranks this prior — if this business sells borderless (B2B/SaaS/e-com delivered remotely), discard any geo footprint/units/markets shown here and classify footprint=nongeo units=1.\n'
+    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. The REPRODUCIBILITY CONTRACT requires you to REUSE THEM VERBATIM, changing a field ONLY where you can name the specific NEW fact that moved it (and say so in that field\'s Why). seoScore/geoScore are exempt. PRECEDENCE: the borderless rule outranks this prior — if this business is B2B/SaaS (ALWAYS borderless, no exceptions) or otherwise sells borderless (e-com/DTC), discard any geo footprint/units/markets shown here and classify footprint=nongeo units=1.\n'
     +'industry='+ps.industry+' footprint='+ps.footprint+' units='+ps.units
     +(ps.volume>0?' volume='+ps.volume:'')
     +((typeof mktsSerialize==='function'&&mktsMax()>0&&MKTS.some(function(m){return (m.n&&m.n.trim())||m.v>0;}))?' markets='+mktsSerialize():'')
@@ -2247,12 +2247,12 @@ function researchWithAI(){
   const prompt='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs. [prompt build '+BUILD+']\n\n'
     +'Business website: '+url+'\n\n'
     +prior
-    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+((mktFoot==='multi'||mktFoot==='national')?', set footprint='+mktFoot+' and units='+mktList.length:'')+', size capacity to the locations serving '+(mktList.length>1?'these markets':'this market')+' only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link. BORDERLESS EXCEPTION — this block assumes a geo-bound business. If research shows this business sells BORDERLESS (SaaS, software development, B2B services delivered remotely, e-commerce/DTC — clients anywhere, offices are only offices), the named \"markets\" above are OFFICE LOCATIONS, not service markets: IGNORE this block — set footprint=nongeo and units=1, OMIT &markets= from the link, and state in the footprint row\'s Why that the borderless rule overrode the supplied market list. This exception OUTRANKS both this block and any PRIOR ESTIMATE.\n\n':'')
+    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+((mktFoot==='multi'||mktFoot==='national')?', set footprint='+mktFoot+' and units='+mktList.length:'')+', size capacity to the locations serving '+(mktList.length>1?'these markets':'this market')+' only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link. BORDERLESS EXCEPTION — this block assumes a geo-bound business. If this business is B2B or SaaS (industry=b2b — ALWAYS borderless, no exceptions) or otherwise sells BORDERLESS (SaaS, software development, B2B services delivered remotely, e-commerce/DTC — clients anywhere, offices are only offices), the named \"markets\" above are OFFICE LOCATIONS, not service markets: IGNORE this block — set footprint=nongeo and units=1, OMIT &markets= from the link, and state in the footprint row\'s Why that the borderless rule overrode the supplied market list. This exception OUTRANKS both this block and any PRIOR ESTIMATE.\n\n':'')
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'REPRODUCIBILITY CONTRACT — TREAT THIS LIKE A DETERMINISTIC FUNCTION. The same business researched twice minutes apart MUST produce the SAME table and the SAME link, field for field. Three rules make that true: (1) DERIVE, never impressionistically estimate — every value must come from a named source or a stated calculation, and two runs from the same facts land on the same number. (2) SNAP every numeric field to its ladder below — ladders exist so independent runs converge; never output a value between rungs. (3) STICK — if a prior estimate for this business exists anywhere (an earlier prefilled link, a prior table, a figure the user states), reuse it VERBATIM for every field, changing only a field where you can name the specific NEW fact that moved it, and say so in the Why column. Differences are expected months apart as markets move; minutes apart they are an error. ONE EXCEPTION: seoScore and geoScore are directional estimates only and exempt from this contract — New Reward runs its own internal visibility audit that supersedes them before anything is presented, so run-to-run variance on those two fields is acceptable.\n\n'
     +'Classification rules — follow exactly:\n'
     +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands.\n'
-    +'- footprint: "national" = a brand winning MANY physical markets nationwide (set units to the real location count — the model scores capture per local market). "nongeo" = borderless online businesses with no physical service areas (e-commerce, SaaS, DTC) — the model applies the big-market capture damper there instead. A business with ONE physical location serving one city/area is ALWAYS "local". B2B/SaaS, software development, and consulting firms sell BORDERLESS: classify them footprint=nongeo with units=1 — units for them means distinct product/solution lines (usually 1), and their OFFICE LOCATIONS ARE NEVER MARKETS: never set footprint or units from an office count. The only exception is B2B work delivered physically on-site in one region (on-site IT/MSP service, local staffing with in-person placement) — that is local or metro. Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
+    +'- footprint: "national" = a brand winning MANY physical markets nationwide (set units to the real location count — the model scores capture per local market). "nongeo" = borderless online businesses with no physical service areas (e-commerce, SaaS, DTC) — the model applies the big-market capture damper there instead. A business with ONE physical location serving one city/area is ALWAYS "local". B2B/SaaS, software development, and consulting firms sell BORDERLESS: classify them footprint=nongeo with units=1 — units for them means distinct product/solution lines (usually 1), and their OFFICE LOCATIONS ARE NEVER MARKETS: never set footprint or units from an office count. NO EXCEPTIONS — even a firm with several offices or on-site delivery is ONE borderless program: footprint=nongeo, units=1, and NEVER emit &markets= for a b2b business. Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
     +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets), set units to the NUMBER OF MARKETS, and size the volume across exactly those markets; units>1 with footprint=local is only correct when every location shares ONE market.\n'
@@ -3299,6 +3299,22 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
   renderMktsLib();
   drawMkts();   // initial state (covers non-prefilled loads)
 })();
+/* HARD RULE — B2B/SaaS is ALWAYS borderless: footprint locked to online/non-geo, one scope,
+   offices are never markets. Applies on manual industry choice AND on any researched link. */
+function b2bLock(){
+  const ie=document.getElementById('industry'), fe=document.getElementById('footprint');
+  const b2b=ie.value==='b2b';
+  [...fe.options].forEach(function(o){ o.disabled=b2b&&o.value!=='nongeo'; });
+  if(b2b&&fe.value!=='nongeo'){
+    fe.value='nongeo';
+    const u=document.getElementById('units');
+    mktsSync=true; u.value=1; mktsSync=false;
+    MKTS.length=0; if(typeof drawMkts==='function') drawMkts();
+    if(typeof render==='function') render();
+  }
+}
+document.getElementById('industry').addEventListener('change',b2bLock);
+b2bLock();
 (function(){
   const fp=document.getElementById('footprint'), volEl=document.getElementById('volume');
   let prevFoot=fp.value;
@@ -3385,13 +3401,22 @@ function applyPrefill(qs){
     MKTS.forEach(function(m){ if(m.n&&m.v>0) MKTS_LIB[m.n]=m.v; });
     if(typeof renderMktsLib==='function') renderMktsLib();
   }
+  /* HARD RULE — B2B/SaaS is ALWAYS borderless: a researched link carrying a geo footprint
+     or market chips for a b2b business self-corrects to nongeo / 1 scope / no markets. */
+  if(document.getElementById('industry').value==='b2b'){
+    document.getElementById('footprint').value='nongeo';
+    document.getElementById('units').value=1;
+    MKTS.length=0;
+  }
+  if(typeof b2bLock==='function') b2bLock();
   if(typeof drawMkts==='function') drawMkts();
   /* remember the scope the volume was researched FOR — if footprint/units change later,
      the volume note offers a re-scaled demand figure so all three stay in step */
   if(p.has('volume') && parseFloat(String(p.get('volume')).replace(/,/g,''))>0){
+    const _fpNow=document.getElementById('footprint').value;
     prefillScope={ volume:Math.round(parseFloat(String(p.get('volume')).replace(/,/g,''))),
-                   units:Math.max(1,Math.round(parseFloat(p.get('units')||'1'))||1),
-                   footprint:(FOOT[p.get('footprint')]?p.get('footprint'):'local') };
+                   units:Math.max(1,Math.round(parseFloat(document.getElementById('units').value)||1)),
+                   footprint:(FOOT[_fpNow]?_fpNow:'local') };
   }
   if(p.has('rationale')){
     let arr=null; const raw=p.get('rationale');
