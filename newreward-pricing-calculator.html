@@ -1765,9 +1765,10 @@ function renderEventChart(q,n,ep,el){
     /* three representative bills only — a build month, a win month, a no-win share month;
        labelling every white bar clumps at this size (the PDF labels them all) */
     const lbl=[];
-    if(n.rampMonth>=2) lbl.push([n.rampMonth-2,'']);
-    for(let i=n.rampMonth-1;i<12;i++){ if(ep.wins[i]>0){ lbl.push([i,' bill']); break; } }
-    for(let i=n.rampMonth-1;i<12;i++){ if(ep.wins[i]===0){ lbl.push([i,'']); break; } }
+    if(n.rampMonth>=2) lbl.push([0,'']);                                    // first build month — far left
+    let winI=-1;
+    for(let i=n.rampMonth-1;i<12;i++){ if(ep.wins[i]>0){ winI=i; lbl.push([i,' bill']); break; } }
+    for(let i=11;i>=n.rampMonth-1;i--){ if(ep.wins[i]===0){ if(i!==winI) lbl.push([i,'']); break; } }   // last no-win share month — far right, never stacked on the win label
     lbl.forEach(function(p){ const i=p[0]; if(i<0||i>11) return;
       const cx=X0+i*gw+gw/2;
       g+='<text x="'+(cx+6.5).toFixed(1)+'" y="'+(Y1-costH[i]-2.5).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+p[1]+'</text>';
@@ -2224,7 +2225,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-24';
+const BUILD='NR-20260728-25';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
