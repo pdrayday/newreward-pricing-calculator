@@ -760,6 +760,12 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </span>
       <span class="switch"><input type="checkbox" id="scopeGeo" checked><span class="slider"></span></span>
     </label>
+    <label class="toggle-row" for="scopeShare" style="margin-bottom:4px">
+      <span class="tlabel">Revenue share included
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">ON: the hybrid structure — a reduced fixed fee once the share starts, plus a share of each proven new customer's first-year value. OFF: a straightforward flat retainer — the full fixed fee every month, 0% of client revenue, no fee drop. Flip it off for clients in licensed verticals (real estate, mortgage, legal, healthcare) until their broker/attorney approves a share structure, or for anyone who prefers simple pricing.</span></button>
+      </span>
+      <span class="switch"><input type="checkbox" id="scopeShare" checked><span class="slider"></span></span>
+    </label>
     <div class="scope-warn" id="scope-warn"></div>
     <div class="row2">
       <div class="fgroup">
@@ -993,7 +999,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow.<br><span class="neg-note" id="o-share-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow. <span style="color:var(--muted2)">Licensed verticals (real estate, mortgage, legal, healthcare): transaction-linked compensation may require broker/attorney approval — the flat-retainer option (revenue share toggled off) is always available.</span><br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
 
@@ -1437,6 +1443,7 @@ function computeQuote(s){
   share += s.industry==='ultra' ? 1 : 1.5;                                // new-net-revenue basis — scaled so we scale when they scale (ultra keeps the lighter bump: huge tickets)
   share += arrAddedPM>=30000?-1 : arrAddedPM<8000?1 : 0;                  // very large deals take a slightly lower %
   share = clamp(Math.round(share*2)/2, s.industry==='ultra' ? 1 : 2, 10);
+  if(s.revShare===false) share = 0;   // flat-retainer mode: full fee every month, no share
 
   /* ---- attribution: every win is tracked and 100% verifiable — a win is a win, there is
           no in-between, so no provability haircut. Conservatism lives in the demand model
@@ -1467,7 +1474,7 @@ function computeQuote(s){
    $3k/mo, 25% at $3k–5k, 30% at $5k+ — sweetening the rev-share structure where fees are highest */
 const PERF_DISCOUNT = p => p>=5000 ? 0.70 : p>=3000 ? 0.75 : 0.80;
 function buildSeries(q, price, share){
-  const perfPrice = price!=null ? Math.round(price*PERF_DISCOUNT(price)/50)*50 : null;   // reduced fixed once share starts
+  const perfPrice = price!=null ? (share>0 ? Math.round(price*PERF_DISCOUNT(price)/50)*50 : price) : null;   // reduced fixed once share starts; flat when share is off
   const months=[]; const mrr=[]; const invoice=[]; let cum=0;
   const churn = 1/(q.retainYears*12);   // retention sets monthly churn on accumulated customers
   /* wins start DURING the build — technical and trust fixes land in the first weeks, so from
@@ -1544,6 +1551,7 @@ function readState(){
     cpc: num('cpc'),
     seo: document.getElementById('scopeSeo').checked,
     geo: document.getElementById('scopeGeo').checked,
+    revShare: document.getElementById('scopeShare').checked,
     rank: num('rank'), seoScore: num('seoScore'), geoScore: num('geoScore'),
     compstr: document.getElementById('compstr').value,
     units: num('units'),
@@ -2016,7 +2024,7 @@ function render(){
   const tpm=document.getElementById('tip-price-math');
   if(tpm) tpm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
     'How this number is built: the researched cost to deliver this exact scope — engagement intensity (graded from current visibility), industry model, market footprint, '
-    +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. It drops '+Math.round((1-PERF_DISCOUNT(n.price))*100)+'% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins — or choose the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, with 0% share.';
+    +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. '+(n.share>0?'It drops '+Math.round((1-PERF_DISCOUNT(n.price))*100)+'% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins — or choose the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, with 0% share.':'<b>Flat retainer</b> — the revenue share is toggled off: the same '+fmt$(n.price)+'/mo every month, no fee drop, 0% of client revenue.')+'';
   const tsm=document.getElementById('tip-share-math');
   if(tsm) tsm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
     'How this percentage is built: sized from the client\'s own economics so it stays fair — gross margin (<b>'+(s.margin??BENCH(s).margin)+'%</b>), acquisition budget (<b>'+(s.acq??15)+'%</b>), existing sales commissions (<b>'+(s.commission??8)+'%</b>), and typical deal size (<b>'+fmt$(q.yearlyValue)+'/yr</b>). Thinner margins, bigger deals, and higher existing commissions all pull it <b>down</b>; it is bounded 2–10% in 0.5% steps. Applied only to a proven new customer\'s first-year value: <b>'+n.share+'% × '+fmt$(q.yearlyValue)+' = '+fmt$(q.yearlyValue*n.share/100)+'</b> per win — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond.';
@@ -2146,7 +2154,9 @@ function render(){
       ? '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value'
       : cr.txt+' × '+fmt$(q.yearlyValue)+' each · ≈'+fmtK(q.newCust*12*q.yearlyValue)+'/yr in new contract value'+(q.contractStyle?' — shown as a 12-month average; wins land as whole contracts':''));
   set('o-runrate', '+'+fmtK(n.series.exitARR)+'/yr');
-  set('o-runrate-note', '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed');
+  set('o-runrate-note', q.retainYears>1
+      ? '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed'
+      : '≈'+fmtK(n.series.exitMRR)+'/mo pace — gross first-year value of signed clients (value won, not cash collected); modeled, not guaranteed');
   set('o-window', q.windowDays+' days');
   set('o-window-note', '');
 
@@ -2181,6 +2191,9 @@ function render(){
   /* revenue-share math — full transparency, live numbers */
   const smEl=document.getElementById('share-math');
   if(q.price==null){ smEl.innerHTML='Select at least one service in Scope to see the math.'; }
+  else if(!(n.share>0)){
+    smEl.innerHTML='<b>Revenue share is toggled off — this quote is a straightforward flat retainer.</b> The client pays '+fmt$(n.price)+'/mo, every month, and keeps 100% of every dollar of revenue — no share, no fee drop, no per-win billing. Toggle the revenue share back on to see the hybrid structure and its math. <span style="color:var(--muted2)">Licensed verticals (real estate, mortgage, legal, healthcare): transaction-linked compensation may require broker/attorney approval — the flat retainer avoids that question entirely.</span>';
+  }
   else{
     const perWin = q.yearlyValue*q.attribFactor*n.share/100;
     const shareMo = n.share/100*q.newCust*q.yearlyValue*q.attribFactor;
@@ -2219,7 +2232,7 @@ function render(){
       + 'Once ramped, the model signs '+crS.txt+' — roughly '
       + (crS.monthly ? fmtK(q.arrAddedPM)+' in new annual contracts every month.' : fmtK(q.newCust*12*q.yearlyValue)+' a year in new contract value.')
       + ' The '+((priceDirty||shareDirty)?'negotiated':'recommended')+' program is '
-      + fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus '+n.share+'% of attributable first-year revenue from proven new customers, from month '+n.rampMonth+'. '
+      + (n.share>0? fmt$(n.price)+'/mo while we build, then '+fmt$(n.series.perfPrice)+'/mo plus '+n.share+'% of attributable first-year revenue from proven new customers, from month '+n.rampMonth+'. ' : 'a flat '+fmt$(n.price)+'/mo retainer — no revenue share. ')
       + 'Figures are estimated from research — confirm with live data within the '+q.windowDays+'-day review window.';
   }
   set('o-summary', txt);
@@ -2235,7 +2248,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-26';
+const BUILD='NR-20260728-27';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2300,7 +2313,7 @@ function researchWithAI(){
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
     +'REPRODUCIBILITY CONTRACT — TREAT THIS LIKE A DETERMINISTIC FUNCTION. The same business researched twice minutes apart MUST produce the SAME table and the SAME link, field for field. Three rules make that true: (1) DERIVE, never impressionistically estimate — every value must come from a named source or a stated calculation, and two runs from the same facts land on the same number. (2) SNAP every numeric field to its ladder below — ladders exist so independent runs converge; never output a value between rungs. (3) STICK — if a prior estimate for this business exists anywhere (an earlier prefilled link, a prior table, a figure the user states), reuse it VERBATIM for every field, changing only a field where you can name the specific NEW fact that moved it, and say so in the Why column. Differences are expected months apart as markets move; minutes apart they are an error. PRECEDENCE — ACCURACY OUTRANKS REPRODUCIBILITY. When rules pull in opposite directions, resolve in this order: (1st) HARD CLASSIFICATION RULES (borderless b2b→nongeo, unit definitions, citation integrity — the page must state the figure); (2nd) METHODOLOGY RULES (phrase-level CPC never category averages, head anchor = the declared phrase, buying-intent variants, multiplier and reference-anchor bands, stated derivation chains); (3rd) STICKINESS / PRIOR ESTIMATE. A prior value that VIOLATES a rule above it is NOT protected by stickiness — it was produced by a broken methodology: discard it, re-derive by the rules, and name in the Why which rule the prior broke. Stickiness exists to stop two CORRECT derivations from drifting; it never preserves an incorrect one. ONE EXCEPTION: seoScore and geoScore are directional estimates only and exempt from this contract — New Reward runs its own internal visibility audit that supersedes them before anything is presented, so run-to-run variance on those two fields is acceptable.\n\n'
     +'Classification rules — follow exactly:\n'
-    +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands. HYBRID PROFESSIONAL SERVICES (wealth managers/RIAs, law, accounting, consultancies, agencies) straddle b2b and highticket \u2014 decide by WHO PAYS and HOW DEMAND SEARCHES, as a HARD 1st-tier rule so two runs can never flip: (a) customers are INDIVIDUAL consumers/households (retail wealth management, personal legal, medical, financial planning) \u2192 highticket with a GEO footprint \u2014 their demand is geo-anchored (\'financial advisor salt lake city\', \'near me\') even when the service can be delivered virtually, and the borderless b2b rule NEVER applies to consumer-facing firms; (b) customers are BUSINESSES (dev shops, B2B consultancies, agencies) \u2192 b2b/nongeo per the borderless rule; (c) genuinely mixed books \u2192 classify by the majority of revenue and name the split in the Why. If a prior run classified the other way, the WHO-PAYS test decides and the Why must say so.\n'
+    +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands. HYBRID PROFESSIONAL SERVICES (wealth managers/RIAs, law, accounting, consultancies, agencies) straddle b2b and highticket \u2014 decide by WHO PAYS and HOW DEMAND SEARCHES, as a HARD 1st-tier rule so two runs can never flip: (a) customers are INDIVIDUAL consumers/households (retail wealth management, personal legal, medical, financial planning) \u2192 highticket with a GEO footprint \u2014 their demand is geo-anchored (\'financial advisor salt lake city\', \'near me\') even when the service can be delivered virtually, and the borderless b2b rule NEVER applies to consumer-facing firms; (b) customers are BUSINESSES (dev shops, B2B consultancies, agencies) \u2192 b2b/nongeo per the borderless rule; (c) genuinely mixed books \u2192 classify by the majority of revenue and name the split in the Why. If a prior run classified the other way, the WHO-PAYS test decides and the Why must say so. LICENSED-VERTICAL FLAG: when the business operates in a licensing-restricted referral vertical (real estate agents/brokerages, mortgage/lending, legal, healthcare), add to the industry row\'s Why: \'transaction-linked revenue share requires broker/attorney review (RESPA guidance; state licensing rules such as Utah Code 61-2f-401) — flat-retainer option available\' — never present a share structure as pre-approved.\n'
     +'- footprint: "national" = a brand winning MANY physical markets nationwide (set units to the real location count — the model scores capture per local market). "nongeo" = borderless online businesses with no physical service areas (e-commerce, SaaS, DTC) — the model applies the big-market capture damper there instead. A business with ONE physical location serving one city/area is ALWAYS "local". B2B/SaaS, software development, and consulting firms WHOSE CUSTOMERS ARE BUSINESSES sell BORDERLESS: classify them footprint=nongeo with units=1 — units for them means distinct product/solution lines (usually 1), and their OFFICE LOCATIONS ARE NEVER MARKETS: never set footprint or units from an office count. NO EXCEPTIONS — even a firm with several offices or on-site delivery is ONE borderless program: footprint=nongeo, units=1, and NEVER emit &markets= for a b2b business. Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
@@ -2472,13 +2485,13 @@ document.addEventListener('mousemove',function(e){
       if(chartSeries.contract){
         body=wins>0
           ? '<b>'+wins+' new customer'+(wins>1?'s':'')+'</b> &mdash; <b>'+fmt$(chartSeries.rev[m-1])+'</b> signed'
-            +'<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> '+(m<chartSeries.ramp?'(fee only — build months; these wins are share-free)':(chartSeries.feeWaive?'(share only — fee waived)':'(fee + '+fmt$(wins*chartSeries.perWin)+' share)'))
+            +'<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> '+(!(chartSeries.perWin>0)?'(flat fee)':(m<chartSeries.ramp?'(fee only — build months; these wins are share-free)':(chartSeries.feeWaive?'(share only — fee waived)':'(fee + '+fmt$(wins*chartSeries.perWin)+' share)')))
           : 'No win modeled this month<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> (fee only)';
       } else {
         body=(wins>0
           ? '<b>'+wins+' new customer'+(wins>1?'s':'')+' won</b> &mdash; <b>'+fmt$(chartSeries.rev[m-1])+'</b> in first-year value'
           : 'No new wins modeled this month')
-          +'<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> '+(m<chartSeries.ramp?'(full fee — build; wins land share-free)':'(fee + share on what customers actually spend this month)');
+          +'<br>Billed: <b>'+fmt$(chartSeries.inv[m-1])+'</b> '+(!(chartSeries.perWin>0)?'(flat fee)':(m<chartSeries.ramp?'(full fee — build; wins land share-free)':'(fee + share on what customers actually spend this month)'));
       }
     } else if(chartSeries.mode==='accr'){
       const wins=chartSeries.wins[m-1], rev=chartSeries.mrr[m-1], cA=chartSeries.invA[m-1];
@@ -2486,7 +2499,7 @@ document.addEventListener('mousemove',function(e){
           ? (wins>0?'<b>'+wins+' new customer'+(wins>1?'s':'')+' won</b> — build phase, share-free<br>':'<b>Build month</b> — any wins land share-free<br>')
           : (wins>0?'<b>'+wins+' new customer'+(wins>1?'s':'')+' won</b> this month<br>':'No new wins modeled this month<br>'))
         +'Collected from all wins so far: <b>'+fmt$(rev)+'</b>'
-        +'<br>Billed'+(m<chartSeries.ramp?' (full fee, no share)':' (fixed + share)')+': <b>'+fmt$(cA)+'</b>'+(m>=chartSeries.ramp?' &middot; <b>'+rx(rev,cA)+'</b>':'');
+        +'<br>Billed'+(!(chartSeries.perWin>0)?' (flat fee)':(m<chartSeries.ramp?' (full fee, no share)':' (fixed + share)'))+': <b>'+fmt$(cA)+'</b>'+(m>=chartSeries.ramp?' &middot; <b>'+rx(rev,cA)+'</b>':'');
     } else {
       const rev=chartSeries.mrr[m-1], cA=chartSeries.invA[m-1];
       body='New revenue: <b>'+fmt$(rev)+'</b>'
@@ -2589,12 +2602,13 @@ function buildPDF(mode){
   box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?(roi>=1?'year-one wins × their first-year value, vs billed':'investment year — the run-rate carries it'):'', DARK, true);
   box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
       n.price!=null?fmt$(n.price)+'/mo':'—',
-      discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
-            : (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''),
+      n.share>0?(discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
+            : (n.series.perfPrice!=null?'during build, then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')':scopeTxt+' fee')+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''))
+            :'flat retainer — the same fee every month, no revenue share'+((priceDirty&&q.price!=null&&n.price!==q.price)?' (neg.)':''),
       DARK, true, discP, discP?fmt$(q.price)+'/mo':null);
-  box(L+134,48,h1, discS?'SHARE — DISCOUNTED':'REVENUE SHARE', n.share+'%',
-      discS ? 'of each new customer\'s first-year value, from month '+n.rampMonth
-            : 'of each new customer\'s first-year value, from month '+n.rampMonth+' — billed monthly as wins land'+((shareDirty&&n.share!==q.share)?' (neg.)':''),
+  box(L+134,48,h1, n.share>0?(discS?'SHARE — DISCOUNTED':'REVENUE SHARE'):'REVENUE SHARE', n.share>0?n.share+'%':'None',
+      n.share>0?(discS ? 'of each new customer\'s first-year value, from month '+n.rampMonth
+            : 'of each new customer\'s first-year value, from month '+n.rampMonth+' — billed monthly as wins land'+((shareDirty&&n.share!==q.share)?' (neg.)':'')):'flat retainer — the client keeps 100% of every dollar of revenue',
       DARK, true, discS, discS?q.share+'%':null);
 
   y+=h1+4;
@@ -2602,7 +2616,7 @@ function buildPDF(mode){
   const crP = custRate(q.newCust);
   box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'pace after the ramp (months 1–'+(n.rampMonth-1)+', fixed fee only) — year one models '+eventPlan(q,n).winsYr, DARK);
   box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', q.contractStyle?'averaged across 12 months — wins land as whole contracts':'pace by month 12', DARK);
-  box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', q.contractStyle?'modeled potential — from whole-contract wins':'pace by month 12 — modeled potential', DARK);
+  box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', q.contractStyle?(q.retainYears>1?'modeled potential — from whole-contract wins':'gross first-year value of signed clients — value won, not cash collected'):'pace by month 12 — modeled potential', DARK);
 
   y+=h2+4.6;
 
@@ -2665,12 +2679,14 @@ function buildPDF(mode){
   doc.setFont('helvetica','italic'); doc.setFontSize(6.3); doc.setTextColor(150,143,130);
   doc.text('Disclosure: The figures in this proposal are not guarantees of performance. They are viable estimates produced through extensive AI-assisted market research with human review and approval. Actual results depend on market conditions, competition, and execution.', L, Math.max(y+7, 272), {maxWidth:W});
 
-  /* footer band */
+  /* footer band — with the reproducibility stamp: build + date version-lock every artifact */
   doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
   doc.text('NEW REWARD',L,291,{charSpace:1});
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
   doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
+  doc.setFontSize(5.6); doc.setTextColor(150,140,120);
+  doc.text('Reproducible quote — calculator build '+(typeof BUILD!=='undefined'?BUILD:'dev')+' · generated '+new Date().toISOString().slice(0,10)+' · the cited inputs on page 3 recreate it exactly',105,295,{align:'center'});
 
   /* ============ PAGE 2 — CALCULATOR INPUTS, RATIONALE & SOURCES ============ */
   doc.addPage();
@@ -2902,7 +2918,7 @@ function buildPDF(mode){
     }
   }
   /* rev-share start marker — the month the reduced fee + share begins */
-  if(n.rampMonth>=1&&n.rampMonth<=12){
+  if(n.rampMonth>=1&&n.rampMonth<=12&&n.share>0){
     const rsX=pL2+(n.rampMonth-1)*pgw;
     doc.setDrawColor(146,112,36); doc.setLineWidth(0.3); doc.setLineDashPattern([1.4,1.1],0);
     doc.line(rsX,pT-1,rsX,pB);
@@ -2964,12 +2980,13 @@ function buildPDF(mode){
   if(false) pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   else if(q.contractStyle&&pEp.winsYr<=4) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract covers the program many times over — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
   else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
-  pdDraw('The cost bars, in exact dollars:','months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build — and any customers won during the build are share-free. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(pEp.feeWaive?' — and at this contract size the fixed fee is WAIVED in any win month: the share only':'')+', and a month with no wins bills just the fixed fee. '
+  pdDraw('The cost bars, in exact dollars:', !(n.share>0) ? 'a flat '+fmt$(n.price)+' retainer bills every month — the revenue share is off, so there is no fee drop and no per-win billing; the client keeps 100% of every dollar of revenue.' : 'months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build — and any customers won during the build are share-free. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(pEp.feeWaive?' — and at this contract size the fixed fee is WAIVED in any win month: the share only':'')+', and a month with no wins bills just the fixed fee. '
     +((pdCr.monthly&&!q.contractStyle)
       ? 'A ramped month lands about '+pdCr.v+' wins — some months a couple more, some fewer — and each win adds '+pdPerWin+' of share spread across its first twelve months, billed only as that customer actually spends (a typical ramped month: ~'+fmt$(n.series.ongoingCost)+'/mo all-in). '
       : 'At the modeled pace ('+pdCr.txt+' once fully ramped — year one lands fewer while we build), most months bill only the fixed '+fmt$(n.series.perfPrice)+' — the chart places each modeled win in an illustrative month (the count is modeled; the exact timing will vary), and '+(pEp.feeWaive?'in a win month the fixed fee is WAIVED — that month bills only the '+pdPerWin+' share':'a win month bills the fee plus '+pdPerWin)+'. ')
     +'Year-one total at this pattern: '+fmt$(!q.contractStyle?pCumC[11]:pEp.eventY1)+'. No proven wins in a month = no share that month.');
   pdDraw('The profit math on a single win — in the client\'s favor, every time:','a '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+pdPerWin+' — a customer who brings ~'+fmt$(pdGross)+' in gross profit (at their '+pdMgn+'% margin) they wouldn\'t otherwise have. They keep ~'+fmt$(pdKeep)+' of that first-year profit, and the share never touches anything after year one: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.'));
+  if(n.share>0) pdDraw('Licensed verticals:','real estate, mortgage, legal, and healthcare clients should have their broker/attorney approve any revenue-share structure before signing — the flat-retainer option (revenue share off) is always available.');
   pdDraw('This projection never compounds','— the visibility asset does, but these numbers count none of it. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.');
   hy+=1;
   doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
@@ -3171,7 +3188,7 @@ function buildPDF(mode){
 
 /* scope toggles define a different program — clear any negotiated overrides
    so the recommended price always responds to SEO/GEO on/off */
-['scopeSeo','scopeGeo'].forEach(id=>{
+['scopeSeo','scopeGeo','scopeShare'].forEach(id=>{
   document.getElementById(id).addEventListener('change', ()=>{ priceDirty=false; shareDirty=false; rampDirty=false; render(); });
 });
 document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
@@ -3521,6 +3538,7 @@ function applyPrefill(qs){
     if(Array.isArray(arr)){ researchRationale={}; arr.forEach(function(o){ if(o&&o.f) researchRationale[o.f]={w:o.w||'',s:Array.isArray(o.s)?o.s:(o.s?[String(o.s)]:[])}; }); }
   }
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
+  if(p.has('revshare')) document.getElementById('scopeShare').checked = p.get('revshare')!=='0';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
   /* negotiated terms travel with the quote link */
   if(p.has('negPrice')){ var npv=parseFloat(p.get('negPrice')); if(npv>0){ document.getElementById('o-price-edit').value=Math.round(npv).toLocaleString('en-US'); priceDirty=true; } }
@@ -3691,6 +3709,7 @@ function copyQuoteLink(){
     var v=String(el.value||'').trim().replace(/,/g,''); if(v!=='') p.set(id,v); });
   p.set('seo', document.getElementById('scopeSeo').checked?'1':'0');
   p.set('geo', document.getElementById('scopeGeo').checked?'1':'0');
+  if(!document.getElementById('scopeShare').checked) p.set('revshare','0');
   if(typeof mktsMax==='function'&&mktsMax()>0&&MKTS.some(function(m){return (m.n&&m.n.trim())||m.v>0;})) p.set('markets', mktsSerialize());
   if(typeof priceDirty!=='undefined'&&priceDirty){ var pv=(document.getElementById('o-price-edit').value||'').replace(/[^0-9.]/g,''); if(pv) p.set('negPrice',pv); }
   if(typeof shareDirty!=='undefined'&&shareDirty){ var sv=document.getElementById('o-share-edit').value; if(sv) p.set('negShare',sv); }
