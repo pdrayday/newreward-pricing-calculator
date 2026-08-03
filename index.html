@@ -1990,7 +1990,7 @@ function render(){
   if(mjt) mjt.textContent = q.price==null ? 'See results' : fmt$(n.price)+'/mo · '+fx(rrCons)+'–'+fx(rr)+'× return';
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
-      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
+      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost '+(n.share>0?'(reduced fee + share)':'(flat fee)')+'. '
         +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+(function(){ const mgn=(s.margin??BENCH(s).margin), gpMo=q.newCust*q.yearlyValue*mgn/100, netMo=gpMo-(n.series.ongoingCost||0);
         return netMo>0 ? 'In client profit terms: the modeled pace adds ≈'+fmtK(gpMo)+'/mo in gross profit (at their '+mgn+'% margin) against ≈'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in cost — ≈'+fmtK(netMo)+'/mo net to the client. ' : ''; })()
       +'Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
@@ -2256,7 +2256,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-29';
+const BUILD='NR-20260728-30';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
