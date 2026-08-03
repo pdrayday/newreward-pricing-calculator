@@ -997,7 +997,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="neg-warn" id="o-price-warn"></div>
     <div class="o-market" id="o-market"></div>
 
-    <div class="o-share">
+    <div class="o-share" id="share-row">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
       <div class="share-desc"><b style="color:var(--text)">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow. <span style="color:var(--muted2)">Licensed verticals (real estate, mortgage, legal, healthcare): transaction-linked compensation may require broker/attorney approval — the flat-retainer option (revenue share toggled off) is always available.</span><br><span class="neg-note" id="o-share-note"></span></div>
     </div>
@@ -1039,7 +1039,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="oc-val gold" id="o-runrate">$—</div>
         <div class="oc-note" id="o-runrate-note">potential, not guaranteed</div>
       </div>
-      <div class="ocard">
+      <div class="ocard" id="ramp-card">
         <div class="oc-label">Rev share starts <button class="tip tip-left" type="button" aria-label="help">?<span class="tipbox">When the revenue share begins. It starts at month 3, plus one month if the market is difficult (≥6/10) and one more if the client's current visibility is very low — minus one month if they already rank in Google's top 5, since there's authority to build on. Editable — set any month you agree to.</span></button></div>
         <div class="oc-val gold edit-num" title="Editable — set the month the revenue share begins"><span class="rampword">Month</span><input id="o-ramp-edit" type="number" min="2" max="12" step="1" aria-label="Revenue share start month"></div>
         <div class="oc-note">fixed fee only until then</div>
@@ -1991,7 +1991,9 @@ function render(){
   set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
   set('o-roi-sub', rrCons!=null
       ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost (reduced fee + share). '
-        +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+'Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
+        +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+(function(){ const mgn=(s.margin??BENCH(s).margin), gpMo=q.newCust*q.yearlyValue*mgn/100, netMo=gpMo-(n.series.ongoingCost||0);
+        return netMo>0 ? 'In client profit terms: the modeled pace adds ≈'+fmtK(gpMo)+'/mo in gross profit (at their '+mgn+'% margin) against ≈'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in cost — ≈'+fmtK(netMo)+'/mo net to the client. ' : ''; })()
+      +'Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
       : 'Select at least one service in Scope to build the quote');
 
   /* price + share (editable for live negotiation) */
@@ -2041,6 +2043,12 @@ function render(){
   /* negotiation guardrails */
   const pNote=document.getElementById('o-price-note'), shNote=document.getElementById('o-share-note');
   const pWarn=document.getElementById('o-price-warn'), shWarn=document.getElementById('o-share-warn');
+  /* flat-retainer mode: the whole share section (input, copy, guardrail warning, ramp card) disappears */
+  const shRow=document.getElementById('share-row'), rampCard=document.getElementById('ramp-card');
+  const shareOn=(n.share>0);
+  if(shRow) shRow.hidden=!shareOn;
+  if(rampCard) rampCard.hidden=!shareOn;
+  if(shWarn) shWarn.style.display = shareOn ? '' : 'none';
   pNote.innerHTML = (priceDirty&&q.price!=null)
       ? 'negotiated — recommended '+fmt$(q.price)+' &nbsp;·&nbsp; <a onclick="return resetNeg(\'price\')">use recommended</a>' : '';
   shNote.innerHTML = shareDirty
@@ -2248,7 +2256,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-27';
+const BUILD='NR-20260728-29';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2986,6 +2994,8 @@ function buildPDF(mode){
       : 'At the modeled pace ('+pdCr.txt+' once fully ramped — year one lands fewer while we build), most months bill only the fixed '+fmt$(n.series.perfPrice)+' — the chart places each modeled win in an illustrative month (the count is modeled; the exact timing will vary), and '+(pEp.feeWaive?'in a win month the fixed fee is WAIVED — that month bills only the '+pdPerWin+' share':'a win month bills the fee plus '+pdPerWin)+'. ')
     +'Year-one total at this pattern: '+fmt$(!q.contractStyle?pCumC[11]:pEp.eventY1)+'. No proven wins in a month = no share that month.');
   pdDraw('The profit math on a single win — in the client\'s favor, every time:','a '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+pdPerWin+' — a customer who brings ~'+fmt$(pdGross)+' in gross profit (at their '+pdMgn+'% margin) they wouldn\'t otherwise have. They keep ~'+fmt$(pdKeep)+' of that first-year profit, and the share never touches anything after year one: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.'));
+  (function(){ const mgnA=(s.margin??BENCH(s).margin), gpA=q.newCust*q.yearlyValue*mgnA/100, netA=gpA-(n.series.ongoingCost||0);
+    if(netA>0) pdDraw('The client\'s profit math at pace:','~'+fmtK(gpA)+'/mo in new gross profit at the modeled pace (at their '+mgnA+'% margin) against ~'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in program cost — ~'+fmtK(netA)+'/mo net to the client, before any real-world compounding.'); })();
   if(n.share>0) pdDraw('Licensed verticals:','real estate, mortgage, legal, and healthcare clients should have their broker/attorney approve any revenue-share structure before signing — the flat-retainer option (revenue share off) is always available.');
   pdDraw('This projection never compounds','— the visibility asset does, but these numbers count none of it. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.');
   hy+=1;
