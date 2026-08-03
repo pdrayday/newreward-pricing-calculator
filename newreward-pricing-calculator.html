@@ -1385,7 +1385,17 @@ function computeQuote(s){
        band applies untouched, so every existing quote is byte-identical. */
     let scopeAdj=1;
     if(s.markets && s.markets.length && s.markets.some(function(m){return m.v>0;})){
-      const bandScope = s.footprint==='multi' ? clamp(0.78+0.105*(effUnits-2), 0.72, 1.12) : 1;
+      let bandScope = 1;
+      if(s.footprint==='multi') bandScope = clamp(0.78+0.105*(effUnits-2), 0.72, 1.12);
+      else if(s.footprint==='metro'||s.footprint==='national'){
+        /* metro/national with the region's cities listed: each market's demand share sets how
+           much its removal re-prices — dropping the core city cuts more than a small town.
+           Full rich listings sit at 1.00 (never above), thin/reduced scopes price down. */
+        const refM=Math.max(1, ind.vol); let nEff=0;
+        s.markets.forEach(function(m){ nEff += clamp(0.6 + 0.4*(m.v||0)/refM, 0.6, 2.0); });
+        bandScope = s.footprint==='metro' ? clamp(0.72+0.08*nEff, 0.72, 1.00)
+                                          : clamp(0.70+0.045*nEff, 0.70, 1.00);
+      }
       const volRefS = ind.vol*effReach(s.footprint,units);
       const dAdj = clamp(Math.pow(Math.max(0.05, vol/Math.max(1,volRefS)), 0.35), 0.85, 1.15);
       scopeAdj = clamp(bandScope*dAdj, 0.70, 1.30);
@@ -2225,7 +2235,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-25';
+const BUILD='NR-20260728-26';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
