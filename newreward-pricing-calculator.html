@@ -762,7 +762,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </label>
     <label class="toggle-row" for="scopeShare" style="margin-bottom:4px">
       <span class="tlabel">Revenue share included
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">ON: the hybrid structure — a reduced fixed fee once the share starts, plus a share of each proven new customer's first-year value. OFF: a straightforward flat retainer — the full fixed fee every month, 0% of client revenue, no fee drop. Flip it off for clients in licensed verticals (real estate, mortgage, legal, healthcare) until their broker/attorney approves a share structure, or for anyone who prefers simple pricing.</span></button>
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">ON: the hybrid structure — a reduced fixed fee once the share starts, plus a share of each proven new customer's first-year value. OFF: a straightforward flat retainer — the full fixed fee every month, 0% of client revenue, no fee drop. Flip it off for anyone who prefers simple pricing.</span></button>
       </span>
       <span class="switch"><input type="checkbox" id="scopeShare" checked><span class="slider"></span></span>
     </label>
@@ -999,7 +999,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-share" id="share-row">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow. <span style="color:var(--muted2)">Licensed verticals (real estate, mortgage, legal, healthcare): transaction-linked compensation may require broker/attorney approval — the flat-retainer option (revenue share toggled off) is always available.</span><br><span class="neg-note" id="o-share-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow.<br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
 
@@ -1584,6 +1584,7 @@ function getNegotiated(q){
     const v=parseFloat(document.getElementById('o-share-edit').value);
     if(!isNaN(v)) share=clamp(v,0,10);   // rev-share rate capped at 10%
   }
+  if(typeof readState==='function' && readState().revShare===false) share=0;   // toggle off wipes the share — no negotiated value survives it
   if(rampDirty){
     const v=parseInt(document.getElementById('o-ramp-edit').value,10);
     if(v>=2 && v<=12) rampMonth=v;       // month the revenue share begins (editable)
@@ -2045,7 +2046,7 @@ function render(){
   const pWarn=document.getElementById('o-price-warn'), shWarn=document.getElementById('o-share-warn');
   /* flat-retainer mode: the whole share section (input, copy, guardrail warning, ramp card) disappears */
   const shRow=document.getElementById('share-row'), rampCard=document.getElementById('ramp-card');
-  const shareOn=(n.share>0);
+  const shareOn=(s.revShare!==false)&&(n.share>0);
   if(shRow) shRow.hidden=!shareOn;
   if(rampCard) rampCard.hidden=!shareOn;
   if(shWarn) shWarn.style.display = shareOn ? '' : 'none';
@@ -2200,7 +2201,7 @@ function render(){
   const smEl=document.getElementById('share-math');
   if(q.price==null){ smEl.innerHTML='Select at least one service in Scope to see the math.'; }
   else if(!(n.share>0)){
-    smEl.innerHTML='<b>Revenue share is toggled off — this quote is a straightforward flat retainer.</b> The client pays '+fmt$(n.price)+'/mo, every month, and keeps 100% of every dollar of revenue — no share, no fee drop, no per-win billing. Toggle the revenue share back on to see the hybrid structure and its math. <span style="color:var(--muted2)">Licensed verticals (real estate, mortgage, legal, healthcare): transaction-linked compensation may require broker/attorney approval — the flat retainer avoids that question entirely.</span>';
+    smEl.innerHTML='<b>Revenue share is toggled off — this quote is a straightforward flat retainer.</b> The client pays '+fmt$(n.price)+'/mo, every month, and keeps 100% of every dollar of revenue — no share, no fee drop, no per-win billing. Toggle the revenue share back on to see the hybrid structure and its math.';
   }
   else{
     const perWin = q.yearlyValue*q.attribFactor*n.share/100;
@@ -2256,7 +2257,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-30';
+const BUILD='NR-20260728-31';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
