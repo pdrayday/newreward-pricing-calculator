@@ -475,6 +475,7 @@ select option{background:#171410;color:var(--text)}
 .o-price .permo{font-size:14px;font-weight:600;color:var(--muted);text-shadow:none;letter-spacing:0;white-space:nowrap}
 .o-sub{color:var(--muted);font-size:12.5px;margin-top:6px}
 
+[hidden]{display:none !important}   /* the hidden attribute always wins — author display rules never resurrect a hidden block */
 .o-share{
   display:flex;align-items:baseline;gap:10px;margin-top:22px;
   padding-top:20px;border-top:1px solid var(--gold-line-soft);
@@ -2268,7 +2269,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-34';
+const BUILD='NR-20260728-35';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
