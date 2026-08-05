@@ -1431,6 +1431,16 @@ function computeQuote(s){
     }
     price = Math.max(1500, Math.round(p0/50)*50);   // hard floor: $1,500/mo for every combination
     if(price<mLo) price+=50;   // keep the $50 rounding at or above the band floor
+    /* ONE LISTED MARKET = ONE MARKET'S PRICE: a metro/national scoped down to a single
+       market row is the same fight as the local claim on that market — same demand, same
+       chips, same everything — so the footprint label alone never adds cost. Priced via
+       the local-equivalent configuration; each added city row climbs back toward the
+       full metro/national band through the demand-weighted bandScope above. */
+    if((s.footprint==='metro'||s.footprint==='national') && s.markets && s.markets.length===1
+       && ((s.markets[0].v>0)||(s.markets[0].n&&String(s.markets[0].n).trim()))){
+      const qLocEq = computeQuote(Object.assign({}, s, {footprint:'local'}));
+      if(qLocEq.price!=null) price = qLocEq.price;
+    }
   }
 
   /* ---- revenue share: CALCULATED from the client's economics so it's fair to both sides ----
@@ -2315,7 +2325,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-46';
+const BUILD='NR-20260728-47';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
