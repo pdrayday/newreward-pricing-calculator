@@ -2307,7 +2307,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-42';
+const BUILD='NR-20260728-43';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3347,7 +3347,7 @@ let mktsUserEdited=false;  /* true only when the REP edits chips this session �
 let MKTS_LIB={};    // market memory: every researched city -> its demand, so a removed market re-adds with one pick (no re-research)
 let mktsSync=false; // guards against units<->chips update loops
 function mktsMax(){ const f=document.getElementById('footprint').value; if(f==='multi') return 5; if(f==='local') return 1; if(f==='metro') return 10; if(f==='national'){ const u=parseInt(document.getElementById('units').value,10)||1; return u<=10?10:0; } return 0; }
-function mktsParse(str){ try{ return String(str).split('|').map(function(t){ const k=t.split('~'); return {n:(k[0]||'').trim(), v:Math.max(0,Math.round(parseFloat(String(k[1]||'').replace(/,/g,''))||0))}; }).filter(function(m){return m.n||m.v;}).slice(0,5); }catch(e){ return []; } }
+function mktsParse(str){ try{ return String(str).split('|').map(function(t){ const k=t.split('~'); return {n:(k[0]||'').trim(), v:Math.max(0,Math.round(parseFloat(String(k[1]||'').replace(/,/g,''))||0))}; }).filter(function(m){return m.n||m.v;}).slice(0,10); }catch(e){ return []; } }   /* ceiling = metro/national max; the prefill re-caps per footprint */
 function mktsSerialize(){ return MKTS.map(function(m){ return String(m.n||'').replace(/[~|]/g,' ').trim()+'~'+(m.v||0); }).join('|'); }
 function mktsTotal(){ return MKTS.reduce(function(a,m){ return a+(m.v||0); },0); }
 function mktsNames(){ return MKTS.map(function(m){ return String(m.n||'').trim(); }).filter(Boolean); }
@@ -3572,6 +3572,10 @@ function applyPrefill(qs){
   /* per-market chips travel in the link: names + each market's researched demand */
   if(p.has('markets')&&typeof mktsParse==='function'){
     MKTS=mktsParse(p.get('markets'));
+    /* cap to the footprint's own market limit (multi 5, metro/national 10, local 1) —
+       the footprint field is already prefilled above, so mktsMax() is accurate here */
+    var mxP=(typeof mktsMax==='function')?mktsMax():10;
+    if(mxP>0 && MKTS.length>mxP) MKTS=MKTS.slice(0,mxP);
     if(typeof mktsUserEdited!=='undefined') mktsUserEdited=false;   // loaded scope is prior data, not a scope instruction
     MKTS.forEach(function(m){ if(m.n&&m.v>0) MKTS_LIB[m.n]=m.v; });
     if(typeof renderMktsLib==='function') renderMktsLib();
