@@ -1007,7 +1007,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <div class="share-pct" style="font-size:30px;font-weight:800;color:var(--gold-deep)">0<span class="cur">%</span></div>
       <div class="share-desc"><b style="color:var(--text)">Flat retainer — no revenue share.</b> The revenue share is toggled off: the client pays the same fixed fee every month, keeps 100% of every dollar of revenue, and there is no per-win billing — and no fee drop, because there is no share to offset it.</div>
     </div>
-    <div id="flat-compare" hidden style="margin-top:10px;padding:12px 14px;border:1px dashed var(--gold-line);border-radius:10px;font-size:12.5px;line-height:1.6;color:var(--muted)"></div>
 
     <div class="o-diff">
       <div class="o-diff-top">
@@ -2075,24 +2074,6 @@ function render(){
   if(shWarn) shWarn.style.display = shareOn ? '' : 'none';
   const flatBlock=document.getElementById('flat-block');
   if(flatBlock) flatBlock.hidden = shareOn || q.price==null;
-  /* rep-side math (flat mode only): show WHY the hybrid twin bills the same —
-     base + share x modeled win value ~ the flat fee, so cost and ROI both match */
-  const flatCmp=document.getElementById('flat-compare');
-  if(flatCmp){
-    const showCmp = !shareOn && q.price!=null && q.twinShare>0 && q.ongShareBase>0 && q.perfBase!=null;
-    flatCmp.hidden = !showCmp;
-    if(showCmp){
-      const shareBill = q.twinShare/100*q.ongShareBase;
-      const hybridTotal = q.perfBase + shareBill;
-      flatCmp.innerHTML =
-        '<b style="color:var(--text)">Fixed vs hybrid \u2014 the same math, side by side.</b><br>'
-        +'Flat retainer: <b style="color:var(--gold-bright)">'+fmt$(q.price)+'/mo</b>, every month.<br>'
-        +'Hybrid: '+fmt$(q.perfBase)+' base + '+q.twinShare+'% share &times; '+fmt$(Math.round(q.ongShareBase))+' modeled new-win value/mo '
-        +'= '+fmt$(q.perfBase)+' + '+fmt$(Math.round(shareBill))+' = <b style="color:var(--gold-bright)">'+fmt$(Math.round(hybridTotal))+'/mo</b> at the modeled pace.<br>'
-        +fmt$(Math.round(hybridTotal))+' &asymp; '+fmt$(q.price)+' \u2014 the monthly cost matches, the revenue projection is identical, so the projected ROI comes out the same. '
-        +'Until the share starts (month '+n.rampMonth+') the hybrid bills the full fee \u2014 identical to the flat retainer from day one.';
-    }
-  }
   const legC=document.getElementById('legend-cost');
   if(legC) legC.textContent = shareOn ? 'Total cost (fixed + share)' : 'Total cost (flat fee)';
   pNote.innerHTML = (priceDirty&&q.price!=null)
@@ -2251,7 +2232,19 @@ function render(){
   const smEl=document.getElementById('share-math');
   if(q.price==null){ smEl.innerHTML='Select at least one service in Scope to see the math.'; }
   else if(!(n.share>0)){
-    smEl.innerHTML='<b>Revenue share is toggled off — this quote is a straightforward flat retainer.</b> The client pays '+fmt$(n.price)+'/mo, every month, and keeps 100% of every dollar of revenue — no share, no fee drop, no per-win billing. Toggle the revenue share back on to see the hybrid structure and its math.';
+    let smFlat='<b>Revenue share is toggled off — this quote is a straightforward flat retainer.</b> The client pays '+fmt$(n.price)+'/mo, every month, and keeps 100% of every dollar of revenue — no share, no fee drop, no per-win billing. Toggle the revenue share back on to see the hybrid structure and its math.';
+    /* the rep-side fixed-vs-hybrid math lives HERE in section 05 — all of it together:
+       base + share x modeled win value reassembles the flat fee, so cost and ROI match */
+    if(q.twinShare>0 && q.ongShareBase>0 && q.perfBase!=null){
+      const shareBillSM = q.twinShare/100*q.ongShareBase;
+      const hybridTotSM = q.perfBase + shareBillSM;
+      smFlat+='<div style="margin-top:12px;padding:12px 14px;border:1px dashed var(--gold-line);border-radius:10px;line-height:1.6">'
+        +'<b style="color:var(--text)">Fixed vs hybrid \u2014 the same math, side by side.</b><br>'
+        +'Flat retainer: <b style="color:var(--gold-bright)">'+fmt$(q.price)+'/mo</b>, every month.<br>'
+        +'Hybrid: '+fmt$(q.perfBase)+' base + '+q.twinShare+'% share &times; '+fmt$(Math.round(q.ongShareBase))+' modeled new-win value/mo = '+fmt$(q.perfBase)+' + '+fmt$(Math.round(shareBillSM))+' = <b style="color:var(--gold-bright)">'+fmt$(Math.round(hybridTotSM))+'/mo</b> at the modeled pace.<br>'
+        +fmt$(Math.round(hybridTotSM))+' &asymp; '+fmt$(q.price)+' \u2014 the monthly cost matches, the revenue projection is identical, so the projected ROI comes out the same. Until the share starts (month '+n.rampMonth+') the hybrid bills the full fee \u2014 identical to the flat retainer from day one.</div>';
+    }
+    smEl.innerHTML=smFlat;
   }
   else{
     const perWin = q.yearlyValue*q.attribFactor*n.share/100;
@@ -2307,7 +2300,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-43';
+const BUILD='NR-20260728-44';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
