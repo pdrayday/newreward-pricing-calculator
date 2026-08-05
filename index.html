@@ -2024,6 +2024,7 @@ function render(){
   pEdit.disabled = q.price==null;
   if(!priceDirty) pEdit.value = q.price!=null ? q.price.toLocaleString('en-US') : '';
   if(!shareDirty) shEdit.value = q.share;
+  shEdit.step = q.share<3 ? '0.05' : '0.5';   // fine-grained arrows for the sub-3% big-ACV shares
   if(!rampDirty) rEdit.value = q.rampMonth;
   set('o-price-sub', q.price!=null
       ? (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':'AEO/GEO only'))+' fee during the build — drops '+Math.round((1-n.series.perfPrice/n.price)*100)+'% to '+fmt$(n.series.perfPrice)+'/mo when the revenue share begins (month '+n.rampMonth+')'+(eventPlan(q,n).feeWaive?' — and is waived entirely in any month a win lands':'')
@@ -2108,11 +2109,16 @@ function render(){
     pWarn.innerHTML='&#9888; This price is too low for the scope — it will not cover the work this market requires. Use the recommended '+fmt$(q.price)+'.';
   }
   pWarn.classList.toggle('show',pLow);
-  /* negotiated-share floor mirrors the computed floor: 1% for ULTRA (a 1% share on a
-     $500k+ contract still clears our cost-to-deliver many times over — exactly the room
-     a rep needs in a live negotiation), 2% for everything else; never more than 1.5
-     points below the recommended rate. Floors are never shown to the client. */
-  const shFloor=Math.max(s.industry==='ultra'?1:2, q.share-1.5);
+  /* negotiated-share floor: never ABOVE the recommended rate. Huge-ACV programs (ultra,
+     big B2B) legitimately carry sub-1% shares — the equalizer solves the share from the
+     fee, and 0.5% of a $1M contract is real money — so a fixed 1%/2% floor would flag
+     the calculator's own recommendation. At a 3%+ recommended rate the classic rule
+     holds (1% ultra / 2% otherwise, never more than 1.5 pts below recommended); under
+     3% the floor is 70% of the recommended rate (0.05 snap, absolute minimum 0.05%).
+     Floors are never shown to the client. */
+  const shFloor = q.share>=3
+      ? Math.max(s.industry==='ultra'?1:2, q.share-1.5)
+      : Math.max(0.05, Math.round(q.share*0.7*20)/20);
   shLow = n.share<shFloor;
   shWarn.innerHTML='&#9888; This revenue share is too low for the engagement. Use the recommended '+q.share+'%.';
   shWarn.classList.toggle('show',shLow);
@@ -2301,7 +2307,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-41';
+const BUILD='NR-20260728-42';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
