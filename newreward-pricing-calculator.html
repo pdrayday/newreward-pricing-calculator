@@ -1007,6 +1007,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <div class="share-pct" style="font-size:30px;font-weight:800;color:var(--gold-deep)">0<span class="cur">%</span></div>
       <div class="share-desc"><b style="color:var(--text)">Flat retainer — no revenue share.</b> The revenue share is toggled off: the client pays the same fixed fee every month, keeps 100% of every dollar of revenue, and there is no per-win billing — and no fee drop, because there is no share to offset it.</div>
     </div>
+    <div id="flat-compare" hidden style="margin-top:10px;padding:12px 14px;border:1px dashed var(--gold-line);border-radius:10px;font-size:12.5px;line-height:1.6;color:var(--muted)"></div>
 
     <div class="o-diff">
       <div class="o-diff-top">
@@ -1460,6 +1461,7 @@ function computeQuote(s){
     perfBase = Math.max(500, Math.round((price - 0.10*ongShareBase)/50)*50);
   }
   share = clamp(share, 0.05, 10);
+  const twinShare = share;   // the hybrid twin's share, kept for the rep-side comparison even in flat mode
   if(s.revShare===false) share = 0;   // flat-retainer mode: full fee every month, no share
 
   /* ---- attribution: every win is tracked and 100% verifiable — a win is a win, there is
@@ -1470,7 +1472,7 @@ function computeQuote(s){
 
   const windowDays = s.confidence==='verified'?60 : 90;
 
-  return {difficulty, price, share, perfBase, yearlyValue, yrIsAuto, aovYear, retainYears, ltv,
+  return {difficulty, price, share, perfBase, twinShare, ongShareBase, yearlyValue, yrIsAuto, aovYear, retainYears, ltv,
           seoEff, seoEntered, rankImplied, rankNow,
           newCust, newCustDemand, capApplied, capStretch, capBase, capSource, capAuto, stretchMult, aiConvLift, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
           /* CONTRACT-STYLE: a win is a signed deal worth its first-year value — B2B/SaaS,
@@ -2072,6 +2074,24 @@ function render(){
   if(shWarn) shWarn.style.display = shareOn ? '' : 'none';
   const flatBlock=document.getElementById('flat-block');
   if(flatBlock) flatBlock.hidden = shareOn || q.price==null;
+  /* rep-side math (flat mode only): show WHY the hybrid twin bills the same —
+     base + share x modeled win value ~ the flat fee, so cost and ROI both match */
+  const flatCmp=document.getElementById('flat-compare');
+  if(flatCmp){
+    const showCmp = !shareOn && q.price!=null && q.twinShare>0 && q.ongShareBase>0 && q.perfBase!=null;
+    flatCmp.hidden = !showCmp;
+    if(showCmp){
+      const shareBill = q.twinShare/100*q.ongShareBase;
+      const hybridTotal = q.perfBase + shareBill;
+      flatCmp.innerHTML =
+        '<b style="color:var(--text)">Fixed vs hybrid \u2014 the same math, side by side.</b><br>'
+        +'Flat retainer: <b style="color:var(--gold-bright)">'+fmt$(q.price)+'/mo</b>, every month.<br>'
+        +'Hybrid: '+fmt$(q.perfBase)+' base + '+q.twinShare+'% share &times; '+fmt$(Math.round(q.ongShareBase))+' modeled new-win value/mo '
+        +'= '+fmt$(q.perfBase)+' + '+fmt$(Math.round(shareBill))+' = <b style="color:var(--gold-bright)">'+fmt$(Math.round(hybridTotal))+'/mo</b> at the modeled pace.<br>'
+        +fmt$(Math.round(hybridTotal))+' &asymp; '+fmt$(q.price)+' \u2014 the monthly cost matches, the revenue projection is identical, so the projected ROI comes out the same. '
+        +'Until the share starts (month '+n.rampMonth+') the hybrid bills the full fee \u2014 identical to the flat retainer from day one.';
+    }
+  }
   const legC=document.getElementById('legend-cost');
   if(legC) legC.textContent = shareOn ? 'Total cost (fixed + share)' : 'Total cost (flat fee)';
   pNote.innerHTML = (priceDirty&&q.price!=null)
@@ -2281,7 +2301,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-40';
+const BUILD='NR-20260728-41';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
