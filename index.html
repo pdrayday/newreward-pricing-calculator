@@ -738,6 +738,12 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
     </div>
     <div class="fgroup" style="margin-bottom:4px">
+      <label class="flabel">Top competitor
+        <button class="tip" type="button" aria-label="help">?<span class="tipbox">The single most visible direct competitor in this market — the business page one and the AI answers already favor. The results panel runs THEIR estimated visibility through the same demand model to show what maximized, optimized visibility is already worth here. Researched links carry the competitor's estimated visibility (and, when evidence exists, their estimated ad and SEO/GEO budgets); entered by hand, the model assumes market-leader visibility.</span></button>
+      </label>
+      <div class="fwrap"><input type="text" id="competitor" placeholder="https://top-competitor.com"></div>
+    </div>
+    <div class="fgroup" style="margin-bottom:4px">
       <label class="flabel">Search phrase or city
         <button class="tip" type="button" aria-label="help">?<span class="tipbox">The main phrase a customer types to find this business — e.g. "auto repair sandy ut". It's a label and anchor only; the quote is <b>not</b> sized on this one query. Demand comes from "Estimated phrase volume" in the Service Scope, Market Value &amp; Search Demand section below — enter the combined monthly searches for this phrase plus its close and more-popular variants. If a higher-volume phrase fits the business better, use that one here. Use a phrase real customers actually type — the specific product, compound, or service words ("bpc-157 peptides", not "buy peptides").</span></button>
       </label>
@@ -766,12 +772,6 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">ON: the performance partnership — the full fee during the build, then a reduced base plus a share of each proven new customer's first-year value, billed only as wins land. OFF: a straightforward flat retainer — the full fixed fee every month, 0% of client revenue, no fee drop.</span></button>
       </span>
       <span class="switch"><input type="checkbox" id="scopeShare" checked><span class="slider"></span></span>
-    </label>
-    <label class="toggle-row" for="scopeNow" style="margin-bottom:4px">
-      <span class="tlabel">Current state comparison
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">ON: adds a side-by-side card in the results — what this business's <b>current</b> visibility already wins from search &amp; AI today (customers, value, and the Google&nbsp;Ads spend that traffic replaces) next to the modeled pace with the program. Derived from the same demand model, using today's visibility scores as-is. Run a market leader through it to show a prospect what maximized visibility is worth — or run the prospect to show what they capture now.</span></button>
-      </span>
-      <span class="switch"><input type="checkbox" id="scopeNow"><span class="slider"></span></span>
     </label>
     <div class="scope-warn" id="scope-warn"></div>
     <div class="row2">
@@ -1591,7 +1591,7 @@ function readState(){
     seo: document.getElementById('scopeSeo').checked,
     geo: document.getElementById('scopeGeo').checked,
     revShare: document.getElementById('scopeShare').checked,
-    nowCompare: document.getElementById('scopeNow').checked,
+    competitor: document.getElementById('competitor').value.trim(),
     rank: num('rank'), seoScore: num('seoScore'), geoScore: num('geoScore'),
     compstr: document.getElementById('compstr').value,
     units: num('units'),
@@ -1613,6 +1613,7 @@ let priceDirty=false, shareDirty=false, rampDirty=false;
 let researchedQuote=false;   // true when this quote arrived via a researched prefill link
 let researchRationale=null;  // {field:{w:'why',s:['source','...']}} — travels in the &rationale= link param
 let prefillScope=null;       // {volume,units,footprint} the researched volume was sized FOR — powers the re-scope advisory
+let COMPV=null;              // top competitor's researched estimates {rank,seo,geo,ads,spend} — travel in the link
 
 function getNegotiated(q){
   let price=q.price, share=q.share, rampMonth=q.rampMonth;
@@ -2093,32 +2094,50 @@ function render(){
   if(shWarn) shWarn.style.display = shareOn ? '' : 'none';
   const flatBlock=document.getElementById('flat-block');
   if(flatBlock) flatBlock.hidden = shareOn || q.price==null;
-  /* CURRENT-STATE COMPARISON CARD — the same demand model run twice: the winnable pool
-     if this business were invisible, minus what is still winnable at its ACTUAL scores
-     today. The difference = what current visibility already wins, no program counted.
-     Capped at stated delivery capacity. Program column mirrors the displayed projection. */
+  /* CURRENT-STATE + TOP-COMPETITOR CARD — always on: the same demand model run for three
+     positions. Today = the winnable pool if this business were invisible minus what is
+     still winnable at its ACTUAL scores (capped at stated delivery capacity). Top
+     competitor = the same inversion at the competitor's estimated visibility — what
+     maximized, optimized visibility is already worth in THIS market. Program column
+     mirrors the displayed projection (ADDED wins above today's baseline). */
   const nowCard=document.getElementById('now-card');
   if(nowCard){
-    const showNow = s.nowCompare===true && q.price!=null;
+    const showNow = q.price!=null;
     nowCard.hidden = !showNow;
     if(showNow){
       const sZeroCS=Object.assign({},s,{rank:30,seoScore:5,geoScore:2,capacity:9999});
       const sNowCS=Object.assign({},s,{capacity:9999});
-      let capCS=Math.max(0, computeQuote(sZeroCS).newCust - computeQuote(sNowCS).newCust);
+      const poolCS=computeQuote(sZeroCS).newCust;
+      let capCS=Math.max(0, poolCS - computeQuote(sNowCS).newCust);
       if(q.capBase>0) capCS=Math.min(capCS, q.capBase*(q.stretchMult||1));
       const convCS=clamp((s.convrate??BENCH(s).conv),0.1,100)/100;
       const cpcCS=s.cpc??BENCH(s).cpc;
       const visitsNow=convCS>0?capCS/convCS:0, visitsPace=convCS>0?q.newCust/convCS:0;
-      const colCS=function(t,w,v2,v3){ return '<div><div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px">'+t+'</div>'
+      const colCS=function(t,w,v2,v3,extra){ return '<div><div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px">'+t+'</div>'
         +'<div style="font-size:20px;font-weight:800;color:var(--gold-bright)">'+w+'</div><div style="font-size:11px;margin-bottom:6px">customers/mo from search + AI</div>'
         +'<div style="font-weight:700;color:var(--text)">'+v2+'</div><div style="font-size:11px;margin-bottom:6px">first-year value won /mo</div>'
-        +'<div style="font-weight:700;color:var(--text)">'+v3+'</div><div style="font-size:11px">Google Ads spend this traffic replaces /mo</div></div>'; };
-      nowCard.innerHTML='<b style="color:var(--text)">Current state vs the program \u2014 same demand model, same math.</b>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px">'
+        +'<div style="font-weight:700;color:var(--text)">'+v3+'</div><div style="font-size:11px">Google Ads spend this traffic replaces /mo</div>'+(extra||'')+'</div>'; };
+      /* top competitor: researched estimates when the link carried them (COMPV), assumed
+         market-leader visibility (rank 2 / SEO 85 / AI 45) when the field is hand-filled */
+      let compCol='', compNote='';
+      const compName=String(s.competitor||'').replace(/^https?:\/\//,'').replace(/\/.*$/,'').trim();
+      if(compName){
+        const cv=(typeof COMPV!=='undefined'&&COMPV)?COMPV:{rank:2,seo:85,geo:45,ads:null,spend:null};
+        const sCompCS=Object.assign({},s,{rank:cv.rank,seoScore:cv.seo,geoScore:cv.geo,capacity:9999});
+        const compCap=Math.max(0, poolCS - computeQuote(sCompCS).newCust);
+        const visitsComp=convCS>0?compCap/convCS:0;
+        const spendBits=(cv.ads?'<div style="font-weight:700;color:var(--text);margin-top:6px">'+fmt$(cv.ads)+'/mo</div><div style="font-size:11px">est. Google Ads budget</div>':'')
+          +(cv.spend?'<div style="font-weight:700;color:var(--text);margin-top:6px">'+fmt$(cv.spend)+'/mo</div><div style="font-size:11px">est. SEO/GEO investment</div>':'');
+        compCol=colCS('Top competitor today', compCap.toFixed(compCap<1?2:1), fmtK(compCap*q.yearlyValue), fmtK(visitsComp*(cpcCS||0)), spendBits);
+        compNote=' The competitor column is '+compName+' at '+((typeof COMPV!=='undefined'&&COMPV)?'its researched visibility estimates':'assumed market-leader visibility')+' \u2014 what maximized visibility is already worth in this market.';
+      }
+      nowCard.innerHTML='<b style="color:var(--text)">Current state'+(compName?' vs the market leader':'')+' vs the program \u2014 same demand model, same math.</b>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:10px">'
         +colCS('Today \u2014 no program', capCS.toFixed(capCS<1?2:1), fmtK(capCS*q.yearlyValue), fmtK(visitsNow*(cpcCS||0)))
+        +compCol
         +colCS('At the modeled pace', q.newCust.toFixed(q.newCust<1?2:1), fmtK(q.newCust*q.yearlyValue), fmtK(visitsPace*(cpcCS||0)))
         +'</div>'
-        +'<div style="margin-top:8px;font-size:11.5px;color:var(--muted2)">The today column is what the CURRENT visibility scores ('+(q.seoEff!=null?Math.round(q.seoEff):'\u2014')+'/100 SEO \u00b7 '+(s.geoScore!=null?s.geoScore:'\u2014')+'/100 AI, rank '+(s.rank!=null?s.rank:'\u2014')+') already win. The program column is the modeled pace once ramped. Both use the same demand pool, conversion rate, and delivery caps \u2014 run a market leader through this to show what maximized visibility is worth.</div>';
+        +'<div style="margin-top:8px;font-size:11.5px;color:var(--muted2)">The today column is what the CURRENT visibility scores ('+(q.seoEff!=null?Math.round(q.seoEff):'\u2014')+'/100 SEO \u00b7 '+(s.geoScore!=null?s.geoScore:'\u2014')+'/100 AI, rank '+(s.rank!=null?s.rank:'\u2014')+') already win; the program column is the ADDED pace once ramped, on top of today. All columns share one demand pool and conversion rate.'+compNote+'</div>';
     }
   }
   const legC=document.getElementById('legend-cost');
@@ -2362,7 +2381,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260728-49';
+const BUILD='NR-20260728-50';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2437,6 +2456,7 @@ function researchWithAI(){
     +'- volume: the COMBINED phrase-cluster demand across ALL locations/service lines counted in units — a 2-location business serving two cities needs both cities\' demand added together.\n'
     +'- convrate: for everyday call-heavy local services 2.5-4 is realistic; high-ticket quote-driven services run ~1-2; reserve sub-1 rates for B2B and ultra-high-ticket contracts.\n'
     +'- compstr: decide by rule, not vibe. dominant = household-name national brands or very high-authority sites hold most of the top results. strong = established multi-year players with real authority hold them. moderate = a mixed field with visible gaps (the default). weak = thin, outdated, or few competitors. If torn between two labels, take the STRONGER one and name the competitor that justifies it.\n'
+    +'- competitor (REQUIRED) + comprank/compseo/compgeo (+ compads/compspend only with evidence): identify the ONE most visible DIRECT competitor in the same vertical and market \\u2014 the business page one and the AI answers already favor \\u2014 and set competitor= to their website domain, naming the SERP/AI evidence in the Why. Estimate THEIR current visibility the same way as seoScore/geoScore (directional estimates, exempt from the reproducibility contract): comprank snapped to 1/2/3/5/8, compseo (an entrenched leader usually 70-90), compgeo. If \\u2014 and ONLY if \\u2014 evidence exists (ad-transparency listings, published traffic-tool estimates, published agency rates for their visible scope), add compads (their estimated monthly Google Ads budget, $/mo) and compspend (their estimated monthly SEO/GEO investment, $/mo); with NO evidence OMIT both, never fabricate. The calculator runs this competitor through the same demand model to show what maximized, optimized visibility is already worth in the market.\\n'
     +'- seoScore (0–100) and geoScore (0–100): how visible they are TODAY. A deep-researched ESTIMATE is fine here — these are the only two fields exempt from the reproducibility contract, because New Reward runs its own internal visibility audit that replaces them before anything is presented. Most local businesses are SEO 25–40 and GEO 5–20; only score higher with clear evidence of strong rankings or AI mentions.\n'
     +'- rank: their average Google position for money phrases (1–100). If measured by checking, state the exact position; if estimated, snap to 3 / 5 / 8 / 12 / 20 / 30 / 50. cpc: the MONEY PHRASE\'s own published cost-per-click (or the median across the commercial cluster\'s buying-intent phrases), snapped to whole dollars ($2–6 everyday local, $8–25 medical/legal/SaaS). NEVER use a broad category average that blends informational keywords — it systematically understates the money cluster and is a methodology error. STICKINESS: if a prior CPC exists and your fresh phrase-level figure lands within ±30% of it, keep the prior; a bigger gap means one figure was a category average — use the phrase-level one.\n'
     +'- For E-COMMERCE only, you MAY set aov (typical order value, read from their product/pricing pages) and freq (orders per year; use 12 for a clear monthly subscription) — these build the customer value. If not clearly determinable, leave both blank.\n'
@@ -2457,7 +2477,7 @@ function researchWithAI(){
     +'Then give me BOTH of the following:\n\n'
     +'(1) A FOUR-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why", "Sources") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason. In the "Sources" column give 1-3 credible sources per row as ACTUAL LINKS — the full URL of the exact page you used (their pricing page URL, the specific Ahrefs/RisingTrends/IBISWorld article, the BBB profile URL). Use a plain named check (e.g. "live SERP check, Jul 2026") ONLY when no URL exists. As many relevant linked sources as genuinely align with the value. CITATION INTEGRITY — non-negotiable: cite a URL for a value ONLY if that page actually states the number, the range it was snapped from, or the fact claimed — a reader who clicks it must be able to find the figure on that page. NEVER attach a related-but-nonsupporting link to dress up a number; citing a page that merely discusses the industry but never states the value is a citation failure. When a value is a calculator canonical or ladder snap (e.g. the high-ticket 1.5 percent visitor-to-customer standard), name it AND its derivation in Sources — "Vertical standard — ~4.8% visitor-to-lead x ~30% close (links)" — and, if helpful, add a link prefixed "context:" that supports the neighborhood of the number without claiming to state it. When a value is derived, show the chain in Why (e.g. "~4.8 percent visitor-to-lead x ~30 percent lead-to-close = ~1.4 percent, snapped to the 1.5 standard") and cite the page(s) that state EACH link of the chain.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder). CRITICAL: append ONE more parameter, &rationale=, whose value is the URI-encoded compact JSON of the table: an array of {"f":"<link field name>","w":"<a tight 15-25 word SUMMARY of that row\'s Why>","s":["<the full source URLs from your table (or the plain named check when no URL exists)>"]} for every field you filled. This travels into the proposal PDF, which prints the full cited inputs table — so the client sees every source.\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM&rationale=RATIONALE_JSON\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM&competitor=URL&comprank=NUM&compseo=0to100&compgeo=0to100&compads=NUM&compspend=NUM&rationale=RATIONALE_JSON\n'
     +'where RATIONALE_JSON is the URI-encoded JSON array described above — NEVER omit it. Tiny example (two fields): &rationale=%5B%7B%22f%22%3A%22volume%22%2C%22w%22%3A%22Head%20~12k%2Fmo%20plus%20variants%2C%20snapped%20to%2025k%20band%22%2C%22s%22%3A%5B%22https%3A%2F%2Fwww.risingtrends.co%2Fblog%2Fpeptides-trend%22%5D%7D%2C%7B%22f%22%3A%22margin%22%2C%22w%22%3A%22Published%20range%2060-70%2C%20middle%20snapped%22%2C%22s%22%3A%5B%22https%3A%2F%2Fwww.ibisworld.com%2F...%22%5D%7D%5D\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
@@ -3305,7 +3325,7 @@ function buildPDF(mode){
 
 /* scope toggles define a different program — clear any negotiated overrides
    so the recommended price always responds to SEO/GEO on/off */
-['scopeSeo','scopeGeo','scopeShare','scopeNow'].forEach(id=>{
+['scopeSeo','scopeGeo','scopeShare'].forEach(id=>{
   document.getElementById(id).addEventListener('change', ()=>{ priceDirty=false; shareDirty=false; rampDirty=false; render(); });
 });
 document.querySelectorAll('.inputs input,.inputs select').forEach(el=>{
@@ -3611,7 +3631,7 @@ function applyPrefill(qs){
   const p = new URLSearchParams(qs);
   if(![...p.keys()].length) return false;
   if(p.has('industry')){ const ie=document.getElementById('industry'); if([...ie.options].some(o=>o.value===p.get('industry'))) ie.value=p.get('industry'); }
-  const fields = ['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc','capacity',
+  const fields = ['client','website','competitor','phrase','industry','footprint','compstr','units','volume','volsource','cpc','capacity',
                   'rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin',
                   'acq','commission'];
   fields.forEach(id=>{
@@ -3640,6 +3660,12 @@ function applyPrefill(qs){
     var mkSum=MKTS.reduce(function(a,m){return a+(m.v||0);},0);
     if(mkSum>0){ var vEl=document.getElementById('volume'); if(vEl) vEl.value=mkSum.toLocaleString('en-US'); }
   }
+  /* top-competitor researched estimates travel with the link */
+  COMPV=null;
+  if(p.has('compseo')||p.has('compgeo')||p.has('comprank')||p.has('compads')||p.has('compspend')){
+    COMPV={ rank:parseFloat(p.get('comprank'))||2, seo:parseFloat(p.get('compseo'))||85, geo:parseFloat(p.get('compgeo'))||45,
+            ads:parseFloat(String(p.get('compads')||'').replace(/,/g,''))||null, spend:parseFloat(String(p.get('compspend')||'').replace(/,/g,''))||null };
+  }
   /* HARD RULE — B2B/SaaS is ALWAYS borderless: a researched link carrying a geo footprint
      or market chips for a b2b business self-corrects to nongeo / 1 scope / no markets. */
   if(document.getElementById('industry').value==='b2b'){
@@ -3664,7 +3690,6 @@ function applyPrefill(qs){
   }
   if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
   if(p.has('revshare')) document.getElementById('scopeShare').checked = p.get('revshare')!=='0';
-  if(p.has('nowcmp')) document.getElementById('scopeNow').checked = p.get('nowcmp')==='1';
   if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
   /* negotiated terms travel with the quote link */
   if(p.has('negPrice')){ var npv=parseFloat(p.get('negPrice')); if(npv>0){ document.getElementById('o-price-edit').value=Math.round(npv).toLocaleString('en-US'); priceDirty=true; } }
@@ -3830,13 +3855,13 @@ render();
    into a prefill URL, so the address bar never having updated stops mattering. */
 function copyQuoteLink(){
   var p=new URLSearchParams();
-  var ids=['client','website','phrase','industry','footprint','compstr','units','volume','volsource','cpc','capacity','rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin','acq','commission'];
+  var ids=['client','website','competitor','phrase','industry','footprint','compstr','units','volume','volsource','cpc','capacity','rank','seoScore','geoScore','yearly','years','aov','freq','convrate','margin','acq','commission'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(!el) return;
     var v=String(el.value||'').trim().replace(/,/g,''); if(v!=='') p.set(id,v); });
   p.set('seo', document.getElementById('scopeSeo').checked?'1':'0');
   p.set('geo', document.getElementById('scopeGeo').checked?'1':'0');
   if(!document.getElementById('scopeShare').checked) p.set('revshare','0');
-  if(document.getElementById('scopeNow').checked) p.set('nowcmp','1');
+  if(typeof COMPV!=='undefined'&&COMPV){ if(COMPV.rank!=null)p.set('comprank',COMPV.rank); if(COMPV.seo!=null)p.set('compseo',COMPV.seo); if(COMPV.geo!=null)p.set('compgeo',COMPV.geo); if(COMPV.ads)p.set('compads',COMPV.ads); if(COMPV.spend)p.set('compspend',COMPV.spend); }
   if(typeof mktsMax==='function'&&mktsMax()>0&&MKTS.some(function(m){return (m.n&&m.n.trim())||m.v>0;})) p.set('markets', mktsSerialize());
   if(typeof priceDirty!=='undefined'&&priceDirty){ var pv=(document.getElementById('o-price-edit').value||'').replace(/[^0-9.]/g,''); if(pv) p.set('negPrice',pv); }
   if(typeof shareDirty!=='undefined'&&shareDirty){ var sv=document.getElementById('o-share-edit').value; if(sv) p.set('negShare',sv); }
