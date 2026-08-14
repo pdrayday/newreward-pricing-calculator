@@ -230,12 +230,35 @@ async function liveTests(htmlPath){
   t('link round-trip: toggle restored', rt.on===true);
   t('link round-trip: budget restored as edited', rt.dirty===true && rt.v==='2750', JSON.stringify(rt));
 
-  /* toggle-off state: no card, no budget field */
+  /* toggle-off state: no card, no ads-math section (the budget input lives inside it) */
   await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const offUi=await page.evaluate(()=>({card:document.getElementById('ads-card').hidden,
-    field:document.getElementById('fg-adbudget').hidden}));
+    sec:document.getElementById('sec-ads').hidden}));
   t('toggle off: ads card hidden', offUi.card===true);
-  t('toggle off: budget field hidden', offUi.field===true);
+  t('toggle off: ads-math section hidden', offUi.sec===true);
+
+  /* flat-retainer mode: no rev-share talk anywhere on the ads surfaces */
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&revshare=0&stay=1',{waitUntil:'load'});
+  const flat=await page.evaluate(()=>({
+    card:document.getElementById('ads-card').textContent,
+    math:document.getElementById('ads-math').textContent,
+    sum:document.getElementById('o-summary').textContent,
+    sec:document.getElementById('sec-ads').hidden,
+    priceSub:document.getElementById('o-price-sub').textContent}));
+  const noShare=s=>!/rev[- ]?share|revenue share/i.test(s);
+  t('flat mode: ads-math section visible', flat.sec===false);
+  t('flat mode: no rev-share talk on the ads card', noShare(flat.card), flat.card.slice(0,200));
+  t('flat mode: no rev-share talk in section 06', noShare(flat.math));
+  t('flat mode: no rev-share talk in the summary', noShare(flat.sum));
+  t('flat mode: fee subtitle has no share/drop talk', noShare(flat.priceSub) && !/drops/i.test(flat.priceSub), flat.priceSub);
+
+  /* share mode: section 06 states the exclusion + explains the budget with live numbers */
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const shr=await page.evaluate(()=>({math:document.getElementById('ads-math').textContent,
+    inSec:!!document.querySelector('#sec-ads #adbudget')}));
+  t('share mode: section 06 states the rev-share exclusion', /never rev-share billed/.test(shr.math));
+  t('share mode: section 06 explains CAC and guardrails', /simple|clicks become customers/i.test(shr.math) && /guardrail/i.test(shr.math));
+  t('budget input lives inside section 06', shr.inSec===true);
 
   await browser.close();
 }
