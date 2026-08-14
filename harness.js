@@ -254,12 +254,29 @@ async function liveTests(htmlPath){
     sum:document.getElementById('o-summary').textContent,
     sec:document.getElementById('sec-ads').hidden,
     priceSub:document.getElementById('o-price-sub').textContent}));
-  const noShare=s=>!/rev[- ]?share|revenue share/i.test(s);
+  const noShare=s=>!/rev[- ]?share|revenue share|share-free|% share|of share|share starts|share begins|no share|the share /i.test(s);
   t('flat mode: ads-math section visible', flat.sec===false);
   t('flat mode: no rev-share talk on the ads card', noShare(flat.card), flat.card.slice(0,200));
   t('flat mode: no rev-share talk in section 06', noShare(flat.math));
   t('flat mode: no rev-share talk in the summary', noShare(flat.sum));
   t('flat mode: fee subtitle has no share/drop talk', noShare(flat.priceSub) && !/drops/i.test(flat.priceSub), flat.priceSub);
+
+  /* FULL visible-page sweep in flat mode — every vertical style, the whole rendered page.
+     The rev-share toggle row itself (the control + its hover tip) is the ONE allowed mention. */
+  for(const fc of [{n:'flat monthly', qs:'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&revshare=0&stay=1'},
+                   {n:'flat ultra (contract-style)', qs:'?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&revshare=0&stay=1'},
+                   {n:'flat local no-ads', qs:'?industry=local&seo=1&geo=1&revshare=0&stay=1'}]){
+    await page.goto(url+fc.qs,{waitUntil:'load'});
+    const vis=await page.evaluate(()=>{
+      const row=document.querySelector('label[for="scopeShare"]');
+      const saved=row?row.outerHTML:''; if(row) row.remove();   // the toggle control is exempt
+      const txt=document.querySelector('.wrap').innerText.replace(/\s+/g,' ');
+      if(row) document.querySelector('#scope-warn').insertAdjacentHTML('beforebegin',saved);
+      return txt;
+    });
+    const m=vis.match(/rev[- ]?share|revenue share|share-free|% share|of share|share starts|share begins|no share/gi);
+    t(fc.n+': whole visible page free of rev-share talk', !m, m?[...new Set(m)].join('|'):'');
+  }
 
   /* share mode: section 06 states the exclusion + explains the budget with live numbers */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});

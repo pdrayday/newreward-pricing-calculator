@@ -770,7 +770,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </label>
     <label class="toggle-row" for="scopeAds" style="margin-bottom:4px">
       <span class="tlabel">Google + Meta ads included
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Adds a managed paid-ads program (Google + Meta) alongside the organic work. The calculator computes whether ads are efficient for <b>this</b> business — what a customer costs to win with ads (their researched click cost ÷ conversion rate) against their acquisition budget — and recommends a monthly budget that fills the capacity organic isn't using yet. The client pays the ad spend plus a management fee: 15% of spend (12% above $15k/mo), $500/mo minimum — inside the published 10–20%-of-spend 2026 agency norm. <b>Ads-won customers are never rev-share billed</b> — the client pays ad spend + management fee only; the revenue share bills organic program wins only.</span></button>
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Adds a managed paid-ads program (Google + Meta) alongside the organic work. The calculator computes whether ads are efficient for <b>this</b> business — what a customer costs to win with ads (their researched click cost ÷ conversion rate) against their acquisition budget — and recommends a monthly budget that fills the capacity organic isn't using yet. The client pays the ad spend plus a management fee: 15% of spend (12% above $15k/mo), $500/mo minimum — inside the published 10–20%-of-spend 2026 agency norm. Ads always bill exactly that way — spend + management fee, never a percentage of anything.</span></button>
       </span>
       <span class="switch"><input type="checkbox" id="scopeAds"><span class="slider"></span></span>
     </label>
@@ -864,7 +864,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Average search rank
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the client currently ranks on Google for their money phrases, on average. Position 1–3 wins clicks; past 10 means page two — effectively invisible.<br><br>A poor rank raises the cost to deliver (more catch-up work). A top-5 rank speeds the program up: the revenue share starts a month sooner and full output arrives faster. It also pulls the SEO visibility score toward what the rank implies — the two are blended 50/50 in the model.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the client currently ranks on Google for their money phrases, on average. Position 1–3 wins clicks; past 10 means page two — effectively invisible.<br><br>A poor rank raises the cost to deliver (more catch-up work). A top-5 rank speeds the program up: the ramp shortens and full output arrives a month sooner. It also pulls the SEO visibility score toward what the rank implies — the two are blended 50/50 in the model.</span></button>
         </label>
         <div class="fwrap"><input type="number" id="rank" class="has-suffix" value="28" min="1" max="100"><span class="suffix">rank</span></div>
       </div>
@@ -946,7 +946,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Gross margin
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What the client keeps from each sale after direct costs. Higher margins support a higher revenue share. Leave blank for the industry typical (local ~50%, high-ticket ~65%, B2B/SaaS ~78%, e-commerce ~55%).</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What the client keeps from each sale after direct costs. The model uses it to gauge what this business can profitably support. Leave blank for the industry typical (local ~50%, high-ticket ~65%, B2B/SaaS ~78%, e-commerce ~55%).</span></button>
         </label>
         <div class="fwrap"><input type="number" id="margin" class="has-suffix" placeholder="auto" min="0" max="95"><span class="suffix">%</span></div>
         <div class="auto-note" id="note-margin"></div>
@@ -961,7 +961,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       </div>
       <div class="fgroup">
         <label class="flabel">Sales commission
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Commission the client already pays staff or reps on each sale, entered as a percent of the sale's <b>gross (top-line) revenue</b> — the standard basis for sales commissions, not net profit. It stacks with our revenue share, so high commissions lower the share we ask for. Typical: 5–15% (local trades lower, B2B/SaaS and high-ticket higher).</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Commission the client already pays staff or reps on each sale, entered as a percent of the sale's <b>gross (top-line) revenue</b> — the standard basis for sales commissions, not net profit. The model counts it as part of the client's cost of selling and sizes the recommended terms accordingly. Typical: 5–15% (local trades lower, B2B/SaaS and high-ticket higher).</span></button>
         </label>
         <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
       </div>
@@ -980,7 +980,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
   <!-- 06 THE REVENUE-SHARE MATH — full transparency -->
   <div class="section">
-    <div class="sec-head"><div class="sec-num">05</div><div class="sec-title">The Revenue-Share Math — Full Transparency</div></div>
+    <div class="sec-head"><div class="sec-num">05</div><div class="sec-title" id="sec05-title">The Revenue-Share Math — Full Transparency</div></div>
     <div id="share-math" class="share-math"></div>
   </div>
 
@@ -1028,7 +1028,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="neg-warn" id="o-share-warn"></div>
     <div class="o-share" id="flat-block" hidden>
       <div class="share-pct" style="font-size:30px;font-weight:800;color:var(--gold-deep)">0<span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Flat retainer — no revenue share.</b> The revenue share is toggled off: the client pays the same fixed fee every month, keeps 100% of every dollar of revenue, and there is no per-win billing — and no fee drop, because there is no share to offset it.</div>
+      <div class="share-desc"><b style="color:var(--text)">Flat retainer — one predictable fee.</b> The client pays the same fixed amount every month and keeps <b style="color:var(--gold-bright)">100% of every dollar of revenue</b> — every new customer, every repeat purchase, every referral. No per-win billing of any kind.</div>
     </div>
 
     <div id="now-card" hidden style="margin-top:6px;padding:12px 14px;border:1px dashed var(--gold-line);border-radius:10px;font-size:12.5px;line-height:1.55;color:var(--muted)"></div>
@@ -2218,7 +2218,7 @@ function render(){
   const tpm=document.getElementById('tip-price-math');
   if(tpm) tpm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
     'How this number is built: the researched cost to deliver this exact scope — engagement intensity (graded from current visibility), industry model, market footprint, '
-    +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. '+(n.share>0?'It drops '+Math.round((1-PERF_DISCOUNT(n.price))*100)+'% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins — or choose the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, with 0% share.':'<b>Flat retainer</b> — the revenue share is toggled off: the same '+fmt$(n.price)+'/mo every month, no fee drop, 0% of client revenue.')+'';
+    +q.units+' location'+(q.units>1?'s':'')+' / service line'+(q.units>1?'s':'')+', competitor strength, and ad-cost + demand signals — then anchored inside the published 2026 market range for this scope and market and rounded to the nearest $50. '+(n.share>0?'It drops '+Math.round((1-PERF_DISCOUNT(n.price))*100)+'% to <b>'+fmt$(n.series.perfPrice)+'/mo</b> the month the revenue share begins — or choose the fixed-only option: the full '+fmt$(n.price)+'/mo, flat, with 0% share.':'<b>Flat retainer</b> — one predictable fee: the same '+fmt$(n.price)+'/mo every month, and the client keeps 100% of every dollar of revenue.')+'';
   const tsm=document.getElementById('tip-share-math');
   if(tsm) tsm.innerHTML = q.price==null ? 'Select a service in Scope first.' :
     'How this percentage is built: sized from this exact program — the fee structure and the modeled monthly win value for this business — and capped at 10%. The fee itself is the 2026 benchmark-anchored price for this workload. Applied only to a proven new customer\'s first-year value: <b>'+n.share+'% × '+fmt$(q.yearlyValue)+' = '+fmt$(q.yearlyValue*n.share/100)+'</b> per win — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond.';
@@ -2481,7 +2481,7 @@ function render(){
   set('o-cust', cr.v);
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
       +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')+(q.aiConvLift>1.005?' × '+(q.aiConvLift*100).toFixed(0)+'% AI-buyer close premium':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
-      +' · year one models '+eventPlan(q,n).winsYr+' · the ramp (months 1–'+(n.rampMonth-1)+') bills the fixed fee only, before the share and attribution begin');
+      +' · year one models '+eventPlan(q,n).winsYr+(shareOn?' · the ramp (months 1–'+(n.rampMonth-1)+') bills the fixed fee only, before the share and attribution begin':' · months 1–'+(n.rampMonth-1)+' are the build before wins ramp to full pace'));
   set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
   set('o-arrpm-note', cr.monthly
       ? '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value'
@@ -2510,29 +2510,41 @@ function render(){
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
       (adsChart?'<b>The blue segments are ads-won customers</b>, stacked on the organic gold — and the cost bars are all-in: program bill + ad spend + management. One chart, both channels. ':'')
       +(!q.contractStyle
-      ? '<b>The gold bars</b> are the customers this program is modeled to win each month — <b>'+epT.winsYr+' this year</b>, each worth '+fmt$(q.yearlyValue)+' in first-year value; the count varies month to month, exactly like real months do, and the first wins land <b>share-free during the build</b>. <b>The white line</b> is the actual bill: the full fee during the build, then the reduced fee plus '+n.share+'% of what those customers <b>actually spend each month</b> — so it climbs with collections instead of spiking per win. Year one: <b>'+fmtK(n.series.y1Created)+' in first-year value won</b> against <b>'+fmt$(cbT)+' billed</b> ('+(n.series.roi?(n.series.roi>=10?Math.round(n.series.roi):n.series.roi.toFixed(1)):'—')+'× on value created), with '+fmtK(caT)+' of it collected in-year and the rest landing across each customer\'s first twelve months.'
-      : '<b>The gold bars</b> are the contracts this program is modeled to win — <b>'+epT.winsYr+' new customer'+(epT.winsYr>1?'s':'')+' this year</b>, each worth '+fmt$(q.yearlyValue)+', spread out across the year for illustration (the count is modeled; the exact timing will vary). <b>The white line</b> is the actual bill: a no-win month bills just '+fmt$(n.series.perfPrice)
-        +(epT.feeWaive
-          ? ' — and in a month we sign you a customer, <b>the fixed fee is waived</b>: that month bills only the '+fmt$(epT.perWin)+' share against the contract signed.'
-          : ', a win month adds '+fmt$(epT.perWin)+' of share against the contract signed.')
-        +' Any win landed during the build months is <b>share-free</b>. Year one under this pattern totals <b>'+fmt$(epT.eventY1)+'</b>.')
+      ? '<b>The gold bars</b> are the customers this program is modeled to win each month — <b>'+epT.winsYr+' this year</b>, each worth '+fmt$(q.yearlyValue)+' in first-year value; the count varies month to month, exactly like real months do'+(shareOn?', and the first wins land <b>share-free during the build</b>':'')+'. <b>The white line</b> is the actual bill: '+(shareOn
+          ? 'the full fee during the build, then the reduced fee plus '+n.share+'% of what those customers <b>actually spend each month</b> — so it climbs with collections instead of spiking per win. '
+          : 'the same flat '+fmt$(n.price)+' fee every month, win or no win. ')
+        +'Year one: <b>'+fmtK(n.series.y1Created)+' in first-year value won</b> against <b>'+fmt$(cbT)+' billed</b> ('+(n.series.roi?(n.series.roi>=10?Math.round(n.series.roi):n.series.roi.toFixed(1)):'—')+'× on value created), with '+fmtK(caT)+' of it collected in-year and the rest landing across each customer\'s first twelve months.'
+      : '<b>The gold bars</b> are the contracts this program is modeled to win — <b>'+epT.winsYr+' new customer'+(epT.winsYr>1?'s':'')+' this year</b>, each worth '+fmt$(q.yearlyValue)+', spread out across the year for illustration (the count is modeled; the exact timing will vary). <b>The white line</b> is the actual bill: '+(shareOn
+        ? 'a no-win month bills just '+fmt$(n.series.perfPrice)
+          +(epT.feeWaive
+            ? ' — and in a month we sign you a customer, <b>the fixed fee is waived</b>: that month bills only the '+fmt$(epT.perWin)+' share against the contract signed.'
+            : ', a win month adds '+fmt$(epT.perWin)+' of share against the contract signed.')
+          +' Any win landed during the build months is <b>share-free</b>. '
+        : 'the same flat '+fmt$(n.price)+' fee every month, win or no win. ')
+        +'Year one under this pattern totals <b>'+fmt$(epT.eventY1)+'</b>.')
       +(mPos>0&&!q.contractStyle?' The program starts <b>earning more each month than it costs</b> around <b>month '+mPos+'</b> — where the bars clear the line'+(beM>0?' — and has fully repaid the build months by <b>month '+beM+'</b>.':'.'):'')+(q.contractStyle&&epT.first&&epT.winsYr<=4?' <b>One win pays for the entire year</b>: a single '+fmt$(q.yearlyValue)+' contract covers the program many times over.':'')
-      +' '+(n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')
-      +'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
+      +' '+(shareOn
+        ? (n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')+'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
+        : (n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build':'<b>Month 1</b> is the build')+' — wins ramp to full pace from there.')
       +' <span style="color:var(--muted2)">Hover or tap any month for exact figures.</span>';
   })();
 
   /* revenue-share math — full transparency, live numbers */
   const smEl=document.getElementById('share-math');
+  /* the section retitles itself in flat mode — no rev-share vocabulary anywhere on a flat quote */
+  const sec05T=document.getElementById('sec05-title');
+  if(sec05T) sec05T.textContent = shareOn ? 'The Revenue-Share Math — Full Transparency' : 'The Pricing Math — Full Transparency';
   if(q.price==null){ smEl.innerHTML='Select at least one service in Scope to see the math.'; }
   else if(!(n.share>0)){
-    let smFlat='<b>Revenue share is toggled off — this quote is a straightforward flat retainer.</b> The client pays '+fmt$(n.price)+'/mo, every month, and keeps 100% of every dollar of revenue — no share, no fee drop, no per-win billing. Toggle the revenue share back on to see the hybrid structure and its math.';
+    let smFlat='<b>This quote is a flat retainer — one predictable fee.</b> The client pays '+fmt$(n.price)+'/mo, every month, and keeps <span class="sm-big">100% of every dollar of revenue</span> — every new customer, every repeat purchase, every referral. No per-win billing of any kind. The fee is the researched cost of delivering this exact scope, anchored inside published 2026 market rates for this vertical, market, and footprint — nothing arbitrary, nothing hidden.';
     /* the rep-side fixed-vs-hybrid math lives HERE in section 05 — all of it together:
        base + share x modeled win value reassembles the flat fee, so cost and ROI match.
        CONTRACT-STYLE businesses (custom homes, big B2B) get the yearly ledger instead:
        their share is a PER-WIN event bill — a few five-figure bills a year when a
        contract signs, not a monthly trickle — and the yearly totals still reconcile. */
-    if(q.twinShare>0 && q.ongShareBase>0 && q.perfBase!=null){
+    /* the fixed-vs-hybrid comparison is REMOVED from flat mode (Payton, 2026-08-14): a flat
+       quote carries no rev-share vocabulary anywhere — flip the toggle to present the hybrid */
+    if(false && q.twinShare>0 && q.ongShareBase>0 && q.perfBase!=null){
       const shareBillSM = q.twinShare/100*q.ongShareBase;
       const hybridTotSM = q.perfBase + shareBillSM;
       let cmpSM='<b style="color:var(--text)">Fixed vs hybrid \u2014 the same math, side by side.</b><br>';
@@ -2613,7 +2625,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-56';
+const BUILD='NR-20260814-57';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
