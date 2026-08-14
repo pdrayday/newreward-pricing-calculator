@@ -86,7 +86,7 @@
 /* chart: gold revenue bars as in dark mode; cost bars white with a black outline */
 [data-theme="ivory"] #o-chart .bar-cost,[data-theme="ivory"] .cz-body .bar-cost{fill:#ffffff!important;stroke:#14100a!important;stroke-width:1.5!important}
 [data-theme="ivory"] #o-chart .be-label,[data-theme="ivory"] .cz-body .be-label{fill:#8a6520}
-[data-theme="ivory"] .proj-key .k-cost{background:#ffffff;border-color:#14100a}
+[data-theme="ivory"] .proj-key .k-cost,[data-theme="ivory"] .cz-key .k-cost{background:#ffffff;border-color:#14100a}
 /* below-target figure + panel outline: strong red, no glow */
 [data-theme="ivory"] .o-price.roi-below{color:#c81e10;-webkit-text-stroke:0;text-stroke:0;text-shadow:none}
 [data-theme="ivory"] .o-price.roi-below .permo{color:#c81e10}
@@ -637,10 +637,14 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 /* projection chart + timeline */
 .o-proj{margin-top:22px;padding-top:20px;border-top:1px solid var(--gold-line-soft)}
 .proj-key{display:flex;align-items:center;font-size:10px;color:var(--muted);letter-spacing:.05em}
-.proj-key .kk{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 5px 0 10px}
-.proj-key .k-rev{background:linear-gradient(180deg,#eec77c,#a87c2e)}
-.proj-key .k-ads{background:linear-gradient(180deg,#79aede,#4c81b4)}
-.proj-key .k-cost{background:#ffffff;border:1px solid #0c0a08}
+.proj-key .kk,.cz-key .kk{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 5px 0 10px}
+.proj-key .k-rev,.cz-key .k-rev{background:linear-gradient(180deg,#eec77c,#a87c2e)}
+.proj-key .k-ads,.cz-key .k-ads{background:linear-gradient(180deg,#79aede,#4c81b4)}
+.proj-key .k-cost,.cz-key .k-cost{background:#ffffff;border:1px solid #0c0a08}
+.cz-key{display:flex;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted);letter-spacing:.04em;margin:-4px 0 10px -10px}
+.cz-key .kk{width:12px;height:12px}
+.cz-guide{margin-top:14px;padding-top:12px;border-top:1px solid var(--gold-line);font-size:13px;line-height:1.6;color:var(--muted)}
+.cz-guide b{color:var(--text)}
 #o-chart{margin-top:10px}
 #o-chart svg{width:100%;display:block}
 #o-chart text,.cz-body text{fill:var(--muted2);font-size:9.5px;font-family:var(--font)}
@@ -1120,7 +1124,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <div class="chart-zoom no-print" id="chart-zoom" hidden>
   <div class="cz-inner">
     <div class="cz-bar">
-      <span class="cz-title">12-Month Projection — new revenue each month vs the total monthly cost (fixed + share)</span>
+      <span class="cz-title" id="cz-title">12-Month Projection</span>
       <button class="btn btn-gold" onclick="closeChartZoom()">Close</button>
     </div>
     <div class="cz-body" id="cz-body"></div>
@@ -1670,10 +1674,20 @@ function computeAds(s,q,rampMonth,budgetIn){
     months.push({m:m, budget:bm, fee:adsFee(bm), ads:adm, organic:org, total:org+adm});
     adsWinsYr+=adm; adsCostYr+=bm+adsFee(bm);
   }
+  /* INTEGER win schedules (Payton, Aug 14): most industries sell whole customers — no month
+     ever wins 1.3 of one. Cumulative rounding: each month prints the whole customers that
+     have LANDED by then, so every printed month is an integer and the year still adds up
+     exactly. Money stays exact to the dollar — only the customer counts print whole. */
+  let cumA=0,pRA=0,cumO=0,pRO=0;
+  months.forEach(function(mo){
+    cumA+=mo.ads; const rA=Math.round(cumA); mo.adsW=rA-pRA; pRA=rA;
+    cumO+=mo.organic; const rO=Math.round(cumO); mo.orgW=rO-pRO; pRO=rO;
+  });
+  const adsWinsYrInt=pRA;
   const taperDone = taperStart!=null ? Math.min(12,taperStart+2) : null;
   return {adCAC, acqAllowed, acqPct, adsViable, veryEfficient, budgetAuto, budget, fee, adFull,
           roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart, taperDone, rampFull,
-          organicOn, months, adsWinsYr, adsCostYr};
+          organicOn, months, adsWinsYr, adsCostYr, adsWinsYrInt};
 }
 /* the current ads state, resolved the same way for the site card AND the PDF — one source,
    so the two always print the SAME budget / fee / wins (numbers-correspond law) */
@@ -1904,13 +1918,15 @@ function renderEventChart(q,n,ep,el){
   const adsOnC = document.getElementById('scopeAds') && document.getElementById('scopeAds').checked;
   const aC = adsOnC ? adsState(readState(), q, n.rampMonth) : null;
   const adsActive = !!(aC && aC.budget>0);
-  const adsRev  = adsActive ? aC.months.map(function(mo){return mo.ads*q.yearlyValue;}) : null;
-  const adsWinsM= adsActive ? aC.months.map(function(mo){return mo.ads;}) : null;
+  const adsRev  = adsActive ? aC.months.map(function(mo){return mo.adsW*q.yearlyValue;}) : null;   // whole customers × value — integer months
+  const adsWinsM= adsActive ? aC.months.map(function(mo){return mo.adsW;}) : null;
   const adsCostM= adsActive ? aC.months.map(function(mo){return mo.budget+mo.fee;}) : null;
+  const adsSpM  = adsActive ? aC.months.map(function(mo){return mo.budget;}) : null;
+  const adsFeeM = adsActive ? aC.months.map(function(mo){return mo.fee;}) : null;
   const orgInvC = lineInv.slice();
   if(adsActive) lineInv = lineInv.map(function(v,i){return (v||0)+adsCostM[i];});
   chartSeries={mode:'event', rev:ep.rev.slice(), inv:orgInvC, wins:ep.wins.slice(), perWin:ep.perWin, monthly:custRate(q.newCust).monthly, feeWaive:!!ep.feeWaive, contract:!!q.contractStyle, ramp:n.rampMonth,
-               ads:adsRev, adsW:adsWinsM, adsC:adsCostM, allIn:adsActive?lineInv.slice():null};
+               ads:adsRev, adsW:adsWinsM, adsC:adsCostM, adsB:adsSpM, adsF:adsFeeM, allIn:adsActive?lineInv.slice():null};
   const stackTop=ep.rev.map(function(v,i){return v+(adsRev?adsRev[i]:0);});
   const maxV=Math.max.apply(null, stackTop.concat(lineInv,[1]))*1.12;
   const X0=46,X1=352,Y0=16,Y1=112,gw=(X1-X0)/12;
@@ -1961,7 +1977,9 @@ function renderEventChart(q,n,ep,el){
     for(let i=0;i<12;i++){ if(ep.wins[i]>0){
       const cx=X0+i*gw+gw/2;
       const bt=Y1-orgH[i]-((adsRev&&adsRev[i]>0)?1.8+Math.max(adsRev[i]/maxV*(Y1-Y0),2):0);
-      g+='<text x="'+cx.toFixed(1)+'" y="'+(bt-3).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(ep.rev[i])+'</text>';
+      /* the label is the WHOLE stack (organic + ads) — a number printed on top of two
+         segments must be their total, or the chart argues with itself */
+      g+='<text x="'+cx.toFixed(1)+'" y="'+(bt-3).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(ep.rev[i]+((adsRev&&adsRev[i]>0)?adsRev[i]:0))+'</text>';
     }}
   }
   if(q.contractStyle){
@@ -1974,13 +1992,13 @@ function renderEventChart(q,n,ep,el){
     for(let i=11;i>=n.rampMonth-1;i--){ if(ep.wins[i]===0){ if(i!==winI) lbl.push([i,'']); break; } }   // last no-win share month — far right, never stacked on the win label
     lbl.forEach(function(p){ const i=p[0]; if(i<0||i>11) return;
       const cx=X0+i*gw+gw/2;
-      g+='<text x="'+(cx+6.5).toFixed(1)+'" y="'+(Y1-costH[i]-2.5).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+p[1]+'</text>';
+      g+='<text x="'+(cx+6.5).toFixed(1)+'" y="'+(Y1-costH[i]-2.5).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[i])+(adsActive&&p[1]?' all-in':p[1])+'</text>';
     });
   } else {
     const rm2=n.rampMonth;
     if(rm2>=1&&rm2<=12){
       g+='<text x="'+(X0+(rm2-1)*gw+gw/2).toFixed(1)+'" y="'+(Y1-costH[rm2-1]-4).toFixed(1)+'" text-anchor="middle" font-size="8">'+fmtK(lineInv[rm2-1])+'/mo</text>';
-      g+='<text x="'+(X1-2)+'" y="'+(Y1-costH[11]-4).toFixed(1)+'" text-anchor="end" font-size="8">'+fmtK(lineInv[11])+'/mo bill</text>';
+      g+='<text x="'+(X1-2)+'" y="'+(Y1-costH[11]-4).toFixed(1)+'" text-anchor="end" font-size="8">'+fmtK(lineInv[11])+(adsActive?'/mo all-in':'/mo bill')+'</text>';
     }
     /* crossover: first month the value won (organic + ads) clears the actual all-in bill */
     let mPos=-1; for(let i=0;i<12;i++){ if(stackTop[i]>0&&stackTop[i]>=lineInv[i]){ mPos=i; break; } }
@@ -2263,8 +2281,8 @@ function render(){
       const visitsPace=convCS>0?q.newCust/convCS:0;
       nowCard.innerHTML='<b style="color:var(--text)">Money left on the table without SEO/GEO</b>'
         +'<div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:8px">'+fmtK(valGap)+'/mo</div>'
-        +'<div style="font-size:11.5px;margin-bottom:8px">\u2248 '+fmtK(valGap*12)+' a year in new customers this business is NOT winning right now \u2014 that demand goes to more-visible competitors instead ('+q.newCust.toFixed(q.newCust<1?2:1)+' customers/mo at the modeled pace).</div>'
-        +'<div>Today, search + AI bring them only about <b style="color:var(--text)">'+capCS.toFixed(capCS<1?2:1)+' customers/mo</b> (\u2248'+fmtK(valNow)+'/mo) \u2014 because of where they show up today: rank '+(s.rank!=null?s.rank:'\u2014')+' on Google, '+(q.seoEff!=null?Math.round(q.seoEff):'\u2014')+'/100 search visibility, '+(s.geoScore!=null?s.geoScore:'\u2014')+'/100 AI visibility.</div>'
+        +'<div style="font-size:11.5px;margin-bottom:8px">\u2248 '+fmtK(valGap*12)+' a year in new customers this business is NOT winning right now \u2014 that demand goes to more-visible competitors instead ('+custRate(q.newCust).txt.replace(/^~/,'about ')+' at the modeled pace).</div>'
+        +'<div>Today, search + AI bring them only <b style="color:var(--text)">'+custRate(capCS).txt.replace(/^~/,'about ')+'</b> (\u2248'+fmtK(valNow)+'/mo) \u2014 because of where they show up today: rank '+(s.rank!=null?s.rank:'\u2014')+' on Google, '+(q.seoEff!=null?Math.round(q.seoEff):'\u2014')+'/100 search visibility, '+(s.geoScore!=null?s.geoScore:'\u2014')+'/100 AI visibility.</div>'
         +'<div style="margin-top:6px;color:var(--muted2);font-size:11.5px">Buying that missing traffic with Google Ads instead would cost about '+fmtK(visitsPace*(cpcCS||0))+'/mo, every month. The program wins it organically \u2014 the same modeled pace shown in the projection above.</div>';
     }
   }
@@ -2295,8 +2313,6 @@ function render(){
       const amEl=document.getElementById('ads-math');
       if(amEl){
         const convTxt=parseFloat((q.closeRate*100).toFixed(2));
-        const fmt1=v=>v>=10?String(Math.round(v)):(v>=1?String(Math.round(v*10)/10):String(Math.round(v*100)/100));
-        const room=Math.max(0, q.capStretch-q.newCust);
         let am='<p><b>Ads are simple: you buy clicks, and some clicks become customers.</b> One Google click in this market costs about <span class="sm-big">$'+(q.cpcEff||0)+'</span> (researched for this exact phrase and area). Out of every 100 visitors, about <b style="color:var(--text)">'+convTxt+'</b> become paying customers. So winning ONE customer with ads costs about $'+(q.cpcEff||0)+' ÷ '+convTxt+'% = <span class="sm-big">'+(a.adCAC!=null?fmt$(a.adCAC):'—')+'</span>.</p>'
           +'<p><b>Is that a good deal for this business?</b> A new customer here is worth '+fmt$(q.yearlyValue)+' in their first year, and this business is willing to spend '+a.acqPct+'% of that — <span class="sm-big">'+fmt$(a.acqAllowed)+'</span> — to win one. '
           +(a.adsViable
@@ -2305,15 +2321,22 @@ function render(){
               : fmt$(a.adCAC)+' is under the '+fmt$(a.acqAllowed)+' line — ads pay for themselves here. A solid deal, not a steal.</p>')
             : fmt$(a.adCAC||0)+' is MORE than the '+fmt$(a.acqAllowed)+' this business allows — every ads-won customer would cost more than they\'re supposed to. That\'s why the recommended budget is <span class="sm-big">$0</span>: put the money into SEO/GEO, where the same demand is won organically.</p>');
         if(a.adsViable){
+          /* whole customers only — sparse verticals speak per YEAR (matching the pace cards),
+             so "0.77 a month" or "modeled to bring 0" never prints */
+          const perYr=q.capStretch<1.5||q.newCust<0.75;
+          const cN=v=>perYr?Math.round(v*12):Math.round(v);
+          const cUnit=perYr?' a year':' a month';
+          const capN=Math.max(1,cN(q.capStretch)), orgN=Math.min(capN,cN(q.newCust)), roomN=Math.max(0,capN-orgN);
+          const orgTxt=orgN>0?String(orgN):'under one';
           am+='<p><b>How the monthly budget is built, step by step.</b> '
             +(q.nScopes>0
-              ? 'This business can handle about <b style="color:var(--text)">'+fmt1(q.capStretch)+'</b> new customers a month, and the organic program is modeled to bring <b style="color:var(--text)">'+fmt1(q.newCust)+'</b> — leaving room for about <b style="color:var(--text)">'+fmt1(room)+'</b> more. '
-              : 'With no organic program in scope, ads carry the whole flow — this business can handle about <b style="color:var(--text)">'+fmt1(q.capStretch)+'</b> new customers a month. ')
-            +'Multiply that room by the '+(a.adCAC!=null?fmt$(a.adCAC):'—')+' each ads-won customer costs, and you get the spend that fills it. Then two guardrails: never less than <b style="color:var(--text)">$500</b> (below that, ads can\'t learn what works), and never more than half the market\'s total clicks — half of '+q.vol.toLocaleString()+' searches × $'+(q.cpcEff||0)+' = <b style="color:var(--text)">'+fmtK(a.clickCeil)+'</b> — because you can\'t buy customers who aren\'t searching. Rounded to a clean number: <span class="sm-big">'+fmt$(a.budgetAuto)+'/mo</span>'+(adBudgetDirty?' recommended — this quote uses the agreed <span class="sm-big">'+fmt$(a.budget)+'/mo</span>':'')+'.</p>';
+              ? 'This business can handle about <b style="color:var(--text)">'+capN+'</b> new customer'+(capN>1?'s':'')+cUnit+', and the organic program is modeled to bring <b style="color:var(--text)">'+orgTxt+'</b> — leaving room for about <b style="color:var(--text)">'+roomN+'</b> more. '
+              : 'With no organic program in scope, ads carry the whole flow — this business can handle about <b style="color:var(--text)">'+capN+'</b> new customer'+(capN>1?'s':'')+cUnit+'. ')
+            +'Multiply the room ads can fill by the '+(a.adCAC!=null?fmt$(a.adCAC):'—')+' each ads-won customer costs, and you get the monthly spend that fills it. Then two guardrails: never less than <b style="color:var(--text)">$500</b> (below that, ads can\'t learn what works), and never more than half the market\'s total clicks — half of '+q.vol.toLocaleString()+' searches × $'+(q.cpcEff||0)+' = <b style="color:var(--text)">'+fmtK(a.clickCeil)+'</b> — because you can\'t buy customers who aren\'t searching. Rounded to a clean number: <span class="sm-big">'+fmt$(a.budgetAuto)+'/mo</span>'+(adBudgetDirty?' recommended — this quote uses the agreed <span class="sm-big">'+fmt$(a.budget)+'/mo</span>':'')+'.</p>';
         }
         if(a.budget>0){
-          am+='<p><b>The management fee.</b> Running ads well is real work — building the campaigns, testing the messages, cutting what wastes money. The industry norm is 10–20% of ad spend; this program charges <b style="color:var(--text)">15%</b> (12% above $15k/mo), never less than $500/mo: <span class="sm-big">'+fmt$(a.fee)+'/mo</span>. All-in: '+fmt$(a.budget)+' + '+fmt$(a.fee)+' = <span class="sm-big">'+fmt$(a.budget+a.fee)+'/mo</span>.</p>'
-            +'<p><b>What that buys.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(q.cpcEff>0?a.budget/q.cpcEff:0).toLocaleString()+' visitors</b> a month; at '+convTxt+'% that\'s about <span class="sm-big">'+crA.v+crA.unit+'</span> new customers — worth ~'+fmtK(a.adFull*q.yearlyValue)+'/mo in first-year value against the '+fmt$(a.budget+a.fee)+' all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× return)':'')+'. This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. It starts month 1 — no ramp.</p>';
+          am+='<p><b>The management fee — and who gets paid what.</b> The ad budget is not our money: <b style="color:var(--text)">'+fmt$(a.budget)+' goes to Google and Meta</b> — it buys the clicks. Running those ads well is the real work on our side — building the campaigns, testing the messages, cutting what wastes money — and the industry norm for it is 10–20% of ad spend; this program charges <b style="color:var(--text)">15%</b> (12% above $15k/mo), never less than $500/mo: <span class="sm-big">'+fmt$(a.fee)+'/mo</span>. So the ads line on any bill is always the same simple addition: '+fmt$(a.budget)+' (to Google &amp; Meta) + '+fmt$(a.fee)+' (to us) = <span class="sm-big">'+fmt$(a.budget+a.fee)+'/mo</span>'+(q.nScopes>0&&q.price!=null?' — and on top of the SEO/GEO program fee, the whole month is '+fmt$(n.price)+' + '+fmt$(a.budget+a.fee)+' = <b style="color:var(--text)">'+fmt$(n.price+a.budget+a.fee)+' all-in</b>':'')+'.</p>'
+            +'<p><b>What that buys.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(q.cpcEff>0?a.budget/q.cpcEff:0).toLocaleString()+' visitors</b> a month; at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× return)':'')+'. This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. It starts month 1 — no ramp.</p>';
           if(q.nScopes>0&&a.taperStart!=null){
             am+='<p><b>Why ads don\'t run at full spend forever.</b> Ads and SEO/GEO fish in the same pond: the people searching this market. While the organic program builds (months 1–'+(a.taperStart-1)+'), ads carry the customer flow. Around month '+a.taperStart+', organic is winning '+(a.demandLimited?'that same demand':'enough to fill capacity')+' on its own — so paying for it twice stops making sense, and the budget steps down to '+(a.floorB>0?fmt$(a.floorB)+'/mo by month '+a.taperDone+' to keep the ad accounts warm':'$0 by month '+a.taperDone)+'. Same customers, lower cost.</p>';
           }
@@ -2340,10 +2363,10 @@ function render(){
       /* THE STACK — organic + ads + all-in, so the two prices never blur together */
       if(q.nScopes>0 && a.budget>0 && q.price!=null){
         const orgW=Math.max(1,Math.round(n.series.wonYr));
-        const adsWTxt=a.adsWinsYr>=10?String(Math.round(a.adsWinsYr)):a.adsWinsYr.toFixed(1);
-        const combW=Math.round(n.series.wonYr+a.adsWinsYr);
+        const adsWTxt=String(a.adsWinsYrInt);                       // whole customers — the sum below must add up on sight
+        const combW=orgW+a.adsWinsYrInt;
         const combCost=(n.series.year1Cost||0)+a.adsCostYr;
-        const combVal=n.series.y1Created+a.adsWinsYr*q.yearlyValue;
+        const combVal=n.series.y1Created+a.adsWinsYrInt*q.yearlyValue;
         const roiC=combCost>0? combVal/combCost : null;
         const rowS=(l,v,b2)=>'<div style="display:flex;justify-content:space-between;gap:12px;font-size:12px'+(b2?';font-weight:700':'')+'"><span style="white-space:nowrap">'+l+'</span><span style="color:var(--text);font-weight:600;text-align:right">'+v+'</span></div>';
         ac+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gold-line)">'
@@ -2508,7 +2531,7 @@ function render(){
     }
     const epT=eventPlan(q,n);
     document.getElementById('o-timeline').innerHTML = q.price==null ? '' :
-      (adsChart?'<b>The blue segments are ads-won customers</b>, stacked on the organic gold — and the cost bars are all-in: program bill + ad spend + management. One chart, both channels. ':'')
+      (adsChart&&chartSeries&&chartSeries.ads?'<b>The blue segments are ads-won customers</b>, stacked on the organic gold. <b>The cost bars are the whole bill, added up</b> — month 1: '+fmt$(chartSeries.inv[0])+' program + '+fmt$(chartSeries.adsB[0])+' ad budget (that money goes to Google &amp; Meta, not to us) + '+fmt$(chartSeries.adsF[0])+' ad management = <b>'+fmt$(chartSeries.allIn[0])+'</b>. ':'')
       +(!q.contractStyle
       ? '<b>The gold bars</b> are the customers this program is modeled to win each month — <b>'+epT.winsYr+' this year</b>, each worth '+fmt$(q.yearlyValue)+' in first-year value; the count varies month to month, exactly like real months do'+(shareOn?', and the first wins land <b>share-free during the build</b>':'')+'. <b>The white line</b> is the actual bill: '+(shareOn
           ? 'the full fee during the build, then the reduced fee plus '+n.share+'% of what those customers <b>actually spend each month</b> — so it climbs with collections instead of spiking per win. '
@@ -2625,7 +2648,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-57';
+const BUILD='NR-20260814-58';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2836,11 +2859,26 @@ function closePdfPreview(){
 }
 document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closePdfPreview(); closeChartZoom(); } });
 
-/* full-screen chart zoom — same SVG, scaled up losslessly */
+/* full-screen chart zoom — same SVG scaled up losslessly, WITH the legend and a
+   plain-words reading guide (the small chart has these around it; the zoom must too,
+   or the big version is the confusing one). Title and guide follow the current mode —
+   no share vocabulary in flat mode, ads explained only when ads are on. */
 function openChartZoom(){
   const src=document.getElementById('o-chart').innerHTML;
   if(!src) return;
-  document.getElementById('cz-body').innerHTML=src;
+  const adsZ=!!(chartSeries&&chartSeries.ads);
+  const key=document.querySelector('.proj-key');
+  const legC=document.getElementById('legend-cost');
+  const czT=document.getElementById('cz-title');
+  if(czT) czT.textContent='12-Month Projection — customers won each month vs '+(legC?legC.textContent.toLowerCase():'the monthly bill');
+  let guide;
+  if(adsZ){
+    guide='<b>How to read it:</b> the gold bars are customers the SEO/GEO program wins; the blue segments stacked on top are customers the ads win. The white bar beside each month is the whole bill, added up: the program bill + the ad budget (that money goes to Google &amp; Meta, not to us) + the ad management fee. Hover or tap any month for its exact figures.';
+  } else {
+    guide='<b>How to read it:</b> the gold bars are the customers this program is modeled to win each month; the white bar beside each month is the actual bill. Hover or tap any month for its exact figures.';
+  }
+  document.getElementById('cz-body').innerHTML=
+    (key?'<div class="cz-key">'+key.innerHTML+'</div>':'')+src+'<div class="cz-guide">'+guide+'</div>';
   document.getElementById('chart-zoom').hidden=false;
   document.body.style.overflow='hidden';
 }
@@ -2874,12 +2912,15 @@ document.addEventListener('mousemove',function(e){
           : 'No new wins modeled this month')
           +'<br>Billed'+(chartSeries.ads?' (program)':'')+': <b>'+fmt$(chartSeries.inv[m-1])+'</b> '+(!(chartSeries.perWin>0)?'(flat fee)':(m<chartSeries.ramp?'(full fee — build; wins land share-free)':'(fee + share on what customers actually spend this month)'));
       }
-      /* ads layer — the blue segment + the all-in bill */
+      /* ads layer — whole customers only, and the bill shown as the addition it is:
+         program + ad budget (paid to Google & Meta) + management fee = the all-in total.
+         No client should ever have to guess how $2,650 + $5,750 becomes $8,400. */
       if(chartSeries.ads){
-        const aw=chartSeries.adsW[m-1];
-        body+='<br><span style="color:#79aede">From ads:</span> '+(aw>0?'<b>~'+(aw>=10?Math.round(aw):aw.toFixed(1))+'</b> customers — <b>'+fmt$(chartSeries.ads[m-1])+'</b> value':'no ad spend this month')
-          +(chartSeries.adsC[m-1]>0?' &middot; ads cost <b>'+fmt$(chartSeries.adsC[m-1])+'</b>':'')
-          +'<br>All-in billed: <b>'+fmt$(chartSeries.allIn[m-1])+'</b>';
+        const aw=chartSeries.adsW[m-1], sp=chartSeries.adsB[m-1], mf=chartSeries.adsF[m-1];
+        body+='<br><span style="color:#79aede">From ads:</span> '+(aw>0
+          ? '<b>'+aw+'</b> more customer'+(aw>1?'s':'')+' — <b>'+fmt$(chartSeries.ads[m-1])+'</b> value'
+          : (sp>0?'ads running — the next ads-won customer lands in a later month':'no ad spend this month'));
+        if(sp>0) body+='<br>The bill, added up: <b>'+fmt$(chartSeries.inv[m-1])+'</b> program + <b>'+fmt$(sp)+'</b> ad budget (goes to Google &amp; Meta) + <b>'+fmt$(mf)+'</b> ad management = <b>'+fmt$(chartSeries.allIn[m-1])+'</b>';
       }
     } else if(chartSeries.mode==='accr'){
       const wins=chartSeries.wins[m-1], rev=chartSeries.mrr[m-1], cA=chartSeries.invA[m-1];
@@ -3283,7 +3324,7 @@ function buildPDF(mode){
 
   /* ads on the chart: blue segments stack on the gold, cost bars go all-in — one story on
      every surface (same adsState numbers as the site chart and the ads-page schedule) */
-  const pAds = (adsOnP&&aP&&aP.budget>0) ? aP.months.map(function(mo){return mo.ads*q.yearlyValue;}) : null;
+  const pAds = (adsOnP&&aP&&aP.budget>0) ? aP.months.map(function(mo){return mo.adsW*q.yearlyValue;}) : null;   // whole customers × value — matches the site chart
   const pAC  = pAds ? aP.months.map(function(mo){return mo.budget+mo.fee;}) : null;
 
   /* legend — dynamic keys */
@@ -3409,7 +3450,7 @@ function buildPDF(mode){
   pdDraw('The gold bars','are the new revenue the program wins each month.');
   pdDraw('The dark cost bars','is your total monthly bill — the fixed fee while we build, then the reduced fee plus the share as wins land.');
   }
-  if(pAds) pdDraw('The blue segments','are ads-won customers stacked on top of the organic gold — ads deliver from month 1 with no ramp, then taper as organic fills the demand. The cost bars here are ALL-IN: they include each month\'s scheduled ad spend and management fee (the full schedule is on the next page).');
+  if(pAds) pdDraw('The blue segments','are ads-won customers stacked on top of the organic gold — ads deliver from month 1 with no ramp, then taper as organic fills the demand. The cost bars are the WHOLE bill, added up: program + ad budget (paid to Google & Meta, not to us) + management fee — month 1: '+fmt$((pInv[0]||0)-(pAC?pAC[0]:0))+' + '+fmt$(aP.months[0].budget)+' + '+fmt$(aP.months[0].fee)+' = '+fmt$(pInv[0]||0)+'. The full schedule is on the next page.');
   if(false) pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   else if(q.contractStyle&&pEp.winsYr<=4) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract covers the program many times over — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
   else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
@@ -3448,7 +3489,6 @@ function buildPDF(mode){
 
     const fxA=v=>v>30?'30+':(v>=10?String(Math.round(v)):v.toFixed(1));
     const crAP=custRate(aP.adFull);
-    const fmtW=v=>v<=0?'0':(v>=10?String(Math.round(v)):(v>=1?v.toFixed(1):v.toFixed(2)));
 
     /* plan boxes — the same numbers as the site card */
     y=29;
@@ -3480,26 +3520,27 @@ function buildPDF(mode){
       doc.text(String(mo.m)+((aP.taperStart!=null&&mo.m===aP.taperStart)?'  — taper':''),acX[0],y);
       doc.text(mo.budget>0?fmt$(mo.budget):'$0',acX[1],y);
       doc.text(mo.fee>0?fmt$(mo.fee):'—',acX[2],y);
-      doc.text(fmtW(mo.ads),acX[3],y);
-      doc.text(fmtW(mo.organic),acX[4],y);
-      doc.text(fmtW(mo.total),acX[5],y);
+      doc.text(String(mo.adsW),acX[3],y);
+      doc.text(String(mo.orgW),acX[4],y);
+      doc.text(String(mo.adsW+mo.orgW),acX[5],y);
       doc.text(fmt$((orgInv?(orgInv[mo.m-1]||0):0)+mo.budget+mo.fee),acX[6],y);
       y+=3.9;
     });
     doc.setFont('helvetica','italic'); doc.setFontSize(6.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text(aP.taperStart!=null
+    doc.text((aP.taperStart!=null
       ? 'Months 1–'+(aP.taperStart-1)+' run the full budget while organic builds; from month '+aP.taperStart+' the budget steps down to the '+(aP.floorB>0?fmt$(aP.floorB)+'/mo maintenance floor':'$0 floor — organic replaces the ads entirely')+' by month '+aP.taperDone+'. Wins/mo are modeled floors; combined wins never exceed delivery capacity.'
       : (aP.organicOn? 'No taper modeled in year one at these inputs — the budget holds; wins/mo are modeled floors and combined wins never exceed delivery capacity.'
-                     : 'Ads-only plan: the budget holds every month — the flow starts when the spend starts and stops when it stops. Wins/mo are modeled floors, capped at delivery capacity.'),L,y,{maxWidth:W});
+                     : 'Ads-only plan: the budget holds every month — the flow starts when the spend starts and stops when it stops. Wins/mo are modeled floors, capped at delivery capacity.'))
+      +' Win columns count whole customers — a 0-win month just means the next customer lands a little later; the year-one totals are what matter.',L,y,{maxWidth:W});
     y+=8;
 
     /* THE STACK — organic + ads + all-in, combined: the two prices never blur together */
     if(aP.organicOn && aP.budget>0 && q.price!=null){
       const skOrgW=Math.max(1,Math.round(n.series.wonYr));
-      const skAdsW=aP.adsWinsYr>=10?String(Math.round(aP.adsWinsYr)):aP.adsWinsYr.toFixed(1);
-      const skCombW=Math.round(n.series.wonYr+aP.adsWinsYr);
+      const skAdsW=String(aP.adsWinsYrInt);                       // whole customers — matches the site card exactly
+      const skCombW=skOrgW+aP.adsWinsYrInt;
       const skCost=(n.series.year1Cost||0)+aP.adsCostYr;
-      const skVal=n.series.y1Created+aP.adsWinsYr*q.yearlyValue;
+      const skVal=n.series.y1Created+aP.adsWinsYrInt*q.yearlyValue;
       const skROI=skCost>0? skVal/skCost : null;
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
       doc.text('THE STACK — SEO/GEO + ADS, COMBINED',L,y,{charSpace:.8});

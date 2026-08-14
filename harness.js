@@ -58,10 +58,18 @@ function independent(q, acqPct, budgetIn){
     months.push({m, budget:bm, fee:fee(bm), ads:adm, organic:org, total:org+adm});
     adsWinsYr+=adm; adsCostYr+=bm+fee(bm);
   }
+  /* INTEGER win schedules (spec update, Aug 14): cumulative rounding — each month prints
+     the whole customers landed by then; every month an integer, the year adds up exactly. */
+  let cumA=0,pRA=0,cumO=0,pRO=0;
+  months.forEach(mo=>{
+    cumA+=mo.ads; const rA=Math.round(cumA); mo.adsW=rA-pRA; pRA=rA;
+    cumO+=mo.organic; const rO=Math.round(cumO); mo.orgW=rO-pRO; pRO=rO;
+  });
+  const adsWinsYrInt=pRA;
   return {adCAC, acqAllowed, adsViable, veryEfficient, budgetAuto, budget, fee:fee(budget),
           adFull, roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart,
           taperDone:taperStart!=null?Math.min(12,taperStart+2):null, rampFull, organicOn, months,
-          adsWinsYr, adsCostYr};
+          adsWinsYr, adsCostYr, adsWinsYrInt};
 }
 
 /* ---------- tiny test kit ---------- */
@@ -157,6 +165,18 @@ function edgeTests(){
   t('year totals: adsCostYr = sum of monthly spend + fees', near(a.adsCostYr, a.months.reduce((x,mo)=>x+mo.budget+mo.fee,0)));
   a=independent(solo,15,3000);
   t('year totals: ads-only cost = 12 x (budget + fee)', near(a.adsCostYr, 12*(3000+a.fee)));
+
+  // -- integer win schedules (Aug 14): whole customers every month, year adds up exactly
+  a=independent(capB,15,4000);
+  t('int schedule: every monthly ads win is a whole number >= 0', a.months.every(mo=>mo.adsW>=0&&mo.adsW===Math.round(mo.adsW)));
+  t('int schedule: every monthly organic win is a whole number >= 0', a.months.every(mo=>mo.orgW>=0&&mo.orgW===Math.round(mo.orgW)));
+  t('int schedule: monthly adsW sums to round(adsWinsYr)', a.months.reduce((x,mo)=>x+mo.adsW,0)===Math.round(a.adsWinsYr), a.months.map(mo=>mo.adsW).join(','));
+  t('int schedule: adsWinsYrInt = round(adsWinsYr)', a.adsWinsYrInt===Math.round(a.adsWinsYr));
+  a=independent(ult,10,null);
+  t('int schedule (ultra, sparse): whole counts under 2/yr pacing', a.months.every(mo=>mo.adsW===Math.round(mo.adsW)) && a.months.reduce((x,mo)=>x+mo.adsW,0)===Math.round(a.adsWinsYr));
+  a=independent(loc,15,null);
+  t('int schedule: cumulative rounding never skips ahead of the true pace',
+    (function(){let c=0,r=0;return a.months.every(mo=>{c+=mo.ads;r+=mo.adsW;return Math.abs(r-c)<=0.5+1e-9;});})());
 }
 
 /* ---------- live cross-check against the real calculator ---------- */
@@ -197,10 +217,11 @@ async function liveTests(htmlPath){
       const ok=(va==null&&vb==null)||(typeof va==='number'&&typeof vb==='number'? near(va,vb,eps||1e-6) : va===vb);
       t(c.name+': '+k+' matches', ok, JSON.stringify(va)+' vs '+JSON.stringify(vb));
     };
-    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr'].forEach(k=>same(k,0.01));
+    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr','adsWinsYrInt'].forEach(k=>same(k,0.01));
     const mOk=got.a.months.every((mo,i)=>near(mo.budget,exp.months[i].budget,0.01)&&near(mo.fee,exp.months[i].fee,0.01)
-              &&near(mo.ads,exp.months[i].ads,1e-4)&&near(mo.organic,exp.months[i].organic,1e-4));
-    t(c.name+': 12-month schedule matches', mOk);
+              &&near(mo.ads,exp.months[i].ads,1e-4)&&near(mo.organic,exp.months[i].organic,1e-4)
+              &&mo.adsW===exp.months[i].adsW&&mo.orgW===exp.months[i].orgW);
+    t(c.name+': 12-month schedule matches (incl. integer wins)', mOk);
   }
 
   /* rev-share interplay: toggling ads must not move the organic quote, share, or invoice —
@@ -310,6 +331,44 @@ async function liveTests(htmlPath){
   t('chart: all-in series = organic bill + ads cost, every month',
     stk.cs.allInArr.every((v,i)=>Math.abs(v-((stk.cs.inv[i]||0)+stk.cs.adsC[i]))<0.01));
   t('chart: ads value series present for 12 months', Array.isArray(stk.cs.ads)&&stk.cs.ads.length===12);
+
+  /* integer-display law (Payton, Aug 14): no fractional customer counts anywhere a client
+     looks, in any ads-on vertical — and the chart series carries whole wins + the bill split */
+  for(const fc of [{n:'ultra ads-on', qs:'?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&stay=1'},
+                   {n:'capacity-bound ads-on', qs:'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2000&capacity=20&seo=1&geo=1&ads=1&stay=1'},
+                   {n:'ads-only', qs:'?industry=local&seo=0&geo=0&ads=1&adbudget=3000&stay=1'}]){
+    await page.goto(url+fc.qs,{waitUntil:'load'});
+    const vis=await page.evaluate(()=>document.querySelector('.wrap').innerText.replace(/\s+/g,' '));
+    const m=vis.match(/\d+\.\d+\s*(more\s+)?(new\s+)?customers?\b/gi);
+    t(fc.n+': no fractional customer counts on the page', !m, m?[...new Set(m)].join('|'):'');
+  }
+  await page.goto(url+'?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const csInt=await page.evaluate(()=>{const cs=chartSeries; return cs&&cs.ads?{ok:true,
+    aw:cs.adsW.every(v=>v===Math.round(v)&&v>=0), b:cs.adsB[0], f:cs.adsF[0], inv:cs.inv[0], allIn:cs.allIn[0],
+    sum:cs.adsW.reduce((x,v)=>x+v,0)}:{ok:false};});
+  t('chart series: ads wins are whole numbers every month', csInt.ok&&csInt.aw);
+  t('chart series: program + spend + fee = all-in (month 1, the tooltip equation)',
+    csInt.ok&&Math.abs(csInt.inv+csInt.b+csInt.f-csInt.allIn)<0.01,
+    csInt.ok?csInt.inv+'+'+csInt.b+'+'+csInt.f+' vs '+csInt.allIn:'no ads series');
+
+  /* the zoom: legend + plain-words guide travel into the enlarged view; flat-mode zoom
+     stays share-free (title and guide are dynamic, never the old static "(fixed + share)") */
+  await page.goto(url+'?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&revshare=0&stay=1',{waitUntil:'load'});
+  const zoom=await page.evaluate(()=>{openChartZoom(); const r={
+    title:document.getElementById('cz-title').textContent,
+    body:document.getElementById('cz-body').innerText.replace(/\s+/g,' '),
+    hasKey:!!document.querySelector('#cz-body .cz-key'),
+    hasGuide:!!document.querySelector('#cz-body .cz-guide')}; closeChartZoom(); return r;});
+  t('zoom: legend rendered inside the zoom view', zoom.hasKey);
+  t('zoom: plain-words reading guide present', zoom.hasGuide);
+  t('zoom: guide spells out the all-in addition', /whole bill, added up/i.test(zoom.body), zoom.body.slice(0,160));
+  t('zoom (flat): no share vocabulary in title or guide', !/share/i.test(zoom.title+' '+zoom.body), zoom.title);
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const zoom2=await page.evaluate(()=>{openChartZoom(); const r={
+    title:document.getElementById('cz-title').textContent,
+    hasGuide:!!document.querySelector('#cz-body .cz-guide')}; closeChartZoom(); return r;});
+  t('zoom (share, no ads): title mirrors the live cost legend', /fixed \+ share/i.test(zoom2.title), zoom2.title);
+  t('zoom (share, no ads): guide present without ads talk', zoom2.hasGuide);
 
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
