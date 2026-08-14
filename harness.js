@@ -276,14 +276,30 @@ async function liveTests(htmlPath){
     return {card:document.getElementById('ads-card').textContent,
             allIn:n.price+a.budget+a.fee, price:n.price, budget:a.budget, fee:a.fee,
             roiSub:document.getElementById('o-roi-sub').textContent,
-            tl:document.getElementById('o-timeline').textContent};
+            tl:document.getElementById('o-timeline').textContent,
+            svg:document.getElementById('o-chart').innerHTML,
+            legAds:document.getElementById('legend-ads').hidden,
+            legCost:document.getElementById('legend-cost').textContent,
+            cs:{inv:chartSeries.inv, adsC:chartSeries.adsC, allInArr:chartSeries.allIn, ads:chartSeries.ads}};
   });
   const money=v=>'$'+Math.round(v).toLocaleString('en-US');
   t('stack: card shows the combined all-in month-1 price', stk.card.indexOf(money(stk.allIn))>=0, money(stk.allIn));
   t('stack: card lists both prices separately', stk.card.indexOf(money(stk.price))>=0 && stk.card.indexOf(money(stk.budget))>=0);
   t('stack: card shows the combined year-one line', /Year one, combined/.test(stk.card));
   t('separation: ROI sub says organic-alone when ads are on', /organic SEO\/GEO program alone/.test(stk.roiSub));
-  t('separation: chart labeled organic-only when ads are on', /organic SEO\/GEO program only/.test(stk.tl));
+  t('chart: timeline explains the blue ads segments', /blue segments are ads-won/i.test(stk.tl));
+  t('chart: blue ads segments drawn in the SVG', /bar-ads/.test(stk.svg));
+  t('chart: ads legend key visible, cost key reads all-in', stk.legAds===false && /All-in cost/.test(stk.legCost), stk.legCost);
+  t('chart: all-in series = organic bill + ads cost, every month',
+    stk.cs.allInArr.every((v,i)=>Math.abs(v-((stk.cs.inv[i]||0)+stk.cs.adsC[i]))<0.01));
+  t('chart: ads value series present for 12 months', Array.isArray(stk.cs.ads)&&stk.cs.ads.length===12);
+
+  /* ads off (control): no blue segments, organic legend restored */
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const noAds=await page.evaluate(()=>({svg:document.getElementById('o-chart').innerHTML,
+    legAds:document.getElementById('legend-ads').hidden, legCost:document.getElementById('legend-cost').textContent}));
+  t('chart control: no ads segments when ads off', !/bar-ads/.test(noAds.svg));
+  t('chart control: ads legend hidden, cost key restored', noAds.legAds===true && /fixed \+ share/.test(noAds.legCost), noAds.legCost);
 
   await browser.close();
 }
