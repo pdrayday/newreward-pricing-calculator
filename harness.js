@@ -45,7 +45,7 @@ function independent(q, acqPct, budgetIn){
   const scaleMode=veryEfficient&&demandLimited;                    // headroom + efficiency: hold, don't taper
   const floorB=budget>0? (demandLimited?0:Math.max(500,Math.round(budget*0.30/250)*250)) : 0;
   const taperStart=(organicOn&&budget>0&&q.newCust>0&&!scaleMode&&rampFull+1<=12)? rampFull+1 : null;
-  const months=[];
+  const months=[]; let adsWinsYr=0, adsCostYr=0;
   for(let m=1;m<=12;m++){
     let bm=budget;
     if(taperStart!=null&&m>=taperStart){
@@ -56,10 +56,12 @@ function independent(q, acqPct, budgetIn){
     const org=organicOn? q.newCust*fW(m):0;
     const adm=(cpc>0&&bm>0)? Math.min(bm/cpc*close, Math.max(0,q.capStretch-org)) : 0;
     months.push({m, budget:bm, fee:fee(bm), ads:adm, organic:org, total:org+adm});
+    adsWinsYr+=adm; adsCostYr+=bm+fee(bm);
   }
   return {adCAC, acqAllowed, adsViable, veryEfficient, budgetAuto, budget, fee:fee(budget),
           adFull, roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart,
-          taperDone:taperStart!=null?Math.min(12,taperStart+2):null, rampFull, organicOn, months};
+          taperDone:taperStart!=null?Math.min(12,taperStart+2):null, rampFull, organicOn, months,
+          adsWinsYr, adsCostYr};
 }
 
 /* ---------- tiny test kit ---------- */
@@ -148,6 +150,13 @@ function edgeTests(){
   // -- edited budget: verbatim, never snapped
   a=independent(loc,15,3200);
   t('edited budget kept verbatim (no $250 snap on manual)', a.budget===3200);
+
+  // -- year-one totals: the combined stack's inputs are exact sums of the schedule
+  a=independent(capB,15,4000);
+  t('year totals: adsWinsYr = sum of monthly ads wins', near(a.adsWinsYr, a.months.reduce((x,mo)=>x+mo.ads,0)));
+  t('year totals: adsCostYr = sum of monthly spend + fees', near(a.adsCostYr, a.months.reduce((x,mo)=>x+mo.budget+mo.fee,0)));
+  a=independent(solo,15,3000);
+  t('year totals: ads-only cost = 12 x (budget + fee)', near(a.adsCostYr, 12*(3000+a.fee)));
 }
 
 /* ---------- live cross-check against the real calculator ---------- */
@@ -188,7 +197,7 @@ async function liveTests(htmlPath){
       const ok=(va==null&&vb==null)||(typeof va==='number'&&typeof vb==='number'? near(va,vb,eps||1e-6) : va===vb);
       t(c.name+': '+k+' matches', ok, JSON.stringify(va)+' vs '+JSON.stringify(vb));
     };
-    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone'].forEach(k=>same(k,0.01));
+    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr'].forEach(k=>same(k,0.01));
     const mOk=got.a.months.every((mo,i)=>near(mo.budget,exp.months[i].budget,0.01)&&near(mo.fee,exp.months[i].fee,0.01)
               &&near(mo.ads,exp.months[i].ads,1e-4)&&near(mo.organic,exp.months[i].organic,1e-4));
     t(c.name+': 12-month schedule matches', mOk);
@@ -259,6 +268,22 @@ async function liveTests(htmlPath){
   t('share mode: section 06 states the rev-share exclusion', /never rev-share billed/.test(shr.math));
   t('share mode: section 06 explains CAC and guardrails', /simple|clicks become customers/i.test(shr.math) && /guardrail/i.test(shr.math));
   t('budget input lives inside section 06', shr.inSec===true);
+
+  /* the combined stack: organic + ads + all-in on the card, numbers reconciling exactly */
+  const stk=await page.evaluate(()=>{
+    const s=readState(), q=computeQuote(s), n=getNegotiated(q);
+    const a=adsState(s,q,n.rampMonth);
+    return {card:document.getElementById('ads-card').textContent,
+            allIn:n.price+a.budget+a.fee, price:n.price, budget:a.budget, fee:a.fee,
+            roiSub:document.getElementById('o-roi-sub').textContent,
+            tl:document.getElementById('o-timeline').textContent};
+  });
+  const money=v=>'$'+Math.round(v).toLocaleString('en-US');
+  t('stack: card shows the combined all-in month-1 price', stk.card.indexOf(money(stk.allIn))>=0, money(stk.allIn));
+  t('stack: card lists both prices separately', stk.card.indexOf(money(stk.price))>=0 && stk.card.indexOf(money(stk.budget))>=0);
+  t('stack: card shows the combined year-one line', /Year one, combined/.test(stk.card));
+  t('separation: ROI sub says organic-alone when ads are on', /organic SEO\/GEO program alone/.test(stk.roiSub));
+  t('separation: chart labeled organic-only when ads are on', /organic SEO\/GEO program only/.test(stk.tl));
 
   await browser.close();
 }
