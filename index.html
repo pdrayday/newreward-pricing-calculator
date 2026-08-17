@@ -577,6 +577,8 @@ select option{background:#171410;color:var(--text)}
 .o-intensity .ig-note{margin-top:6px;color:var(--muted2);font-size:11px}
 
 /* organic vs paid: equivalent Google Ads spend for the captured traffic */
+.oc-group{margin:14px 0 -6px;font-size:10px;letter-spacing:.14em;font-weight:700;color:var(--gold-deep);text-transform:uppercase}
+.oc-group[hidden]{display:none}
 .o-adsave{margin-top:14px;display:none;background:rgba(212,162,74,.07);border:1px solid var(--gold-line-soft);
   border-radius:10px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.55}
 .o-adsave.show{display:block}
@@ -1011,7 +1013,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <!-- ================= OUTPUTS ================= -->
 <div class="outputs">
   <div class="opanel">
-    <div class="o-kicker">Projected ROI</div>
+    <div class="o-kicker" id="o-kicker">Projected ROI</div>
     <div class="o-price"><span id="o-roi">—</span><span class="permo" id="o-roi-unit"></span></div>
     <div class="o-sub" id="o-roi-sub">Estimated return on the monthly program investment</div>
 
@@ -1020,19 +1022,19 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-share">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><span class="cur">$</span><input id="o-price-edit" type="text" inputmode="numeric" autocomplete="off" aria-label="Negotiated fixed monthly price"></div>
-      <div class="share-desc"><b style="color:var(--text)">Fixed monthly investment</b> <button class="tip tip-left" type="button" aria-label="How this number is built">?<span class="tipbox" id="tip-price-math"></span></button> — <span id="o-price-sub">program fee</span><br><span class="neg-note" id="o-price-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)" id="o-price-lbl">Fixed monthly investment</b> <button class="tip tip-left" type="button" aria-label="How this number is built">?<span class="tipbox" id="tip-price-math"></span></button> — <span id="o-price-sub">program fee</span><br><span class="neg-note" id="o-price-note"></span></div>
     </div>
     <div class="neg-warn" id="o-price-warn"></div>
     <div class="o-market" id="o-market"></div>
 
     <div class="o-share" id="share-row">
       <div class="share-pct edit-num" title="Editable — adjust live during negotiation"><input id="o-share-edit" type="number" min="0" max="10" step="0.5" aria-label="Negotiated revenue share percent"><span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow. And if results outrun the projection, the same math simply scales with you: every extra win bills only its small share — you keep everything else.<br><span class="neg-note" id="o-share-note"></span></div>
+      <div class="share-desc"><b style="color:var(--text)" id="o-share-lbl">Revenue share</b> <button class="tip tip-left" type="button" aria-label="How this percentage is built">?<span class="tipbox" id="tip-share-math"></span></button> — when our work wins a <b style="color:var(--gold-bright)">new customer</b>, we earn this share of their first-year value. Only growth above today's baseline counts. Begins <span id="o-ramp">month 2</span>; billed monthly, and only on wins we can <b style="color:var(--gold-bright)">verifiably prove</b>. We only grow when you grow. And if results outrun the projection, the same math simply scales with you: every extra win bills only its small share — you keep everything else.<br><span class="neg-note" id="o-share-note"></span></div>
     </div>
     <div class="neg-warn" id="o-share-warn"></div>
     <div class="o-share" id="flat-block" hidden>
       <div class="share-pct" style="font-size:30px;font-weight:800;color:var(--gold-deep)">0<span class="cur">%</span></div>
-      <div class="share-desc"><b style="color:var(--text)">Flat retainer — one predictable fee.</b> The client pays the same fixed amount every month and keeps <b style="color:var(--gold-bright)">100% of every dollar of revenue</b> — every new customer, every repeat purchase, every referral. No per-win billing of any kind.</div>
+      <div class="share-desc"><b style="color:var(--text)">Flat retainer — one predictable fee.</b> The client pays the same fixed amount every month and keeps <b style="color:var(--gold-bright)">100% of every dollar of revenue</b> — every new customer, every repeat purchase, every referral. No per-win billing of any kind.<span id="flat-ads-note"></span></div>
     </div>
 
     <div id="now-card" hidden style="margin-top:6px;padding:12px 14px;border:1px dashed var(--gold-line);border-radius:10px;font-size:12.5px;line-height:1.55;color:var(--muted)"></div>
@@ -1052,13 +1054,14 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 
     <div class="o-proj">
       <div class="o-diff-top">
-        <span class="o-diff-label">12-Month Projection</span>
+        <span class="o-diff-label" id="o-proj-label">12-Month Projection</span>
         <span class="proj-key"><i class="kk k-rev"></i><span id="legend-rev">New revenue / mo</span><i class="kk k-ads" id="legend-ads-k" hidden></i><span id="legend-ads" hidden>From ads</span><i class="kk k-cost"></i><span id="legend-cost">Total cost (fixed + share)</span></span>
       </div>
       <div id="o-chart" onclick="openChartZoom()"></div>
       <div class="o-timeline" id="o-timeline"></div>
     </div>
 
+    <div class="oc-group" id="ocards-kicker" hidden>SEO/GEO program — organic pace (ads are tallied on the Paid Media card above)</div>
     <div class="ocards">
       <div class="ocard">
         <div class="oc-label" id="o-cust-label">New customers / month</div>
@@ -1962,7 +1965,9 @@ function renderEventChart(q,n,ep,el){
   for(let i=0;i<12;i++){
     const trueH=lineInv[i]/maxV*(Y1-Y0);
     if(!q.contractStyle){ costH.push(Math.max(trueH, lineInv[i]>0?2:0)); continue; }
-    const feeOnly=(i+1)<n.rampMonth?n.price:n.series.perfPrice;
+    /* the no-win baseline is the ACTUAL bill for that month — fee PLUS any ads cost —
+       so two months billing the same $8.4k always draw the same height (Payton, Aug 17) */
+    const feeOnly=((i+1)<n.rampMonth?n.price:n.series.perfPrice)+(adsActive?adsCostM[i]:0);
     const baseH=Math.max(feeOnly/maxV*(Y1-Y0), 2.5);
     if(ep.wins[i]>0){ costH.push(Math.max(trueH, baseH)); }   // true scale — the bill drawn at the same $/px as the revenue bars
     else costH.push(baseH);
@@ -2386,6 +2391,16 @@ function render(){
   }
   /* legend: with ads on the chart shows BOTH channels — gold organic, blue ads, all-in cost */
   const adsChart = adsOn && q.price!=null && adsState(s,q,n.rampMonth).budget>0;
+  /* CHANNEL-LABEL LAW (Payton, Aug 17): with ads on, every output is either grouped under an
+     SEO/GEO label or explicitly marked combined — no unlabeled organic-only number anywhere */
+  set('o-kicker', (adsOn&&q.price!=null)?'Projected ROI — SEO/GEO organic':'Projected ROI');
+  set('o-price-lbl', adsOn?'SEO/GEO fixed monthly investment':'Fixed monthly investment');
+  set('o-share-lbl', adsOn?'Revenue share — organic wins only':'Revenue share');
+  const fanEl=document.getElementById('flat-ads-note');
+  if(fanEl) fanEl.textContent = adsOn?' Google + Meta ads are a separate line — ad budget + management fee, itemized on the Paid Media card below.':'';
+  set('o-proj-label', adsChart?'12-Month Projection — SEO/GEO + ads combined':'12-Month Projection');
+  const okEl=document.getElementById('ocards-kicker');
+  if(okEl) okEl.hidden = !(adsOn&&q.price!=null);
   const legR=document.getElementById('legend-rev'), legAK=document.getElementById('legend-ads-k'), legA=document.getElementById('legend-ads');
   if(legR) legR.textContent = adsChart ? 'Organic wins' : 'New revenue / mo';
   if(legAK) legAK.hidden = !adsChart;
@@ -2648,7 +2663,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-58';
+const BUILD='NR-20260814-59';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2980,7 +2995,9 @@ function buildPDF(mode){
   doc.setFontSize(7); doc.text('GET FOUND. GET TRUSTED. GET CHOSEN.', L, 27, {charSpace:.9});
   /* right-align manually: jsPDF's align:'right' ignores charSpace, pushing the title off the page edge */
   doc.setFontSize(9.5);
-  const gppTitle='GROWTH PROGRAM PROPOSAL';
+  /* with ads in the deck, page 1 says exactly what it holds: the SEO/GEO pricing and
+     projections — the Google + Meta ads plan is its own page (page 2) */
+  const gppTitle=(adsOnP&&aP&&q.price!=null)?'SEO/GEO PRICING & PROJECTIONS':'GROWTH PROGRAM PROPOSAL';
   const gppW=doc.getTextWidth(gppTitle)+0.6*(gppTitle.length-1);
   doc.text(gppTitle, R-gppW, 17, {charSpace:.6});
   doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(190,182,168);
@@ -3052,11 +3069,17 @@ function buildPDF(mode){
   y+=h1+4;
   const h2=25;
   const crP = custRate(q.newCust);
-  box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'pace after the ramp (months 1–'+(n.rampMonth-1)+', fixed fee only) — year one models '+eventPlan(q,n).winsYr, DARK);
-  box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', q.contractStyle?'averaged across 12 months — wins land as whole contracts':'pace by month 12', DARK);
-  box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', q.contractStyle?(q.retainYears>1?'modeled potential — from whole-contract wins':'gross first-year value of signed clients — value won, not cash collected'):'pace by month 12 — modeled potential', DARK);
+  const chLbl=(adsOnP&&aP&&q.price!=null)?' (SEO/GEO)':'';   // channel-label law: organic-only boxes say so when ads are in the deck
+  box(L,58,h2,'NEW CUSTOMERS'+chLbl, crP.v+' '+crP.unit, 'pace after the ramp (months 1–'+(n.rampMonth-1)+', fixed fee only) — year one models '+eventPlan(q,n).winsYr, DARK);
+  box(L+62,58,h2,'NEW REVENUE / MONTH'+chLbl, '+'+fmt$(n.series.exitMRR)+'/mo', q.contractStyle?'averaged across 12 months — wins land as whole contracts':'pace by month 12', DARK);
+  box(L+124,58,h2,'NEW REVENUE / YEAR'+chLbl, '+'+fmt$(n.series.exitARR)+'/yr', q.contractStyle?(q.retainYears>1?'modeled potential — from whole-contract wins':'gross first-year value of signed clients — value won, not cash collected'):'pace by month 12 — modeled potential', DARK);
 
   y+=h2+4.6;
+  if(adsOnP&&aP&&q.price!=null){
+    doc.setFont('helvetica','italic'); doc.setFontSize(6.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+    doc.text('Every figure above is the organic SEO/GEO program alone. The Google + Meta ads plan — budget, fee, modeled wins, and the combined stack — is on page 2.',L,y);
+    y+=4;
+  }
 
   /* ---- the pricing principle — full-width section, gold title, no box ---- */
   y+=7;
@@ -3075,8 +3098,8 @@ function buildPDF(mode){
   y+=6;
   doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   const WHERETXT=(typeof researchedQuote!=='undefined'&&researchedQuote)
-    ? 'Every input behind this proposal is itemized on the next page — value by value, with the reasoning and the named sources for each. Every figure is business-specific: researched for this client and verified against published 2026 benchmarks for their exact vertical, market, and footprint.'
-    : 'Every input behind this proposal is itemized on the next page — value by value, with where each number came from. Each value is set from the client\'s own economics and published 2026 benchmarks for their exact vertical, market, and footprint.';
+    ? 'Every input behind this proposal is itemized on page '+inputsPg+' — value by value, with the reasoning and the named sources for each. Every figure is business-specific: researched for this client and verified against published 2026 benchmarks for their exact vertical, market, and footprint.'
+    : 'Every input behind this proposal is itemized on page '+inputsPg+' — value by value, with where each number came from. Each value is set from the client\'s own economics and published 2026 benchmarks for their exact vertical, market, and footprint.';
   doc.splitTextToSize(WHERETXT,W).forEach(function(ln){ doc.text(ln,L,y); y+=4.9; });
 
   y+=9;
@@ -3308,11 +3331,15 @@ function buildPDF(mode){
   /* ============ PAGE 3 — THE PROJECTION (full page, 12 months) — organic scope only ============ */
   if(q.price!=null){
   doc.addPage();
+  const pAdsHdr = adsOnP&&aP&&aP.budget>0;   // combined chart on this page → say so in the title
   doc.setFillColor(10,8,6); doc.rect(0,0,210,24,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(GOLD[0],GOLD[1],GOLD[2]);
-  doc.text('The 12-Month Projection',L,11);
+  doc.text('The 12-Month Projection'+(pAdsHdr?' — SEO/GEO + Ads, Combined':''),L,11);
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,192,178);
-  doc.text('New revenue each month, against the total monthly cost — fixed fee plus the share as wins land.',L,17.5);
+  doc.text(pAdsHdr
+    ? 'Customers won each month — organic gold, ads blue — against the all-in monthly bill: program + ad budget + management.'
+    : (shareOnP ? 'New revenue each month, against the total monthly cost — fixed fee plus the share as wins land.'
+                : 'New revenue each month, against the flat monthly fee.'),L,17.5);
 
   const pCumR=[],pCumC=[];
   (function(){ let a2=0,b2=0; for(let i2=0;i2<12;i2++){ a2+=n.series.mrr[i2]; b2+=n.series.invoice[i2]; pCumR.push(a2); pCumC.push(b2); } })();
@@ -3376,7 +3403,8 @@ function buildPDF(mode){
   for(let i2=0;i2<12;i2++){
     const trueH=pInv[i2]/pMax*(pB-pT);
     if(!q.contractStyle){ pCh.push(Math.max(trueH, pInv[i2]>0?0.8:0)); continue; }
-    const feeOnly=(i2+1)<n.rampMonth?n.price:n.series.perfPrice;
+    /* no-win baseline = the ACTUAL bill (fee + ads cost) — equal bills, equal heights */
+    const feeOnly=((i2+1)<n.rampMonth?n.price:n.series.perfPrice)+(pAC?pAC[i2]:0);
     const baseH=Math.max(feeOnly/pMax*(pB-pT), 1.1);
     if(pEp.wins[i2]>0){ pCh.push(Math.max(trueH, baseH)); }   // true scale, matching the site chart
     else pCh.push(baseH);
@@ -3450,7 +3478,7 @@ function buildPDF(mode){
   pdDraw('The gold bars','are the new revenue the program wins each month.');
   pdDraw('The dark cost bars','is your total monthly bill — the fixed fee while we build, then the reduced fee plus the share as wins land.');
   }
-  if(pAds) pdDraw('The blue segments','are ads-won customers stacked on top of the organic gold — ads deliver from month 1 with no ramp, then taper as organic fills the demand. The cost bars are the WHOLE bill, added up: program + ad budget (paid to Google & Meta, not to us) + management fee — month 1: '+fmt$((pInv[0]||0)-(pAC?pAC[0]:0))+' + '+fmt$(aP.months[0].budget)+' + '+fmt$(aP.months[0].fee)+' = '+fmt$(pInv[0]||0)+'. The full schedule is on the next page.');
+  if(pAds) pdDraw('The blue segments','are ads-won customers stacked on top of the organic gold — ads deliver from month 1 with no ramp, then taper as organic fills the demand. The cost bars are the WHOLE bill, added up: program + ad budget (paid to Google & Meta, not to us) + management fee — month 1: '+fmt$((pInv[0]||0)-(pAC?pAC[0]:0))+' + '+fmt$(aP.months[0].budget)+' + '+fmt$(aP.months[0].fee)+' = '+fmt$(pInv[0]||0)+'. The full schedule is on page 2 — the ads plan.');
   if(false) pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   else if(q.contractStyle&&pEp.winsYr<=4) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract covers the program many times over — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
   else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
@@ -3467,7 +3495,7 @@ function buildPDF(mode){
   pdDraw('This projection never compounds','— the visibility asset does, but these numbers count none of it. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.');
   hy+=1;
   doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Modeled projections from the cited inputs on page '+inputsPg+' — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.'+(adsOnP&&aP&&aP.budget>0?' Blue segments are ads-won customers; the cost bars are all-in (program + ad spend + management). The month-by-month ads schedule and the combined stack are on the next page.':''),L,hy,{maxWidth:W});
+  doc.text('Modeled projections from the cited inputs on page '+inputsPg+' — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.'+(adsOnP&&aP&&aP.budget>0?' Blue segments are ads-won customers; the cost bars are all-in (program + ad spend + management). The month-by-month ads schedule and the combined stack are on page 2 — the ads plan.':''),L,hy,{maxWidth:W});
 
   /* footer band */
   doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
@@ -3527,12 +3555,16 @@ function buildPDF(mode){
       y+=3.9;
     });
     doc.setFont('helvetica','italic'); doc.setFontSize(6.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text((aP.taperStart!=null
+    /* measured advance — this note wraps to 2–3 lines depending on the taper text; a fixed
+       step let line three collide with THE STACK heading (Payton, Aug 17) */
+    const schNote=(aP.taperStart!=null
       ? 'Months 1–'+(aP.taperStart-1)+' run the full budget while organic builds; from month '+aP.taperStart+' the budget steps down to the '+(aP.floorB>0?fmt$(aP.floorB)+'/mo maintenance floor':'$0 floor — organic replaces the ads entirely')+' by month '+aP.taperDone+'. Wins/mo are modeled floors; combined wins never exceed delivery capacity.'
       : (aP.organicOn? 'No taper modeled in year one at these inputs — the budget holds; wins/mo are modeled floors and combined wins never exceed delivery capacity.'
                      : 'Ads-only plan: the budget holds every month — the flow starts when the spend starts and stops when it stops. Wins/mo are modeled floors, capped at delivery capacity.'))
-      +' Win columns count whole customers — a 0-win month just means the next customer lands a little later; the year-one totals are what matter.',L,y,{maxWidth:W});
-    y+=8;
+      +' Win columns count whole customers — a 0-win month just means the next customer lands a little later; the year-one totals are what matter.';
+    const schLines=doc.splitTextToSize(schNote,W);
+    doc.text(schLines,L,y);
+    y+=schLines.length*2.9+4.5;
 
     /* THE STACK — organic + ads + all-in, combined: the two prices never blur together */
     if(aP.organicOn && aP.budget>0 && q.price!=null){
@@ -3553,8 +3585,9 @@ function buildPDF(mode){
       skRow('Google + Meta ads', '+ '+fmt$(aP.budget)+'/mo spend + '+fmt$(aP.fee)+'/mo management');
       skRow('All-in, month 1', '= '+fmt$(n.price+aP.budget+aP.fee)+'/mo', true);
       doc.setFont('helvetica','normal'); doc.setFontSize(8.2); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-      doc.text('Year one, combined: ~'+skCombW+' customers won ('+skOrgW+' organic + '+skAdsW+' from ads) — '+fmtK(skVal)+' in first-year value vs '+fmtK(skCost)+' invested: '+(skROI!=null?fxA(skROI):'—')+'× on value created.',L,y,{maxWidth:W});
-      y+=8;
+      const skLine=doc.splitTextToSize('Year one, combined: ~'+skCombW+' customers won ('+skOrgW+' organic + '+skAdsW+' from ads) — '+fmtK(skVal)+' in first-year value vs '+fmtK(skCost)+' invested: '+(skROI!=null?fxA(skROI):'—')+'× on value created. The combined 12-month chart is on the next page.',W);
+      doc.text(skLine,L,y);
+      y+=skLine.length*3.5+4.5;
     }
 
     /* the honest answer — Payton's framing, straight */
@@ -3567,10 +3600,14 @@ function buildPDF(mode){
     pdDraw('The follow-up discipline caveat:','ads are only fast if lead handling is fast — a lead answered in minutes closes at multiples of one answered in hours, and slow follow-up torches ad budgets. Organic wins are more forgiving; paid ones are not.');
     if(shareOnP) pdDraw('The revenue share never touches ads:','ads-won customers are never rev-share billed. The client pays the ad spend plus the management fee on this channel, nothing else — the revenue share bills organic program wins only.');
     else pdDraw('What ads cost, all-in:','the ad spend plus the management fee — nothing else on this channel, ever. Every dollar an ads-won customer brings is the client\'s to keep.');
-    if(s.footprint!=='nongeo') pdDraw('Foundational wins help everything at once:','a tuned Google Business Profile and a steady review pipeline lift ad quality scores, local rankings, and AI answers together — the first weeks of organic work make the ad dollars work harder too.');
+    /* the last bullet is optional — draw it only when it AND the benchmarks line still fit
+       above the footer band; the benchmarks line then draws at the true cursor (no clamp,
+       no overlap — Payton, Aug 17) */
+    if(s.footprint!=='nongeo' && hy<254) pdDraw('Foundational wins help everything at once:','a tuned Google Business Profile and a steady review pipeline lift ad quality scores, local rankings, and AI answers together — the first weeks of organic work make the ad dollars work harder too.');
     hy+=1;
     doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    doc.text('Management-fee benchmarks: 10–20% of monthly ad spend is the published norm (15–20% most common at $5–15k/mo, sliding to 12–15% above $15k) with flat monthly minimums of $500–$2,000 — OuterBox, NewMedia and CorePPC 2026 pricing guides, cited with live links on the inputs page. Modeled ad wins are floors, not guarantees.',L,Math.min(hy,270),{maxWidth:W});
+    const bmLines=doc.splitTextToSize('Management-fee benchmarks: 10–20% of monthly ad spend is the published norm (15–20% most common at $5–15k/mo, sliding to 12–15% above $15k) with flat monthly minimums of $500–$2,000 — OuterBox, NewMedia and CorePPC 2026 pricing guides, cited with live links on the inputs page. Modeled ad wins are floors, not guarantees.',W);
+    doc.text(bmLines,L,Math.min(hy,281-bmLines.length*3.2));
 
     /* footer band */
     doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
@@ -3709,7 +3746,7 @@ function buildPDF(mode){
     ['AOV x purchases / year','E-commerce: average order value times orders per year = the yearly customer value.'],
     ['Conversion rate','The percent of website visitors who become PAYING CUSTOMERS — not just leads. Derived from published funnel data: visitor-to-lead benchmarks × the vertical\'s lead-to-close rate, typically 0.75-3.5% depending on the vertical.'],
     ['Gross margin','What the client keeps from each sale after direct costs.'+(shareOnP?' Higher margins support a higher revenue share.':'')],
-    ['Acquisition budget','The share of revenue the client will spend to win a new customer. 10-20% is healthy for growth-mode businesses.'],
+    ['Acquisition budget','The percentage of a new customer\'s revenue the client will spend to win them. 10-20% is healthy for growth-mode businesses.'],
     ['Sales commission','Percent of the gross sale already paid to staff or reps.'+(shareOnP?' It stacks with our revenue share, so it pulls our percentage down.':'')],
     ['Ongoing (run-rate) return','The headline ROI band, on the same value-created basis as Year-1: a fully-ramped month\'s won customers × their full first-year value, vs the full ongoing monthly cost ('+(shareOnP?'reduced fee + share':'the flat fee')+'). Shown from conservative floor to modeled — the number that proves the program keeps paying for itself after the build.'],
     ['Year-1 ROI','Value-created basis: the customers won inside year one × their full first-year value, vs everything invoiced in the first 12 months. A December win\'s remaining purchases land in months 13+, but that value was won by year-one work — so it counts, while cash collected in-year is reported alongside it. Lower than the ongoing return by design: the build happens first.'],
@@ -3768,10 +3805,11 @@ function buildPDF(mode){
   doc.text('Get Found. Get Trusted. Get Chosen.',R,291,{align:'right'});
 
   doc.movePage(3,2);   // projection reads first: page 2 = projection, page 3 = cited inputs
-  /* with the ads plan in the deck, it reads RIGHT AFTER the projection (spec: the detail
-     section follows the projection page); the cited inputs slide to page 4. In an ads-only
-     deck (no projection page) the swap above already put the ads plan at page 2. */
-  if(adsOnP&&aP&&q.price!=null) doc.movePage(4,3);
+  /* with the ads plan in the deck, it reads as PAGE 2 (Payton, Aug 17): page 1 is the SEO/GEO
+     pricing + projections, page 2 the Google + Meta ads plan, page 3 the combined 12-month
+     projection, page 4 the cited inputs. In an ads-only deck (no projection page) the swap
+     above already put the ads plan at page 2. */
+  if(adsOnP&&aP&&q.price!=null) doc.movePage(4,2);
   const name=(s.client||'client').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'')||'client';
   if(mode==='preview'){
     openPdfPreview(doc.output('bloburl'));    // rendered in-page — no file is created on disk

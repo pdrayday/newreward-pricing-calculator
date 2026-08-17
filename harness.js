@@ -370,6 +370,52 @@ async function liveTests(htmlPath){
   t('zoom (share, no ads): title mirrors the live cost legend', /fixed \+ share/i.test(zoom2.title), zoom2.title);
   t('zoom (share, no ads): guide present without ads talk', zoom2.hasGuide);
 
+  /* CHANNEL-LABEL LAW (Payton, Aug 17): with ads on, every output is grouped/labeled
+     SEO/GEO or combined — and reverts cleanly when ads is off */
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const lbl=await page.evaluate(()=>({
+    kick:document.getElementById('o-kicker').textContent,
+    price:document.getElementById('o-price-lbl').textContent,
+    share:document.getElementById('o-share-lbl').textContent,
+    proj:document.getElementById('o-proj-label').textContent,
+    ocHidden:document.getElementById('ocards-kicker').hidden,
+    ocTxt:document.getElementById('ocards-kicker').textContent}));
+  t('labels: ROI kicker says SEO/GEO organic', /SEO\/GEO organic/.test(lbl.kick), lbl.kick);
+  t('labels: price label says SEO/GEO', /^SEO\/GEO fixed/.test(lbl.price), lbl.price);
+  t('labels: share label says organic wins only', /organic wins only/.test(lbl.share), lbl.share);
+  t('labels: projection label says combined', /SEO\/GEO \+ ads combined/.test(lbl.proj), lbl.proj);
+  t('labels: pace-cards group kicker visible + SEO/GEO', lbl.ocHidden===false && /SEO\/GEO program — organic pace/.test(lbl.ocTxt));
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&revshare=0&stay=1',{waitUntil:'load'});
+  const lblF=await page.evaluate(()=>({fan:document.getElementById('flat-ads-note').textContent,
+    shareRowHidden:!!document.getElementById('share-row').closest('[hidden]')||document.getElementById('share-row').hidden||getComputedStyle(document.getElementById('share-row')).display==='none'}));
+  t('labels (flat): flat block notes ads billed separately', /separate line/.test(lblF.fan), lblF.fan);
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const lblOff=await page.evaluate(()=>({
+    kick:document.getElementById('o-kicker').textContent,
+    price:document.getElementById('o-price-lbl').textContent,
+    proj:document.getElementById('o-proj-label').textContent,
+    ocHidden:document.getElementById('ocards-kicker').hidden,
+    fan:document.getElementById('flat-ads-note').textContent}));
+  t('labels control (ads off): kicker plain', lblOff.kick==='Projected ROI', lblOff.kick);
+  t('labels control (ads off): price label plain', lblOff.price==='Fixed monthly investment');
+  t('labels control (ads off): projection label plain', lblOff.proj==='12-Month Projection');
+  t('labels control (ads off): pace-cards kicker hidden + flat note empty', lblOff.ocHidden===true && lblOff.fan==='');
+
+  /* equal bills draw equal bars (Payton, Aug 17): contract-style chart, ads on — any two
+     months with the same all-in bill must render cost bars of the same height */
+  await page.goto(url+'?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&revshare=0&stay=1',{waitUntil:'load'});
+  const eq=await page.evaluate(()=>{
+    const cs=chartSeries; if(!cs||!cs.allIn) return {ok:false,why:'no ads series'};
+    const hs=[...document.querySelectorAll('#o-chart .bar-cost')].map(r=>parseFloat(r.getAttribute('height')));
+    if(hs.length!==12) return {ok:false,why:'expected 12 cost bars, got '+hs.length};
+    for(let i=0;i<12;i++)for(let j=i+1;j<12;j++){
+      if(Math.abs(cs.allIn[i]-cs.allIn[j])<0.5 && Math.abs(hs[i]-hs[j])>0.15)
+        return {ok:false,why:'months '+(i+1)+'/'+(j+1)+' bill '+cs.allIn[i]+' but heights '+hs[i]+'/'+hs[j]};
+    }
+    return {ok:true};
+  });
+  t('chart: equal all-in bills render equal cost-bar heights', eq.ok, eq.why||'');
+
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const noAds=await page.evaluate(()=>({svg:document.getElementById('o-chart').innerHTML,
