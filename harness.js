@@ -45,7 +45,10 @@ function independent(q, acqPct, budgetIn){
   const scaleMode=veryEfficient&&demandLimited;                    // headroom + efficiency: hold, don't taper
   const floorB=budget>0? (demandLimited?0:Math.max(500,Math.round(budget*0.30/250)*250)) : 0;
   const taperStart=(organicOn&&budget>0&&q.newCust>0&&!scaleMode&&rampFull+1<=12)? rampFull+1 : null;
-  const months=[]; let adsWinsYr=0, adsCostYr=0;
+  /* CLOSING LAG (spec update, Aug 17): the customers won in month m come from the clicks
+     bought in month m − lag. Fast purchases: 0. $10k+: 1. Contract-style or $25k+: 2. */
+  const lagM=(q.contractStyle||q.yearlyValue>=25000)?2:(q.yearlyValue>=10000?1:0);
+  const bSched=[];
   for(let m=1;m<=12;m++){
     let bm=budget;
     if(taperStart!=null&&m>=taperStart){
@@ -53,8 +56,14 @@ function independent(q, acqPct, budgetIn){
       bm=budget-(budget-floorB)*k;
       bm=Math.max(floorB, Math.round(bm/250)*250);
     }
+    bSched.push(bm);
+  }
+  const months=[]; let adsWinsYr=0, adsCostYr=0;
+  for(let m=1;m<=12;m++){
+    const bm=bSched[m-1];
+    const bWin=(m-lagM>=1)? bSched[m-1-lagM] : 0;
     const org=organicOn? q.newCust*fW(m):0;
-    const adm=(cpc>0&&bm>0)? Math.min(bm/cpc*close, Math.max(0,q.capStretch-org)) : 0;
+    const adm=(cpc>0&&bWin>0)? Math.min(bWin/cpc*close, Math.max(0,q.capStretch-org)) : 0;
     months.push({m, budget:bm, fee:fee(bm), ads:adm, organic:org, total:org+adm});
     adsWinsYr+=adm; adsCostYr+=bm+fee(bm);
   }
@@ -69,7 +78,7 @@ function independent(q, acqPct, budgetIn){
   return {adCAC, acqAllowed, adsViable, veryEfficient, budgetAuto, budget, fee:fee(budget),
           adFull, roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart,
           taperDone:taperStart!=null?Math.min(12,taperStart+2):null, rampFull, organicOn, months,
-          adsWinsYr, adsCostYr, adsWinsYrInt};
+          adsWinsYr, adsCostYr, adsWinsYrInt, lagM};
 }
 
 /* ---------- tiny test kit ---------- */
@@ -177,6 +186,24 @@ function edgeTests(){
   a=independent(loc,15,null);
   t('int schedule: cumulative rounding never skips ahead of the true pace',
     (function(){let c=0,r=0;return a.months.every(mo=>{c+=mo.ads;r+=mo.adsW;return Math.abs(r-c)<=0.5+1e-9;});})());
+
+  // -- CLOSING LAG (Aug 17): big-ticket wins trail the clicks by the sales cycle
+  a=independent(loc,15,3000);
+  t('lag: fast vertical (<$10k) lags 0 — wins from month 1', a.lagM===0 && a.months[0].ads>0);
+  const mid={...loc, yearlyValue:12000};
+  a=independent(mid,15,3000);
+  t('lag: $10k+ ticket lags 1 — month 1 zero, month 2 at pace', a.lagM===1 && a.months[0].ads===0 && near(a.months[1].ads, a.adFull, 1e-9), a.months.slice(0,3).map(mo=>mo.ads).join(','));
+  const big={...loc, yearlyValue:40000, contractStyle:true};
+  a=independent(big,15,3000);
+  t('lag: contract-style lags 2 — months 1-2 zero, month 3 at pace', a.lagM===2 && a.months[0].ads===0 && a.months[1].ads===0 && near(a.months[2].ads, a.adFull, 1e-9));
+  const soloBig={...solo, yearlyValue:30000};
+  a=independent(soloBig,15,3000);
+  t('lag (ads-only, flat budget): months 3-12 all at full pace', a.lagM===2 && a.months.slice(2).every(mo=>near(mo.ads,a.adFull,1e-9)));
+  const capBig={...loc, capApplied:true, newCust:20, capStretch:75, yearlyValue:40000, contractStyle:true};
+  a=independent(capBig,15,4000);
+  t('lag: pipeline keeps closing through the taper — taper-month wins reflect pre-taper spend',
+    a.taperStart!=null && near(a.months[a.taperStart-1].ads, Math.min(4000/6*0.035, Math.max(0,75-a.months[a.taperStart-1].organic)), 1e-6),
+    a.taperStart!=null ? a.months[a.taperStart-1].ads : 'no taper');
 }
 
 /* ---------- live cross-check against the real calculator ---------- */
@@ -198,6 +225,7 @@ async function liveTests(htmlPath){
     {name:'capacity-bound med spa',         qs:'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2000&capacity=20&acq=15&seo=1&geo=1&ads=1'},
     {name:'edited budget',                  qs:'?industry=local&seo=1&geo=1&ads=1&adbudget=3200'},
     {name:'ads-only',                       qs:'?industry=local&seo=0&geo=0&ads=1&adbudget=3000'},
+    {name:'big-ticket lag (real-estate style)', qs:'?industry=highticket&footprint=metro&cpc=4&volume=5000&capacity=2&yearly=40000&convrate=0.1&acq=15&seo=1&geo=1&ads=1'},
   ];
   for(const c of CASES){
     await page.goto(url+c.qs+'&stay=1',{waitUntil:'load'});
@@ -217,7 +245,7 @@ async function liveTests(htmlPath){
       const ok=(va==null&&vb==null)||(typeof va==='number'&&typeof vb==='number'? near(va,vb,eps||1e-6) : va===vb);
       t(c.name+': '+k+' matches', ok, JSON.stringify(va)+' vs '+JSON.stringify(vb));
     };
-    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr','adsWinsYrInt'].forEach(k=>same(k,0.01));
+    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr','adsWinsYrInt','lagM'].forEach(k=>same(k,0.01));
     const mOk=got.a.months.every((mo,i)=>near(mo.budget,exp.months[i].budget,0.01)&&near(mo.fee,exp.months[i].fee,0.01)
               &&near(mo.ads,exp.months[i].ads,1e-4)&&near(mo.organic,exp.months[i].organic,1e-4)
               &&mo.adsW===exp.months[i].adsW&&mo.orgW===exp.months[i].orgW);
@@ -415,6 +443,28 @@ async function liveTests(htmlPath){
     return {ok:true};
   });
   t('chart: equal all-in bills render equal cost-bar heights', eq.ok, eq.why||'');
+
+  /* CLOSING-LAG UI (Payton, Aug 17: "2 new customers every month starting month 1...
+     seems overpromising"): big-ticket quotes stop claiming month-1 closings */
+  await page.goto(url+'?industry=highticket&footprint=metro&cpc=4&volume=5000&capacity=2&yearly=40000&convrate=0.1&acq=15&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const lagUi=await page.evaluate(()=>{
+    const s=readState(), q=computeQuote(s), n=getNegotiated(q), a=adsState(s,q,n.rampMonth);
+    return {card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
+            math:document.getElementById('ads-math').innerText.replace(/\s+/g,' '),
+            lag:a.lagM, m12:a.months.map(x=>x.adsW).join(',')};
+  });
+  t('lag UI: big-ticket quote lags 2 months', lagUi.lag===2);
+  t('lag UI: card no longer claims "month 1, no ramp"', !/month 1, no ramp/i.test(lagUi.card), lagUi.card.slice(0,260));
+  t('lag UI: card says first closings land ~month 3', /closings land (~|around )?month 3/i.test(lagUi.card), lagUi.card.slice(0,400));
+  t('lag UI: section 06 carries the honest timing note', /timing note/i.test(lagUi.math) && /month 3/.test(lagUi.math));
+  t('lag UI: schedule wins months 1-2 are zero', lagUi.m12.split(',').slice(0,2).join(',')==='0,0', lagUi.m12);
+  /* fast vertical control: local keeps its month-1 delivery claim */
+  await page.goto(url+'?industry=local&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const lagC=await page.evaluate(()=>{
+    const s=readState(), q=computeQuote(s), n=getNegotiated(q), a=adsState(s,q,n.rampMonth);
+    return {lag:a.lagM, card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')};
+  });
+  t('lag control: local service lags 0 and keeps "from month 1, no ramp"', lagC.lag===0 && /from month 1, no ramp/i.test(lagC.card), lagC.card.slice(0,240));
 
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});

@@ -1647,7 +1647,7 @@ function computeAds(s,q,rampMonth,budgetIn){
      researched Google CPC through the SAME vertical conversion chain. Meta's cheaper clicks
      make this a floor, never a promise — it prints as "modeled" everywhere it appears. */
   const adFull = (cpc>0&&budget>0) ? Math.min(budget/cpc*close, q.capStretch) : 0;
-  const roiAds = (budget+fee)>0 ? adFull*q.yearlyValue/(budget+fee) : null;   // month 1, no ramp
+  const roiAds = (budget+fee)>0 ? adFull*q.yearlyValue/(budget+fee) : null;   // steady-state pace (closings may lag the clicks — lagM below)
   /* phased 12-month schedule. Organic pace rides the projection's own ramp curve; months
      1..rampFull run ads at the full budget (they carry the flow while organic builds). From
      the month organic pace fills what ads leave, the budget tapers linearly over three months
@@ -1664,7 +1664,15 @@ function computeAds(s,q,rampMonth,budgetIn){
   const scaleMode = veryEfficient && demandLimited;    // headroom + efficiency: hold, don't taper
   const floorB = budget>0 ? (demandLimited ? 0 : Math.max(500, Math.round(budget*0.30/250)*250)) : 0;
   const taperStart = (organicOn && budget>0 && q.newCust>0 && !scaleMode && rampFull+1<=12) ? rampFull+1 : null;
-  const months=[]; let adsWinsYr=0, adsCostYr=0;   // year-one totals — feed the combined stack
+  /* CLOSING LAG (Payton, Aug 17: "2 new customers every month starting month 1... seems
+     overpromising"): clicks buy LEADS day one, but big-ticket buyers take months to decide —
+     a real-estate or contract-size purchase runs ~10 weeks of shopping plus closing time
+     (NAR-cited median), so the customers won in month m come from the clicks bought in
+     month m − lag. Fast purchases (local service, e-commerce) close inside the month: lag 0.
+     Mid-ticket ($10k+): 1 month. Contract-style or $25k+: 2 months — first closings land
+     month 3, and the pipeline keeps closing after spend stops (also true to life). */
+  const lagM = (q.contractStyle || q.yearlyValue>=25000) ? 2 : (q.yearlyValue>=10000 ? 1 : 0);
+  const bSched=[];
   for(let m=1;m<=12;m++){
     let bm=budget;
     if(taperStart!=null && m>=taperStart){
@@ -1672,8 +1680,14 @@ function computeAds(s,q,rampMonth,budgetIn){
       bm=budget-(budget-floorB)*k;
       bm=Math.max(floorB, Math.round(bm/250)*250);
     }
+    bSched.push(bm);
+  }
+  const months=[]; let adsWinsYr=0, adsCostYr=0;   // year-one totals — feed the combined stack
+  for(let m=1;m<=12;m++){
+    const bm=bSched[m-1];
+    const bWin=(m-lagM>=1) ? bSched[m-1-lagM] : 0;   // the spend whose buyers close THIS month
     const org=organicOn ? q.newCust*fW(m) : 0;
-    const adm=(cpc>0&&bm>0) ? Math.min(bm/cpc*close, Math.max(0,q.capStretch-org)) : 0;
+    const adm=(cpc>0&&bWin>0) ? Math.min(bWin/cpc*close, Math.max(0,q.capStretch-org)) : 0;
     months.push({m:m, budget:bm, fee:adsFee(bm), ads:adm, organic:org, total:org+adm});
     adsWinsYr+=adm; adsCostYr+=bm+adsFee(bm);
   }
@@ -1690,7 +1704,7 @@ function computeAds(s,q,rampMonth,budgetIn){
   const taperDone = taperStart!=null ? Math.min(12,taperStart+2) : null;
   return {adCAC, acqAllowed, acqPct, adsViable, veryEfficient, budgetAuto, budget, fee, adFull,
           roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart, taperDone, rampFull,
-          organicOn, months, adsWinsYr, adsCostYr, adsWinsYrInt};
+          organicOn, months, adsWinsYr, adsCostYr, adsWinsYrInt, lagM};
 }
 /* the current ads state, resolved the same way for the site card AND the PDF — one source,
    so the two always print the SAME budget / fee / wins (numbers-correspond law) */
@@ -1710,7 +1724,7 @@ function adsSeqLine(s,q,a){
   } else {
     t='Start ads month 1 at '+fmt$(a.budget)+'/mo — the flow starts when the spend starts, and stops when it stops.';
   }
-  if(s.industry==='ultra'||q.contractStyle) t+=' Long sales cycles here: judge ads on signed contracts, not lead volume.';
+  if(a.lagM>0&&a.budget>0) t+=' Clicks and leads start day one, but buyers this size take time to decide — the first ads-won closings land around month '+(a.lagM+1)+'. Judge ads on signed contracts, not lead volume.';
   return t;
 }
 function resetAdBudget(){ adBudgetDirty=false; render(); return false; }
@@ -1929,7 +1943,7 @@ function renderEventChart(q,n,ep,el){
   const orgInvC = lineInv.slice();
   if(adsActive) lineInv = lineInv.map(function(v,i){return (v||0)+adsCostM[i];});
   chartSeries={mode:'event', rev:ep.rev.slice(), inv:orgInvC, wins:ep.wins.slice(), perWin:ep.perWin, monthly:custRate(q.newCust).monthly, feeWaive:!!ep.feeWaive, contract:!!q.contractStyle, ramp:n.rampMonth,
-               ads:adsRev, adsW:adsWinsM, adsC:adsCostM, adsB:adsSpM, adsF:adsFeeM, allIn:adsActive?lineInv.slice():null};
+               ads:adsRev, adsW:adsWinsM, adsC:adsCostM, adsB:adsSpM, adsF:adsFeeM, adsLag:adsActive?aC.lagM:0, allIn:adsActive?lineInv.slice():null};
   const stackTop=ep.rev.map(function(v,i){return v+(adsRev?adsRev[i]:0);});
   const maxV=Math.max.apply(null, stackTop.concat(lineInv,[1]))*1.12;
   const X0=46,X1=352,Y0=16,Y1=112,gw=(X1-X0)/12;
@@ -2341,7 +2355,7 @@ function render(){
         }
         if(a.budget>0){
           am+='<p><b>The management fee — and who gets paid what.</b> The ad budget is not our money: <b style="color:var(--text)">'+fmt$(a.budget)+' goes to Google and Meta</b> — it buys the clicks. Running those ads well is the real work on our side — building the campaigns, testing the messages, cutting what wastes money — and the industry norm for it is 10–20% of ad spend; this program charges <b style="color:var(--text)">15%</b> (12% above $15k/mo), never less than $500/mo: <span class="sm-big">'+fmt$(a.fee)+'/mo</span>. So the ads line on any bill is always the same simple addition: '+fmt$(a.budget)+' (to Google &amp; Meta) + '+fmt$(a.fee)+' (to us) = <span class="sm-big">'+fmt$(a.budget+a.fee)+'/mo</span>'+(q.nScopes>0&&q.price!=null?' — and on top of the SEO/GEO program fee, the whole month is '+fmt$(n.price)+' + '+fmt$(a.budget+a.fee)+' = <b style="color:var(--text)">'+fmt$(n.price+a.budget+a.fee)+' all-in</b>':'')+'.</p>'
-            +'<p><b>What that buys.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(q.cpcEff>0?a.budget/q.cpcEff:0).toLocaleString()+' visitors</b> a month; at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× return)':'')+'. This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. It starts month 1 — no ramp.</p>';
+            +'<p><b>What that buys.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(q.cpcEff>0?a.budget/q.cpcEff:0).toLocaleString()+' visitors</b> a month; at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× return)':'')+'. This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. '+(a.lagM>0?'<b style="color:var(--text)">One honest timing note:</b> the clicks and leads start month 1, but a purchase this size takes about '+(a.lagM+1)+'–'+(a.lagM+2)+' months from first click to signed deal — so the first ads-won customers land around <b style="color:var(--text)">month '+(a.lagM+1)+'</b>, and the pipeline keeps closing for a couple of months even after spend winds down.':'It starts month 1 — no ramp.')+'</p>';
           if(q.nScopes>0&&a.taperStart!=null){
             am+='<p><b>Why ads don\'t run at full spend forever.</b> Ads and SEO/GEO fish in the same pond: the people searching this market. While the organic program builds (months 1–'+(a.taperStart-1)+'), ads carry the customer flow. Around month '+a.taperStart+', organic is winning '+(a.demandLimited?'that same demand':'enough to fill capacity')+' on its own — so paying for it twice stops making sense, and the budget steps down to '+(a.floorB>0?fmt$(a.floorB)+'/mo by month '+a.taperDone+' to keep the ad accounts warm':'$0 by month '+a.taperDone)+'. Same customers, lower cost.</p>';
           }
@@ -2357,7 +2371,7 @@ function render(){
       if(a.budget>0){
         ac+='<div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:8px">'+fmt$(a.budget)+'/mo <span style="font-size:12.5px;font-weight:600;color:var(--muted)">ad spend + '+fmt$(a.fee)+'/mo management</span></div>'
           +'<div style="font-size:11.5px;margin-bottom:8px"><b style="color:var(--text)">'+crA.v+crA.unit+'</b> new customers from ads (modeled — researched Google click cost through the same conversion math; Meta\'s cheaper clicks only help)'
-          +(a.roiAds!=null?' · ads-only return <b style="color:var(--text)">'+fxA(a.roiAds)+'×</b>: '+fmtK(a.adFull*q.yearlyValue)+'/mo in first-year customer value vs '+fmt$(a.budget+a.fee)+'/mo all-in — from month 1, no ramp':'')+'.</div>';
+          +(a.roiAds!=null?' · ads-only return <b style="color:var(--text)">'+fxA(a.roiAds)+'×</b>: '+fmtK(a.adFull*q.yearlyValue)+'/mo in first-year customer value vs '+fmt$(a.budget+a.fee)+'/mo all-in'+(a.lagM>0?' at pace — first closings land ~month '+(a.lagM+1):' — from month 1, no ramp'):'')+'.</div>';
         if(!a.adsViable) ac+='<div style="margin-bottom:6px">&#9888; '+adsSeqLine(s,q,a)+'</div>';
         else ac+='<div style="margin-bottom:6px">'+adsSeqLine(s,q,a)+'</div>';
         if(q.nScopes>0&&a.taperStart!=null) ac+='<div style="margin-bottom:6px">Ads carry months 1–'+(a.taperStart-1)+' while SEO/GEO builds; then the program takes over and ads taper.</div>';
@@ -2663,7 +2677,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-59';
+const BUILD='NR-20260814-60';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2931,10 +2945,12 @@ document.addEventListener('mousemove',function(e){
          program + ad budget (paid to Google & Meta) + management fee = the all-in total.
          No client should ever have to guess how $2,650 + $5,750 becomes $8,400. */
       if(chartSeries.ads){
-        const aw=chartSeries.adsW[m-1], sp=chartSeries.adsB[m-1], mf=chartSeries.adsF[m-1];
+        const aw=chartSeries.adsW[m-1], sp=chartSeries.adsB[m-1], mf=chartSeries.adsF[m-1], lagT=chartSeries.adsLag||0;
         body+='<br><span style="color:#79aede">From ads:</span> '+(aw>0
-          ? '<b>'+aw+'</b> more customer'+(aw>1?'s':'')+' — <b>'+fmt$(chartSeries.ads[m-1])+'</b> value'
-          : (sp>0?'ads running — the next ads-won customer lands in a later month':'no ad spend this month'));
+          ? '<b>'+aw+'</b> more customer'+(aw>1?'s':'')+' — <b>'+fmt$(chartSeries.ads[m-1])+'</b> value'+(sp>0?'':' (closing from earlier months’ clicks)')
+          : (sp>0
+            ? (lagT>0&&m<=lagT?'clicks are buying leads now — buyers this size take ~'+(lagT+1)+' months from click to signed deal':'ads running — the next ads-won customer lands in a later month')
+            : 'no ad spend this month'));
         if(sp>0) body+='<br>The bill, added up: <b>'+fmt$(chartSeries.inv[m-1])+'</b> program + <b>'+fmt$(sp)+'</b> ad budget (goes to Google &amp; Meta) + <b>'+fmt$(mf)+'</b> ad management = <b>'+fmt$(chartSeries.allIn[m-1])+'</b>';
       }
     } else if(chartSeries.mode==='accr'){
@@ -3478,7 +3494,7 @@ function buildPDF(mode){
   pdDraw('The gold bars','are the new revenue the program wins each month.');
   pdDraw('The dark cost bars','is your total monthly bill — the fixed fee while we build, then the reduced fee plus the share as wins land.');
   }
-  if(pAds) pdDraw('The blue segments','are ads-won customers stacked on top of the organic gold — ads deliver from month 1 with no ramp, then taper as organic fills the demand. The cost bars are the WHOLE bill, added up: program + ad budget (paid to Google & Meta, not to us) + management fee — month 1: '+fmt$((pInv[0]||0)-(pAC?pAC[0]:0))+' + '+fmt$(aP.months[0].budget)+' + '+fmt$(aP.months[0].fee)+' = '+fmt$(pInv[0]||0)+'. The full schedule is on page 2 — the ads plan.');
+  if(pAds) pdDraw('The blue segments','are ads-won customers stacked on top of the organic gold — '+(aP.lagM>0?'the clicks start month 1 and the first closings land around month '+(aP.lagM+1)+' (buyers this size take time to decide)':'ads deliver from month 1 with no ramp')+', then the budget tapers as organic fills the demand. The cost bars are the WHOLE bill, added up: program + ad budget (paid to Google & Meta, not to us) + management fee — month 1: '+fmt$((pInv[0]||0)-(pAC?pAC[0]:0))+' + '+fmt$(aP.months[0].budget)+' + '+fmt$(aP.months[0].fee)+' = '+fmt$(pInv[0]||0)+'. The full schedule is on page 2 — the ads plan.');
   if(false) pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   else if(q.contractStyle&&pEp.winsYr<=4) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract covers the program many times over — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
   else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
@@ -3523,7 +3539,7 @@ function buildPDF(mode){
     const hA=26;
     box(L,58,hA,'MONTHLY AD BUDGET', aP.budget>0?fmt$(aP.budget)+'/mo':'$0', adBudgetDirty?'set by agreement — the auto recommendation is '+fmt$(aP.budgetAuto):'auto — fills the capacity organic isn\'t using; never more than half the market\'s clicks', DARK, true, true);
     box(L+62,58,hA,'MANAGEMENT FEE', aP.budget>0?fmt$(aP.fee)+'/mo':'—', '15% of spend, 12% above $15k/mo, $500 floor — benchmark-cited below', DARK, true);
-    box(L+124,58,hA,'ADS-ONLY RETURN', aP.roiAds!=null?fxA(aP.roiAds)+'×':'—', aP.budget>0?fmtK(aP.adFull*q.yearlyValue)+'/mo value won vs '+fmt$(aP.budget+aP.fee)+'/mo all-in — month 1, no ramp':'no budget recommended — the verdict is below', DARK, true);
+    box(L+124,58,hA,'ADS-ONLY RETURN', aP.roiAds!=null?fxA(aP.roiAds)+'×':'—', aP.budget>0?fmtK(aP.adFull*q.yearlyValue)+'/mo value won vs '+fmt$(aP.budget+aP.fee)+'/mo all-in'+(aP.lagM>0?' at pace — first closings ~month '+(aP.lagM+1):' — month 1, no ramp'):'no budget recommended — the verdict is below', DARK, true);
     y+=hA+4;
     box(L,89,hA,'COST TO WIN A CUSTOMER WITH ADS', aP.adCAC!=null?fmt$(aP.adCAC):'—', 'researched CPC ÷ conversion rate, vs the '+fmt$(aP.acqAllowed)+' allowed ('+aP.acqPct+'% of customer value) — '+(aP.adsViable?(aP.veryEfficient?'very efficient':'viable'):'inefficient: lean on SEO/GEO'), aP.adsViable?DGOLD:[165,60,40], true);
     box(L+93,89,hA,'MODELED WINS FROM ADS', aP.budget>0?crAP.v+crAP.unit:'0', 'floor-style model: the Google-led budget at the researched Google CPC through the same conversion chain — Meta\'s cheaper clicks only help', DARK, true);
@@ -3561,7 +3577,8 @@ function buildPDF(mode){
       ? 'Months 1–'+(aP.taperStart-1)+' run the full budget while organic builds; from month '+aP.taperStart+' the budget steps down to the '+(aP.floorB>0?fmt$(aP.floorB)+'/mo maintenance floor':'$0 floor — organic replaces the ads entirely')+' by month '+aP.taperDone+'. Wins/mo are modeled floors; combined wins never exceed delivery capacity.'
       : (aP.organicOn? 'No taper modeled in year one at these inputs — the budget holds; wins/mo are modeled floors and combined wins never exceed delivery capacity.'
                      : 'Ads-only plan: the budget holds every month — the flow starts when the spend starts and stops when it stops. Wins/mo are modeled floors, capped at delivery capacity.'))
-      +' Win columns count whole customers — a 0-win month just means the next customer lands a little later; the year-one totals are what matter.';
+      +' Win columns count whole customers — a 0-win month just means the next customer lands a little later; the year-one totals are what matter.'
+      +(aP.lagM>0?' Closings lag the clicks at this ticket size: month-1 spend closes around month '+(aP.lagM+1)+', and the pipeline keeps closing after spend steps down.':'');
     const schLines=doc.splitTextToSize(schNote,W);
     doc.text(schLines,L,y);
     y+=schLines.length*2.9+4.5;
