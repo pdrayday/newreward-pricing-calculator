@@ -1766,6 +1766,21 @@ function adsSeqLine(s,q,a){
 }
 function resetAdBudget(){ adBudgetDirty=false; render(); return false; }
 
+/* LOST-REVENUE numbers — ONE source for the site card and the PDF page-1 block (numbers-
+   correspond law): the gap IS the program's modeled added pace; today's capture is the same
+   demand model run at floor visibility minus the remainder at their actual scores. */
+function lostRevCalc(s,q){
+  const sZeroCS=Object.assign({},s,{rank:30,seoScore:5,geoScore:2,capacity:9999});
+  const sNowCS=Object.assign({},s,{capacity:9999});
+  const poolCS=computeQuote(sZeroCS).newCust;
+  let capCS=Math.max(0, poolCS - computeQuote(sNowCS).newCust);
+  if(q.capBase>0) capCS=Math.min(capCS, q.capBase*(q.stretchMult||1));
+  const convCS=clamp((s.convrate??BENCH(s).conv),0.1,100)/100;
+  const cpcCS=s.cpc??BENCH(s).cpc;
+  return {capCS, valNow:capCS*q.yearlyValue, valGap:q.newCust*q.yearlyValue,
+          adsAltMo:(convCS>0?q.newCust/convCS:0)*(cpcCS||0)};
+}
+
 function readState(){
   return {
     client: document.getElementById('client').value.trim(),
@@ -2326,20 +2341,13 @@ function render(){
     const showNow = q.price!=null;
     nowCard.hidden = !showNow;
     if(showNow){
-      const sZeroCS=Object.assign({},s,{rank:30,seoScore:5,geoScore:2,capacity:9999});
-      const sNowCS=Object.assign({},s,{capacity:9999});
-      const poolCS=computeQuote(sZeroCS).newCust;
-      let capCS=Math.max(0, poolCS - computeQuote(sNowCS).newCust);
-      if(q.capBase>0) capCS=Math.min(capCS, q.capBase*(q.stretchMult||1));
-      const convCS=clamp((s.convrate??BENCH(s).conv),0.1,100)/100;
-      const cpcCS=s.cpc??BENCH(s).cpc;
-      const valNow=capCS*q.yearlyValue, valGap=q.newCust*q.yearlyValue;
-      const visitsPace=convCS>0?q.newCust/convCS:0;
+      const lrC=lostRevCalc(s,q);
+      const capCS=lrC.capCS, valNow=lrC.valNow, valGap=lrC.valGap;
       nowCard.innerHTML='<b style="color:var(--text)">Money left on the table without SEO/GEO</b>'
         +'<div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:8px">'+fmtK(valGap)+'/mo</div>'
         +'<div style="font-size:11.5px;margin-bottom:8px">\u2248 '+fmtK(valGap*12)+' a year in new customers this business is NOT winning right now \u2014 that demand goes to more-visible competitors instead ('+custRate(q.newCust).txt.replace(/^~/,'about ')+' at the modeled pace).</div>'
         +'<div>Today, search + AI bring them only <b style="color:var(--text)">'+custRate(capCS).txt.replace(/^~/,'about ')+'</b> (\u2248'+fmtK(valNow)+'/mo) \u2014 because of where they show up today: rank '+(s.rank!=null?s.rank:'\u2014')+' on Google, '+(q.seoEff!=null?Math.round(q.seoEff):'\u2014')+'/100 search visibility, '+(s.geoScore!=null?s.geoScore:'\u2014')+'/100 AI visibility.</div>'
-        +'<div style="margin-top:6px;color:var(--muted2);font-size:11.5px">Buying that missing traffic with Google Ads instead would cost about '+fmtK(visitsPace*(cpcCS||0))+'/mo, every month. The program wins it organically \u2014 the same modeled pace shown in the projection above.</div>';
+        +'<div style="margin-top:6px;color:var(--muted2);font-size:11.5px">Buying that missing traffic with Google Ads instead would cost about '+fmtK(lrC.adsAltMo)+'/mo, every month. The program wins it organically \u2014 the same modeled pace shown in the projection above.</div>';
     }
   }
   /* GOOGLE + META ADS — section 06 (the plain-English math + budget input) and the compact
@@ -2738,7 +2746,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-62';
+const BUILD='NR-20260814-63';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3159,8 +3167,9 @@ function buildPDF(mode){
     y+=4;
   }
 
-  /* ---- the pricing principle — full-width section, gold title, no box ---- */
-  y+=7;
+  /* ---- the pricing principle — full-width section, gold title, no box ----
+     (gaps tightened Aug 17 to make room for the lost-revenue block below — no section removed) */
+  y+=5;
   const PRINCIPLE='This calculator does two things at once: it shows every client exactly how their price is built — openly, with nothing hidden — and it keeps our own pricing disciplined. Every number comes from the client\'s industry, market footprint, current visibility, and published 2026 SEO and AEO/GEO market rates; nothing is arbitrary. The result is the fee the work actually requires — a price that only works when it works for both sides.';
   doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('THE PRINCIPLE BEHIND THIS PRICE',L,y,{charSpace:.8});
@@ -3170,7 +3179,7 @@ function buildPDF(mode){
 
 
   /* every input now lives on its own fully-cited page — point there */
-  y+=9;
+  y+=6;
   doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('WHERE EVERY NUMBER COMES FROM',L,y,{charSpace:.8});
   y+=6;
@@ -3180,7 +3189,7 @@ function buildPDF(mode){
     : 'Every input behind this proposal is itemized on page '+inputsPg+' — value by value, with where each number came from. Each value is set from the client\'s own economics and published 2026 benchmarks for their exact vertical, market, and footprint.';
   doc.splitTextToSize(WHERETXT,W).forEach(function(ln){ doc.text(ln,L,y); y+=4.9; });
 
-  y+=9;
+  y+=6;
   /* plain english + the customer math — one merged section */
   doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('PLAIN ENGLISH — AND THE MATH',L,y,{charSpace:.8});
@@ -3188,14 +3197,14 @@ function buildPDF(mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
   (function(){
     const all=doc.splitTextToSize(document.getElementById('o-summary').textContent,W);
-    let use=all.slice(0,5);
-    if(all.length>5){   /* never cut mid-sentence — trim back to the last complete one */
+    let use=all.slice(0,4);
+    if(all.length>4){   /* never cut mid-sentence — trim back to the last complete one */
       const j=use.join(' '); const cut=j.lastIndexOf('. ');
       if(cut>60) use=doc.splitTextToSize(j.slice(0,cut+1),W);
     }
     use.forEach(function(ln){doc.text(ln,L,y); y+=4.9;});
   })();
-  y+=5;   /* centered between the summary above and the disclosure below */
+  y+=3.5;   /* centered between the summary above and the disclosure below */
   doc.setFontSize(9.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);   /* the math, in gold — visually distinct from the prose above */
   const math1=q.vol.toLocaleString()+' searches × '+(q.clickShare*100).toFixed(0)+'% clicks × '
     +parseFloat((q.closeRate*100).toFixed(2))+'% conv × '+(q.chFactor*100).toFixed(0)+'% still winnable (demand their visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.capApplied?' — capped at '+q.capStretch+'/mo stretch capacity':'')
@@ -3210,6 +3219,21 @@ function buildPDF(mode){
       +'/yr in new contract value — pacing +'+fmtK(n.series.exitARR)+'/yr by month 12.';
   doc.splitTextToSize(math2,W).slice(0,2).forEach(function(ln){doc.text(ln,L,y); y+=4.6;});
 
+  /* ---- the lost-revenue picture (Payton, Aug 17): what standing still costs — same
+          lostRevCalc() numbers as the site card. Page 1 has ~45mm of free space here, so
+          nothing had to be removed; the y-guard skips it rather than ever colliding. ---- */
+  if(q.price!=null && q.nScopes>0 && y<246){
+    const lr=lostRevCalc(s,q);
+    y+=5;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+    doc.text('MONEY LEFT ON THE TABLE WITHOUT SEO/GEO',L,y,{charSpace:.8});
+    doc.setFontSize(11.5); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+    doc.text(fmtK(lr.valGap)+'/mo',R,y,{align:'right'});
+    y+=5.6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.2); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+    const lrTxt='About '+fmtK(lr.valGap*12)+' a year in new customers this business is NOT winning right now — that demand goes to more-visible competitors instead ('+custRate(q.newCust).txt.replace(/^~/,'about ')+' at the modeled pace). Today, search + AI bring them only '+custRate(lr.capCS).txt.replace(/^~/,'about ')+' (~'+fmtK(lr.valNow)+'/mo) — rank '+(s.rank!=null?s.rank:'not set')+' on Google, '+(q.seoEff!=null?Math.round(q.seoEff):'—')+'/100 search visibility, '+(s.geoScore!=null?s.geoScore:'—')+'/100 AI visibility. Buying that missing traffic with Google Ads instead would cost about '+fmtK(lr.adsAltMo)+'/mo, every month — this program wins it organically, at the modeled pace shown above.';
+    doc.splitTextToSize(lrTxt,W).forEach(function(ln){doc.text(ln,L,y); y+=3.9;});
+  }
 
   /* organic-vs-Google-Ads comparison intentionally omitted from the PDF (hidden when the
      ad-equivalent spend exceeds the fee, and it never showed in the reverse case). */
@@ -3279,7 +3303,7 @@ function buildPDF(mode){
       ['Company', s.client||'—', rxW('client','The business this proposal was researched and priced for.'), (s.client&&s.client.trim())?[s.client.trim()]:'Provided / researched'],
       ['Website', (s.website||'—'), rxW('website','The site the program optimizes and measures.'), SRC_SITE?[SRC_SITE]:'Provided / researched', SITE_URL],
       ['Search phrase', s.phrase||'—'].concat(rx('phrase','The anchor money phrase; the quote is sized on the full phrase cluster, not this one query.',SRC_SERP?[SRC_SERP]:'Provided / researched')),
-      ['Scope', ((s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''))||'None'].concat(rx('scope','The services in this program.',[SRC_OFF])),
+      ['Scope', (function(){ let sc=(s.seo?'SEO':'')+(s.seo&&s.geo?' + ':'')+(s.geo?'AEO/GEO':''); if(adsOnP) sc+=(sc?' + ':'')+'Google & Meta ads'; return sc||'None'; })()].concat(rx('scope','The services in this program.',[SRC_OFF])),
       ['Industry model', selText('industry')].concat(rx('industry','The business type — sets every blank-field benchmark.',SRC_SITE?[SRC_SITE]:'Matched from their actual offering')),
       ['Market footprint', selText('footprint')].concat(rx('footprint','How wide the program fights — demand, competitors, and pages scale with it.',SRC_SITE?[SRC_SITE]:'Matched from their service area')),
       ['Competitor strength', selText('compstr')].concat(rx('compstr','Decided by rule from who actually holds the top results.',SRC_SERP?[SRC_SERP,SRC_KD]:['Live SERP review',SRC_KD])),
@@ -3470,7 +3494,14 @@ function buildPDF(mode){
       doc.setFillColor(94,155,209); doc.rect(cx-6.2,base-ah,7.6,ah,'F');
       topY=base-ah;
     }
-    if(pStack[i2]>0){ doc.setFontSize(5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]); doc.text(fmtK(pStack[i2]),cx,topY-1.2,{align:'center'}); }
+    if(pStack[i2]>0){
+      /* annotate the modeled WIN COUNT where wins land (Payton, Aug 17): value on top,
+         whole-customer count tucked against the bar — organic + ads combined */
+      const wCt=(pEp.wins[i2]||0)+((pAds&&aP)?(aP.months[i2].adsW||0):0);
+      doc.setFontSize(5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+      doc.text(fmtK(pStack[i2]),cx,topY-(wCt>0?4.4:1.2),{align:'center'});
+      if(wCt>0){ doc.setFontSize(4.6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.text(wCt+' win'+(wCt>1?'s':''),cx,topY-1.0,{align:'center'}); }
+    }
     doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
     doc.text(String(i2+1),cx,pB+5.4,{align:'center'});
   }
