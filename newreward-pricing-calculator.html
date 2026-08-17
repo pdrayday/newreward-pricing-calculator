@@ -143,6 +143,9 @@
 [data-theme="ivory"] .theme-switch button[aria-pressed="true"]{background:linear-gradient(135deg,#241a06,#0c0802);color:#f0d8a0}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
+/* laid-out-but-invisible tooltips (opacity 0) must never widen the page into a horizontal
+   scroll on phones — clip, not hidden, so no new scroll container is created (audit, Aug 17) */
+html,body{overflow-x:clip}
 body{
   background:var(--bg);
   color:var(--text);
@@ -291,7 +294,19 @@ a.wordmark:hover span{color:var(--gold-bright)}
   .ocards{grid-template-columns:1fr}
   .ocard[style*="span 2"]{grid-column:auto!important}
   /* keep tooltips on-screen */
-  .tip .tipbox{width:min(240px,82vw)}
+  .tip .tipbox{width:min(240px,82vw);max-width:calc(100vw - 28px)}
+  /* toggle-row + output-card tooltips: anchor to the row/card (same pattern as the field
+     groups below) so a "?" near the screen edge can never push the bubble off-viewport */
+  .toggle-row{position:relative}
+  .toggle-row .tip{position:static}
+  .toggle-row .tip .tipbox{left:8px;right:8px;width:auto;bottom:calc(100% + 6px);transform:translateY(4px)}
+  .toggle-row .tip:hover .tipbox,.toggle-row .tip:focus .tipbox{transform:translateY(0)}
+  .toggle-row .tip .tipbox::after{display:none}
+  .ocard{position:relative}
+  .ocard .tip{position:static}
+  .ocard .tip .tipbox{left:0;right:0;width:auto;bottom:calc(100% + 6px);transform:translateY(4px)}
+  .ocard .tip:hover .tipbox,.ocard .tip:focus .tipbox{transform:translateY(0)}
+  .ocard .tip .tipbox::after{display:none}
   /* input-field tooltips: anchor to the full field group instead of the "?" so a tooltip
      near the screen edge can never clip off-screen (same pattern as the share tooltips) */
   .fgroup{position:relative}
@@ -1671,7 +1686,8 @@ function computeAds(s,q,rampMonth,budgetIn){
      month m − lag. Fast purchases (local service, e-commerce) close inside the month: lag 0.
      Mid-ticket ($10k+): 1 month. Contract-style or $25k+: 2 months — first closings land
      month 3, and the pipeline keeps closing after spend stops (also true to life). */
-  const lagM = (q.contractStyle || q.yearlyValue>=25000) ? 2 : (q.yearlyValue>=10000 ? 1 : 0);
+  const lagM = Math.max((q.contractStyle || q.yearlyValue>=25000) ? 2 : (q.yearlyValue>=10000 ? 1 : 0),
+                        (s&&s.industry==='b2b')?1:0);   // B2B never closes same-month from a cold click
   const bSched=[];
   for(let m=1;m<=12;m++){
     let bm=budget;
@@ -1687,7 +1703,10 @@ function computeAds(s,q,rampMonth,budgetIn){
     const bm=bSched[m-1];
     const bWin=(m-lagM>=1) ? bSched[m-1-lagM] : 0;   // the spend whose buyers close THIS month
     const org=organicOn ? q.newCust*fW(m) : 0;
-    const adm=(cpc>0&&bWin>0) ? Math.min(bWin/cpc*close, Math.max(0,q.capStretch-org)) : 0;
+    /* wins are modeled from AT MOST half-the-market's clicks, even when an edited budget
+       spends past the ceiling — you can't buy customers who aren't searching (audit, Aug 17) */
+    const bEff=Math.min(bWin, clickCeil);
+    const adm=(cpc>0&&bEff>0) ? Math.min(bEff/cpc*close, Math.max(0,q.capStretch-org)) : 0;
     months.push({m:m, budget:bm, fee:adsFee(bm), ads:adm, organic:org, total:org+adm});
     adsWinsYr+=adm; adsCostYr+=bm+adsFee(bm);
   }
@@ -2322,6 +2341,7 @@ function render(){
       const noteAB=document.getElementById('note-adbudget');
       if(noteAB) noteAB.innerHTML = adBudgetDirty
         ? 'edited — the math above recommends '+fmt$(a.budgetAuto)+' &nbsp;·&nbsp; <a onclick="return resetAdBudget()">use auto</a>'
+          +(a.budget>a.clickCeil?'<br>&#9888; above the half-the-market click ceiling ('+fmtK(a.clickCeil)+') — the model only counts wins that many clicks can deliver; spend past it buys no modeled customers':'')
         : (a.adsViable
           ? 'auto — based on capacity and CPC: fills the capacity organic isn\'t using, at ~'+fmt$(a.adCAC)+' per ads-won customer'
           : 'auto — $0: ads are inefficient for this business (~'+fmt$(a.adCAC||0)+' to win a customer with ads vs the '+fmt$(a.acqAllowed)+' their acquisition budget allows)');
@@ -2677,7 +2697,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-60';
+const BUILD='NR-20260814-61';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);

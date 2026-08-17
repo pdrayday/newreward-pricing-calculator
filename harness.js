@@ -47,7 +47,8 @@ function independent(q, acqPct, budgetIn){
   const taperStart=(organicOn&&budget>0&&q.newCust>0&&!scaleMode&&rampFull+1<=12)? rampFull+1 : null;
   /* CLOSING LAG (spec update, Aug 17): the customers won in month m come from the clicks
      bought in month m − lag. Fast purchases: 0. $10k+: 1. Contract-style or $25k+: 2. */
-  const lagM=(q.contractStyle||q.yearlyValue>=25000)?2:(q.yearlyValue>=10000?1:0);
+  const lagM=Math.max((q.contractStyle||q.yearlyValue>=25000)?2:(q.yearlyValue>=10000?1:0),
+                      q.industry==='b2b'?1:0);   // B2B never closes same-month from a cold click
   const bSched=[];
   for(let m=1;m<=12;m++){
     let bm=budget;
@@ -63,7 +64,8 @@ function independent(q, acqPct, budgetIn){
     const bm=bSched[m-1];
     const bWin=(m-lagM>=1)? bSched[m-1-lagM] : 0;
     const org=organicOn? q.newCust*fW(m):0;
-    const adm=(cpc>0&&bWin>0)? Math.min(bWin/cpc*close, Math.max(0,q.capStretch-org)) : 0;
+    const bEff=Math.min(bWin, clickCeil);          // wins from at most half-the-market's clicks
+    const adm=(cpc>0&&bEff>0)? Math.min(bEff/cpc*close, Math.max(0,q.capStretch-org)) : 0;
     months.push({m, budget:bm, fee:fee(bm), ads:adm, organic:org, total:org+adm});
     adsWinsYr+=adm; adsCostYr+=bm+fee(bm);
   }
@@ -201,9 +203,19 @@ function edgeTests(){
   t('lag (ads-only, flat budget): months 3-12 all at full pace', a.lagM===2 && a.months.slice(2).every(mo=>near(mo.ads,a.adFull,1e-9)));
   const capBig={...loc, capApplied:true, newCust:20, capStretch:75, yearlyValue:40000, contractStyle:true};
   a=independent(capBig,15,4000);
-  t('lag: pipeline keeps closing through the taper — taper-month wins reflect pre-taper spend',
-    a.taperStart!=null && near(a.months[a.taperStart-1].ads, Math.min(4000/6*0.035, Math.max(0,75-a.months[a.taperStart-1].organic)), 1e-6),
+  t('lag: pipeline keeps closing through the taper — taper-month wins reflect pre-taper spend (ceiling-capped)',
+    a.taperStart!=null && near(a.months[a.taperStart-1].ads, Math.min(Math.min(4000,a.clickCeil)/6*0.035, Math.max(0,75-a.months[a.taperStart-1].organic)), 1e-6),
     a.taperStart!=null ? a.months[a.taperStart-1].ads : 'no taper');
+
+  // -- AUDIT FIXES (Aug 17): B2B minimum lag; edited budgets never inflate wins past the ceiling
+  const b2b={...loc, industry:'b2b', yearlyValue:8000};
+  a=independent(b2b,15,3000);
+  t('lag: B2B floors at 1 month even under $10k ticket', a.lagM===1 && a.months[0].ads===0 && a.months[1].ads>0);
+  const over={...solo, vol:200};                    // ceil = 0.5 x 200 x $6 = $600
+  a=independent(over,15,4000);
+  t('ceiling: edited budget over the click ceiling — wins modeled from the ceiling, not the spend',
+    near(a.months[5].ads, Math.min(600/6*0.035, over.capStretch), 1e-9), a.months[5].ads);
+  t('ceiling: the over-spend still bills (cost honest, wins capped)', a.months[5].budget===4000);
 }
 
 /* ---------- live cross-check against the real calculator ---------- */
@@ -235,7 +247,7 @@ async function liveTests(htmlPath){
       return {a, q:{cpcEff:q.cpcEff, closeRate:q.closeRate, yearlyValue:q.yearlyValue,
                     capStretch:q.capStretch, newCust:q.newCust, vol:q.vol, capApplied:q.capApplied,
                     nScopes:q.nScopes, rampMonth:n.rampMonth, rampSpan:q.rampSpan,
-                    contractStyle:q.contractStyle},
+                    contractStyle:q.contractStyle, industry:s.industry},
               acq:s.acq, dirty:adBudgetDirty,
               budgetField:(document.getElementById('adbudget').value||'').replace(/[^0-9.]/g,'')};
     });
