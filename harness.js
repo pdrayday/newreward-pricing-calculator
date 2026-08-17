@@ -77,10 +77,20 @@ function independent(q, acqPct, budgetIn){
     cumO+=mo.organic; const rO=Math.round(cumO); mo.orgW=rO-pRO; pRO=rO;
   });
   const adsWinsYrInt=pRA;
+  /* THE FUNNEL (HOTH-referenced, Aug 17): clicks → leads → customers + margin-adjusted profit.
+     Leads are never capacity-capped; e-commerce (leadclose null) has no lead stage. */
+  const lc=q.leadclose??null;
+  const clicksMo=(cpc>0&&budget>0)?budget/cpc:0;
+  const leadsMo=(lc&&clicksMo>0)?clicksMo*(close/lc):null;
+  const cpl=(leadsMo>0)?budget/leadsMo:null;
+  const mgnPct=q.margin;
+  const grossMo=adFull*q.yearlyValue*(mgnPct||0)/100;
+  const netMo=grossMo-(budget+fee(budget));
   return {adCAC, acqAllowed, adsViable, veryEfficient, budgetAuto, budget, fee:fee(budget),
           adFull, roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart,
           taperDone:taperStart!=null?Math.min(12,taperStart+2):null, rampFull, organicOn, months,
-          adsWinsYr, adsCostYr, adsWinsYrInt, lagM};
+          adsWinsYr, adsCostYr, adsWinsYrInt, lagM,
+          leadClose:lc, clicksMo, leadsMo, cpl, mgnPct, grossMo, netMo};
 }
 
 /* ---------- tiny test kit ---------- */
@@ -216,6 +226,17 @@ function edgeTests(){
   t('ceiling: edited budget over the click ceiling — wins modeled from the ceiling, not the spend',
     near(a.months[5].ads, Math.min(600/6*0.035, over.capStretch), 1e-9), a.months[5].ads);
   t('ceiling: the over-spend still bills (cost honest, wins capped)', a.months[5].budget===4000);
+
+  // -- THE FUNNEL (HOTH-referenced, Aug 17): clicks → leads → customers + profit identities
+  const fun={...loc, leadclose:0.40, margin:50};
+  a=independent(fun,15,3000);
+  t('funnel: leads × lead-close = clicks × visit-close (identity)', near(a.leadsMo*0.40, a.clicksMo*fun.closeRate, 1e-9));
+  t('funnel: CPL × leads = the budget', near(a.cpl*a.leadsMo, 3000, 1e-6));
+  t('funnel: CPL = adCAC × lead-close (unit costs chain)', near(a.cpl, a.adCAC*0.40, 1e-6), a.cpl+' vs '+(a.adCAC*0.40));
+  t('funnel: net profit = wins × value × margin − all-in cost', near(a.netMo, a.adFull*fun.yearlyValue*0.50-(3000+a.fee), 1e-6));
+  const noLead={...fun, leadclose:null};
+  a=independent(noLead,15,3000);
+  t('funnel: e-commerce style (no lead stage) — leads and CPL are null', a.leadsMo===null && a.cpl===null);
 }
 
 /* ---------- live cross-check against the real calculator ---------- */
@@ -247,7 +268,8 @@ async function liveTests(htmlPath){
       return {a, q:{cpcEff:q.cpcEff, closeRate:q.closeRate, yearlyValue:q.yearlyValue,
                     capStretch:q.capStretch, newCust:q.newCust, vol:q.vol, capApplied:q.capApplied,
                     nScopes:q.nScopes, rampMonth:n.rampMonth, rampSpan:q.rampSpan,
-                    contractStyle:q.contractStyle, industry:s.industry},
+                    contractStyle:q.contractStyle, industry:s.industry,
+                    leadclose:BENCH(s).leadclose??null, margin:(s.margin??BENCH(s).margin)},
               acq:s.acq, dirty:adBudgetDirty,
               budgetField:(document.getElementById('adbudget').value||'').replace(/[^0-9.]/g,'')};
     });
@@ -257,7 +279,7 @@ async function liveTests(htmlPath){
       const ok=(va==null&&vb==null)||(typeof va==='number'&&typeof vb==='number'? near(va,vb,eps||1e-6) : va===vb);
       t(c.name+': '+k+' matches', ok, JSON.stringify(va)+' vs '+JSON.stringify(vb));
     };
-    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr','adsWinsYrInt','lagM'].forEach(k=>same(k,0.01));
+    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr','adsWinsYrInt','lagM','leadClose','clicksMo','leadsMo','cpl','grossMo','netMo'].forEach(k=>same(k,0.01));
     const mOk=got.a.months.every((mo,i)=>near(mo.budget,exp.months[i].budget,0.01)&&near(mo.fee,exp.months[i].fee,0.01)
               &&near(mo.ads,exp.months[i].ads,1e-4)&&near(mo.organic,exp.months[i].organic,1e-4)
               &&mo.adsW===exp.months[i].adsW&&mo.orgW===exp.months[i].orgW);
@@ -477,6 +499,32 @@ async function liveTests(htmlPath){
     return {lag:a.lagM, card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')};
   });
   t('lag control: local service lags 0 and keeps "from month 1, no ramp"', lagC.lag===0 && /from month 1, no ramp/i.test(lagC.card), lagC.card.slice(0,240));
+
+  /* THE FUNNEL on the surfaces (HOTH-referenced, Aug 17) */
+  await page.goto(url+'?industry=local&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const fun1=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
+    math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')}));
+  t('funnel: card shows clicks → leads → customers', /The funnel: [\d,]+ clicks → ~\d+ leads \(\$[\d,]+\/lead\) → /.test(fun1.card), fun1.card.slice(0,300));
+  t('funnel: card shows the net-after-margin line', /\/mo net after the client|break-even/.test(fun1.card));
+  t('funnel: section 06 walks the funnel with leads and CPL', /become leads/.test(fun1.math) && /per lead/.test(fun1.math));
+  t('funnel: section 06 has the profit-terms line', /in profit terms/i.test(fun1.math));
+  await page.goto(url+'?industry=ecom&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const fun2=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
+    math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')}));
+  t('funnel (ecom): no lead stage on the card', !/leads \(/.test(fun2.card), fun2.card.slice(0,260));
+  t('funnel (ecom): section 06 says buyers purchase directly', /purchase directly|no lead stage/i.test(fun2.math));
+
+  /* the revenue card reframes for one-time-sale verticals (Payton, Aug 17: "+$956/mo
+     next to $138k/yr" is a contradiction when customers pay once) */
+  await page.goto(url+'?industry=highticket&footprint=metro&cpc=4&volume=5000&capacity=2&yearly=40000&convrate=0.1&acq=15&years=1&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const rc1=await page.evaluate(()=>({lbl:document.getElementById('o-arrpm-label').textContent,
+    val:document.getElementById('o-arrpm').textContent, note:document.getElementById('o-arrpm-note').textContent}));
+  t('revenue card (one-time): label is contract value per year', rc1.lbl==='New contract value / year', rc1.lbl);
+  t('revenue card (one-time): value is a /yr figure, no fake MRR', /\/yr$/.test(rc1.val), rc1.val);
+  t('revenue card (one-time): note says one-time sales, not recurring', /one-time sales, not recurring/.test(rc1.note), rc1.note);
+  await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const rc2=await page.evaluate(()=>({lbl:document.getElementById('o-arrpm-label').textContent}));
+  t('revenue card (recurring control): local keeps recurring revenue / mo', rc2.lbl==='New recurring revenue / mo', rc2.lbl);
 
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});

@@ -1084,7 +1084,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <div class="oc-note" id="o-cust-note">modeled, after the ramp</div>
       </div>
       <div class="ocard">
-        <div class="oc-label">New recurring revenue / mo</div>
+        <div class="oc-label" id="o-arrpm-label">New recurring revenue / mo</div>
         <div class="oc-val gold" id="o-arrpm">$—</div>
         <div class="oc-note" id="o-arrpm-note">added each month after the ramp</div>
       </div>
@@ -1190,11 +1190,16 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 /* cost = relative cost-to-deliver multiplier — intentionally FLAT (compressed spread across
    industries and footprints per pricing decision: everything stays near the local-service base) */
 const IND = {
-  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:3.5, margin:50, cost:1.00, cpc:6, cap:60, stretch:1.30, name:'Local service'},
-  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:1.5, margin:65, cost:1.08, cpc:12, cap:30, stretch:1.25, name:'High-ticket local'},
-  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.25, margin:22, cost:1.10, cpc:9, cap:0.7, stretch:1.10, name:'Ultra high-ticket'},
-  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:1, margin:78, cost:1.10, cpc:10, cap:5, stretch:1.40, name:'B2B / SaaS'},
-  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2.5, margin:55, cost:1.12, cpc:3, cap:3000, stretch:1.55, name:'E-commerce / National'}
+  /* leadclose = the researched share of LEADS that become customers (grademyclose/upcision 2026
+     close-rate benchmarks: B2B/SaaS 15–20%, real-estate qualified 15–25%, B2B services 20–30%,
+     inbound home-service calls higher; e-commerce buys direct — no lead stage). Sanity-locked:
+     conv ÷ leadclose = the implied visit→lead rate, and it matches WordStream's published 2026
+     landing benchmarks (local 8.75% vs 8.05% home services; b2b 5.6% vs 4.85% biz services). */
+  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:3.5, margin:50, cost:1.00, cpc:6, cap:60, stretch:1.30, leadclose:0.40, name:'Local service'},
+  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:1.5, margin:65, cost:1.08, cpc:12, cap:30, stretch:1.25, leadclose:0.30, name:'High-ticket local'},
+  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.25, margin:22, cost:1.10, cpc:9, cap:0.7, stretch:1.10, leadclose:0.15, name:'Ultra high-ticket'},
+  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:1, margin:78, cost:1.10, cpc:10, cap:5, stretch:1.40, leadclose:0.18, name:'B2B / SaaS'},
+  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2.5, margin:55, cost:1.12, cpc:3, cap:3000, stretch:1.55, leadclose:null, name:'E-commerce / National'}
 };
 /* Effective benchmark for blank fields = the industry model. Finer vertical accuracy comes
    from the RESEARCH PROMPT: every prefilled quote's inputs are researched for the client's
@@ -1721,9 +1726,22 @@ function computeAds(s,q,rampMonth,budgetIn){
   });
   const adsWinsYrInt=pRA;
   const taperDone = taperStart!=null ? Math.min(12,taperStart+2) : null;
+  /* THE FUNNEL (HOTH-referenced, Aug 17): clicks → leads → customers, with cost-per-lead and
+     margin-adjusted PROFIT — the two things a client instinctively asks for. leadClose is the
+     researched share of leads that become customers (benchmark-cited on the preset table);
+     e-commerce buys direct, so its funnel is clicks → orders with no lead stage. Leads are
+     NOT capacity-capped (the phone still rings past capacity — only closings cap). */
+  const lc = BENCH(s).leadclose ?? null;
+  const clicksMo = (cpc>0&&budget>0) ? budget/cpc : 0;
+  const leadsMo  = (lc&&clicksMo>0) ? clicksMo*(close/lc) : null;
+  const cpl      = (leadsMo>0) ? budget/leadsMo : null;
+  const mgnPct   = s.margin ?? BENCH(s).margin;
+  const grossMo  = adFull*q.yearlyValue*mgnPct/100;
+  const netMo    = grossMo-(budget+fee);
   return {adCAC, acqAllowed, acqPct, adsViable, veryEfficient, budgetAuto, budget, fee, adFull,
           roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart, taperDone, rampFull,
-          organicOn, months, adsWinsYr, adsCostYr, adsWinsYrInt, lagM};
+          organicOn, months, adsWinsYr, adsCostYr, adsWinsYrInt, lagM,
+          leadClose:lc, clicksMo, leadsMo, cpl, mgnPct, grossMo, netMo};
 }
 /* the current ads state, resolved the same way for the site card AND the PDF — one source,
    so the two always print the SAME budget / fee / wins (numbers-correspond law) */
@@ -2375,7 +2393,14 @@ function render(){
         }
         if(a.budget>0){
           am+='<p><b>The management fee — and who gets paid what.</b> The ad budget is not our money: <b style="color:var(--text)">'+fmt$(a.budget)+' goes to Google and Meta</b> — it buys the clicks. Running those ads well is the real work on our side — building the campaigns, testing the messages, cutting what wastes money — and the industry norm for it is 10–20% of ad spend; this program charges <b style="color:var(--text)">15%</b> (12% above $15k/mo), never less than $500/mo: <span class="sm-big">'+fmt$(a.fee)+'/mo</span>. So the ads line on any bill is always the same simple addition: '+fmt$(a.budget)+' (to Google &amp; Meta) + '+fmt$(a.fee)+' (to us) = <span class="sm-big">'+fmt$(a.budget+a.fee)+'/mo</span>'+(q.nScopes>0&&q.price!=null?' — and on top of the SEO/GEO program fee, the whole month is '+fmt$(n.price)+' + '+fmt$(a.budget+a.fee)+' = <b style="color:var(--text)">'+fmt$(n.price+a.budget+a.fee)+' all-in</b>':'')+'.</p>'
-            +'<p><b>What that buys.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(q.cpcEff>0?a.budget/q.cpcEff:0).toLocaleString()+' visitors</b> a month; at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× return)':'')+'. This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. '+(a.lagM>0?'<b style="color:var(--text)">One honest timing note:</b> the clicks and leads start month 1, but a purchase this size takes about '+(a.lagM+1)+'–'+(a.lagM+2)+' months from first click to signed deal — so the first ads-won customers land around <b style="color:var(--text)">month '+(a.lagM+1)+'</b>, and the pipeline keeps closing for a couple of months even after spend winds down.':'It starts month 1 — no ramp.')+'</p>';
+            +'<p><b>What that buys — the funnel, start to finish.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(a.clicksMo).toLocaleString()+' visitors</b> a month'
+            +(a.leadsMo!=null
+              ? '; about <b style="color:var(--text)">'+Math.round(a.leadsMo)+' become leads</b> — real enquiries: calls, forms, bookings — at ≈<b style="color:var(--text)">'+fmt$(a.cpl)+' per lead</b>. At the researched ~'+Math.round(a.leadClose*100)+'% lead-close rate for this vertical, that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.adCAC)+' per customer won'+(a.adFull<a.clicksMo*q.closeRate-1e-6?' — delivery capacity holds the pace there':'')+')'
+              : '; buyers here purchase directly — no lead stage — so at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.adCAC)+' per customer won)')
+            +' — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× return on value)':'')+'. '
+            +'<b>And in profit terms</b> — the number that actually lands in the client\'s pocket: at their '+a.mgnPct+'% margin those customers bring ≈'+fmtK(a.grossMo)+'/mo in gross profit vs '+fmt$(a.budget+a.fee)+'/mo all-in — '
+            +(a.netMo>0?'≈<span class="sm-big">'+fmtK(a.netMo)+'/mo net</span>.':'about break-even on first-year profit; the case here is '+(q.retainYears>1?'years two and beyond, which are 100% the client\'s.':'pipeline volume and referrals.'))
+            +' This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. '+(a.lagM>0?'<b style="color:var(--text)">One honest timing note:</b> the clicks and leads start month 1, but a purchase this size takes about '+(a.lagM+1)+'–'+(a.lagM+2)+' months from first click to signed deal — so the first ads-won customers land around <b style="color:var(--text)">month '+(a.lagM+1)+'</b>, and the pipeline keeps closing for a couple of months even after spend winds down.':'It starts month 1 — no ramp.')+'</p>';
           if(q.nScopes>0&&a.taperStart!=null){
             am+='<p><b>Why ads don\'t run at full spend forever.</b> Ads and SEO/GEO fish in the same pond: the people searching this market. While the organic program builds (months 1–'+(a.taperStart-1)+'), ads carry the customer flow. Around month '+a.taperStart+', organic is winning '+(a.demandLimited?'that same demand':'enough to fill capacity')+' on its own — so paying for it twice stops making sense, and the budget steps down to '+(a.floorB>0?fmt$(a.floorB)+'/mo by month '+a.taperDone+' to keep the ad accounts warm':'$0 by month '+a.taperDone)+'. Same customers, lower cost.</p>';
           }
@@ -2391,7 +2416,12 @@ function render(){
       if(a.budget>0){
         ac+='<div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:8px">'+fmt$(a.budget)+'/mo <span style="font-size:12.5px;font-weight:600;color:var(--muted)">ad spend + '+fmt$(a.fee)+'/mo management</span></div>'
           +'<div style="font-size:11.5px;margin-bottom:8px"><b style="color:var(--text)">'+crA.v+crA.unit+'</b> new customers from ads (modeled — researched Google click cost through the same conversion math; Meta\'s cheaper clicks only help)'
-          +(a.roiAds!=null?' · ads-only return <b style="color:var(--text)">'+fxA(a.roiAds)+'×</b>: '+fmtK(a.adFull*q.yearlyValue)+'/mo in first-year customer value vs '+fmt$(a.budget+a.fee)+'/mo all-in'+(a.lagM>0?' at pace — first closings land ~month '+(a.lagM+1):' — from month 1, no ramp'):'')+'.</div>';
+          +(a.roiAds!=null?' · ads-only return <b style="color:var(--text)">'+fxA(a.roiAds)+'×</b>: '+fmtK(a.adFull*q.yearlyValue)+'/mo in first-year customer value vs '+fmt$(a.budget+a.fee)+'/mo all-in'+(a.lagM>0?' at pace — first closings land ~month '+(a.lagM+1):' — from month 1, no ramp'):'')+'.</div>'
+          /* the funnel, HOTH-style: clicks → leads → customers, then the profit line */
+          +'<div style="font-size:11.5px;margin-bottom:8px;color:var(--muted)">The funnel: <b style="color:var(--text)">'+Math.round(a.clicksMo).toLocaleString()+' clicks</b>'
+          +(a.leadsMo!=null?' → <b style="color:var(--text)">~'+Math.round(a.leadsMo)+' leads</b> ('+fmt$(a.cpl)+'/lead)':'')
+          +' → <b style="color:var(--text)">'+crA.v+crA.unit+' customers</b> ('+fmt$(a.adCAC)+' each)'
+          +(a.netMo>0?' · ≈<b style="color:var(--gold-bright)">'+fmtK(a.netMo)+'/mo net</b> after the client\'s '+a.mgnPct+'% margin':' · ≈break-even on first-year profit at the client\'s margin')+'</div>';
         if(!a.adsViable) ac+='<div style="margin-bottom:6px">&#9888; '+adsSeqLine(s,q,a)+'</div>';
         else ac+='<div style="margin-bottom:6px">'+adsSeqLine(s,q,a)+'</div>';
         if(q.nScopes>0&&a.taperStart!=null) ac+='<div style="margin-bottom:6px">Ads carry months 1–'+(a.taperStart-1)+' while SEO/GEO builds; then the program takes over and ads taper.</div>';
@@ -2554,10 +2584,21 @@ function render(){
   set('o-cust-note', q.vol.toLocaleString()+' × '+(q.clickShare*100).toFixed(0)+'% × '+parseFloat((q.closeRate*100).toFixed(2))+'% × '
       +(q.chFactor*100).toFixed(0)+'% still winnable (demand their current visibility misses)'+(q.volQ<1?' × '+(q.volQ*100).toFixed(0)+'% source confidence':'')+(q.aiLift>1?' × '+(q.aiLift*100).toFixed(0)+'% AI demand':'')+(q.aiConvLift>1.005?' × '+(q.aiConvLift*100).toFixed(0)+'% AI-buyer close premium':'')+(q.capApplied?' → capped at '+q.capStretch+'/mo stretch capacity':'')
       +' · year one models '+eventPlan(q,n).winsYr+(shareOn?' · the ramp (months 1–'+(n.rampMonth-1)+') bills the fixed fee only, before the share and attribution begin':' · months 1–'+(n.rampMonth-1)+' are the build before wins ramp to full pace'));
-  set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
-  set('o-arrpm-note', cr.monthly
+  /* "recurring revenue / mo" only exists for businesses whose customers KEEP paying
+     (retention > 1 year). One-time-sale verticals (real estate, big contracts, years = 1)
+     get the frame that actually makes sense: new contract value per YEAR at pace —
+     Payton, Aug 17: "+$956/mo next to $138k/yr" read as a contradiction. */
+  if(q.retainYears<=1){
+    set('o-arrpm-label', 'New contract value / year');
+    set('o-arrpm', '+'+fmtK(q.newCust*12*q.yearlyValue)+'/yr');
+    set('o-arrpm-note', cr.txt.replace(/^~/,'about ')+' × '+fmt$(q.yearlyValue)+' at the modeled pace — one-time sales, not recurring'+(q.contractStyle?'; wins land as whole contracts':''));
+  } else {
+    set('o-arrpm-label', 'New recurring revenue / mo');
+    set('o-arrpm', '+'+fmtK(q.newCust*q.mrrPC));
+    set('o-arrpm-note', cr.monthly
       ? '~'+Math.round(q.newCust)+' new customers × '+fmt$(q.mrrPC)+'/mo · ≈'+fmtK(q.arrAddedPM)+'/yr in contract value'
       : cr.txt+' × '+fmt$(q.yearlyValue)+' each · ≈'+fmtK(q.newCust*12*q.yearlyValue)+'/yr in new contract value'+(q.contractStyle?' — shown as a 12-month average; wins land as whole contracts':''));
+  }
   set('o-runrate', '+'+fmtK(n.series.exitARR)+'/yr');
   set('o-runrate-note', q.retainYears>1
       ? '≈'+fmtK(n.series.exitMRR)+'/mo if ~'+Math.round(n.series.exitCust)+' customers retained — modeled, not guaranteed'
@@ -2697,7 +2738,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-61';
+const BUILD='NR-20260814-62';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3105,10 +3146,11 @@ function buildPDF(mode){
   y+=h1+4;
   const h2=25;
   const crP = custRate(q.newCust);
-  const chLbl=(adsOnP&&aP&&q.price!=null)?' (SEO/GEO)':'';   // channel-label law: organic-only boxes say so when ads are in the deck
-  box(L,58,h2,'NEW CUSTOMERS'+chLbl, crP.v+' '+crP.unit, 'pace after the ramp (months 1–'+(n.rampMonth-1)+', fixed fee only) — year one models '+eventPlan(q,n).winsYr, DARK);
-  box(L+62,58,h2,'NEW REVENUE / MONTH'+chLbl, '+'+fmt$(n.series.exitMRR)+'/mo', q.contractStyle?'averaged across 12 months — wins land as whole contracts':'pace by month 12', DARK);
-  box(L+124,58,h2,'NEW REVENUE / YEAR'+chLbl, '+'+fmt$(n.series.exitARR)+'/yr', q.contractStyle?(q.retainYears>1?'modeled potential — from whole-contract wins':'gross first-year value of signed clients — value won, not cash collected'):'pace by month 12 — modeled potential', DARK);
+  /* no "(SEO/GEO)" suffix on the boxes (Payton, Aug 17) — the page title "SEO/GEO PRICING &
+     PROJECTIONS" plus the italic line below already say whose numbers these are */
+  box(L,58,h2,'NEW CUSTOMERS', crP.v+' '+crP.unit, 'pace after the ramp (months 1–'+(n.rampMonth-1)+', fixed fee only) — year one models '+eventPlan(q,n).winsYr, DARK);
+  box(L+62,58,h2,'NEW REVENUE / MONTH', '+'+fmt$(n.series.exitMRR)+'/mo', q.contractStyle?'averaged across 12 months — wins land as whole contracts':'pace by month 12', DARK);
+  box(L+124,58,h2,'NEW REVENUE / YEAR', '+'+fmt$(n.series.exitARR)+'/yr', q.contractStyle?(q.retainYears>1?'modeled potential — from whole-contract wins':'gross first-year value of signed clients — value won, not cash collected'):'pace by month 12 — modeled potential', DARK);
 
   y+=h2+4.6;
   if(adsOnP&&aP&&q.price!=null){
@@ -3565,6 +3607,15 @@ function buildPDF(mode){
     box(L+93,89,hA,'MODELED WINS FROM ADS', aP.budget>0?crAP.v+crAP.unit:'0', 'floor-style model: the Google-led budget at the researched Google CPC through the same conversion chain — Meta\'s cheaper clicks only help', DARK, true);
     y+=hA+7;
 
+    /* the funnel in one line — clicks → leads → customers → net profit (HOTH-referenced) */
+    if(aP.budget>0){
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.8); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+      doc.text('THE FUNNEL:  '+Math.round(aP.clicksMo).toLocaleString()+' clicks/mo'
+        +(aP.leadsMo!=null?'  »  ~'+Math.round(aP.leadsMo)+' leads ('+fmt$(aP.cpl)+' each)':'')
+        +'  »  '+crAP.v+crAP.unit+' customers ('+fmt$(aP.adCAC)+' each)'
+        +(aP.netMo>0?'  »  ~'+fmtK(aP.netMo)+'/mo net profit at the client\'s '+aP.mgnPct+'% margin':''),L,y);
+      y+=6;
+    }
     /* phased schedule by month — ads carry the build, then hand off */
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
     doc.text('THE PHASED SCHEDULE — MONTH BY MONTH',L,y,{charSpace:.8});
