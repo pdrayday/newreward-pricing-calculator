@@ -1195,11 +1195,19 @@ const IND = {
      inbound home-service calls higher; e-commerce buys direct — no lead stage). Sanity-locked:
      conv ÷ leadclose = the implied visit→lead rate, and it matches WordStream's published 2026
      landing benchmarks (local 8.75% vs 8.05% home services; b2b 5.6% vs 4.85% biz services). */
-  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:3.5, margin:50, cost:1.00, cpc:6, cap:60, stretch:1.30, leadclose:0.40, name:'Local service'},
-  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:1.5, margin:65, cost:1.08, cpc:12, cap:30, stretch:1.25, leadclose:0.30, name:'High-ticket local'},
-  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.25, margin:22, cost:1.10, cpc:9, cap:0.7, stretch:1.10, leadclose:0.15, name:'Ultra high-ticket'},
-  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:1, margin:78, cost:1.10, cpc:10, cap:5, stretch:1.40, leadclose:0.18, name:'B2B / SaaS'},
-  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2.5, margin:55, cost:1.12, cpc:3, cap:3000, stretch:1.55, leadclose:null, name:'E-commerce / National'}
+  /* ailift / aiconv (Payton, Aug 17: the AI factors must vary by vertical, not one flat
+     112%×122%): ailift = extra AI-assistant demand Google's counters never see when GEO is
+     in scope; aiconv = the conversion-premium coefficient applied to the AI SHARE of winnable
+     demand. Skew is benchmark-anchored: 73–94% of B2B buyers research vendors with AI (PRN /
+     MachineRelations 2026 multi-source) → highest; considered high-ticket and luxury purchases
+     are research-heavy → high; urgent local services stay maps/search-led → lowest; e-commerce
+     discovery is still Google/Amazon-led → modest. All values sit conservative vs the cited
+     Ruler +18% / Adobe +42% / Semrush 4.4x AI-referral studies. */
+  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:3.5, margin:50, cost:1.00, cpc:6, cap:60, stretch:1.30, leadclose:0.40, ailift:1.08, aiconv:0.35, name:'Local service'},
+  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:1.5, margin:65, cost:1.08, cpc:12, cap:30, stretch:1.25, leadclose:0.30, ailift:1.14, aiconv:0.50, name:'High-ticket local'},
+  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.25, margin:22, cost:1.10, cpc:9, cap:0.7, stretch:1.10, leadclose:0.15, ailift:1.15, aiconv:0.50, name:'Ultra high-ticket'},
+  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:1, margin:78, cost:1.10, cpc:10, cap:5, stretch:1.40, leadclose:0.18, ailift:1.18, aiconv:0.55, name:'B2B / SaaS'},
+  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2.5, margin:55, cost:1.12, cpc:3, cap:3000, stretch:1.55, leadclose:null, ailift:1.10, aiconv:0.40, name:'E-commerce / National'}
 };
 /* Effective benchmark for blank fields = the industry model. Finer vertical accuracy comes
    from the RESEARCH PROMPT: every prefilled quote's inputs are researched for the client's
@@ -1373,18 +1381,18 @@ function computeQuote(s){
                  : s.seo ? W_SEARCH*gapSeo : s.geo ? W_AI*gapGeo : 0, 0, 1);
   const volQ = VOLQ[s.volsource] ?? 1;
   /* AEO/GEO widens the funnel: buyers who ask AI assistants directly are demand Google's
-     counters never see — modeled at +12% whenever GEO is in scope (still conservative:
-     2026 studies put AI Overviews alone on ~50% of queries), and it only grows as more
-     buying starts in AI answers. */
-  const aiLift = s.geo ? 1.12 : 1;
+     counters never see — modeled per VERTICAL (Payton, Aug 17: AI usage skews by category —
+     B2B research-heavy, local urgent-service light; the ailift values on the preset table,
+     each still conservative vs 2026 studies putting AI Overviews on ~50% of queries). */
+  const aiLift = s.geo ? (BENCH(s).ailift ?? 1.12) : 1;
   /* AI-BUYER CONVERSION PREMIUM: visitors who arrive from AI answers convert markedly
      better than average — Ruler Analytics 2026 tracks AI-referral leads at +18% vs blended,
      Adobe measured AI-referred shoppers converting +42% at the customer level, and Semrush
-     puts their value at 4.4x. Applied at a conservative +50% on the AI SHARE of the winnable
-     demand only: GEO-only programs get the full premium, dual programs a weighted slice,
-     SEO-only none. */
+     puts their value at 4.4x. The coefficient now varies by vertical (aiconv on the preset
+     table, 0.35–0.55) and applies to the AI SHARE of the winnable demand only: GEO-only
+     programs get the full premium, dual programs a weighted slice, SEO-only none. */
   const gShare = chFactor>0 ? clamp((s.geo ? W_AI*gapGeo : 0)/ (nScopes===2 ? (W_SEARCH*gapSeo+W_AI*gapGeo) : (s.geo?W_AI*gapGeo:1)), 0, 1) : 0;
-  const aiConvLift = 1 + 0.5*gShare;
+  const aiConvLift = 1 + (BENCH(s).aiconv ?? 0.5)*gShare;
   const newCustDemand = vol*clickShare*closeRate*chFactor*volQ*aiLift*aiConvLift;
   /* DELIVERY CAPACITY — STRETCH CAP. The model never promises wins wildly beyond what the
      client could serve, but it leans optimistic on purpose: when real demand shows up,
@@ -2403,9 +2411,9 @@ function render(){
           am+='<p><b>The management fee — and who gets paid what.</b> The ad budget is not our money: <b style="color:var(--text)">'+fmt$(a.budget)+' goes to Google and Meta</b> — it buys the clicks. Running those ads well is the real work on our side — building the campaigns, testing the messages, cutting what wastes money — and the industry norm for it is 10–20% of ad spend; this program charges <b style="color:var(--text)">15%</b> (12% above $15k/mo), never less than $500/mo: <span class="sm-big">'+fmt$(a.fee)+'/mo</span>. So the ads line on any bill is always the same simple addition: '+fmt$(a.budget)+' (to Google &amp; Meta) + '+fmt$(a.fee)+' (to us) = <span class="sm-big">'+fmt$(a.budget+a.fee)+'/mo</span>'+(q.nScopes>0&&q.price!=null?' — and on top of the SEO/GEO program fee, the whole month is '+fmt$(n.price)+' + '+fmt$(a.budget+a.fee)+' = <b style="color:var(--text)">'+fmt$(n.price+a.budget+a.fee)+' all-in</b>':'')+'.</p>'
             +'<p><b>What that buys — the funnel, start to finish.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(a.clicksMo).toLocaleString()+' visitors</b> a month'
             +(a.leadsMo!=null
-              ? '; about <b style="color:var(--text)">'+Math.round(a.leadsMo)+' become leads</b> — real enquiries: calls, forms, bookings — at ≈<b style="color:var(--text)">'+fmt$(a.cpl)+' per lead</b>. At the researched ~'+Math.round(a.leadClose*100)+'% lead-close rate for this vertical, that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.adCAC)+' per customer won'+(a.adFull<a.clicksMo*q.closeRate-1e-6?' — delivery capacity holds the pace there':'')+')'
+              ? '; about <b style="color:var(--text)">'+Math.round(a.leadsMo)+' become qualified opportunities</b> — the consult-ready conversations, not raw enquiries (raw web leads run far higher in number but close at only ~0.5–3%; we count the ones that matter) — at ≈<b style="color:var(--text)">'+fmt$(a.cpl)+' per opportunity</b>. At the researched ~'+Math.round(a.leadClose*100)+'% close rate on qualified opportunities in this vertical, that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.adCAC)+' per customer won'+(a.adFull<a.clicksMo*q.closeRate-1e-6?' — delivery capacity holds the pace there':'')+')'
               : '; buyers here purchase directly — no lead stage — so at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.adCAC)+' per customer won)')
-            +' — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× return on value)':'')+'. '
+            +' — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× revenue ROAS — a revenue multiple, not profit)':'')+'. '
             +'<b>And in profit terms</b> — the number that actually lands in the client\'s pocket: at their '+a.mgnPct+'% margin those customers bring ≈'+fmtK(a.grossMo)+'/mo in gross profit vs '+fmt$(a.budget+a.fee)+'/mo all-in — '
             +(a.netMo>0?'≈<span class="sm-big">'+fmtK(a.netMo)+'/mo net</span>.':'about break-even on first-year profit; the case here is '+(q.retainYears>1?'years two and beyond, which are 100% the client\'s.':'pipeline volume and referrals.'))
             +' This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. '+(a.lagM>0?'<b style="color:var(--text)">One honest timing note:</b> the clicks and leads start month 1, but a purchase this size takes about '+(a.lagM+1)+'–'+(a.lagM+2)+' months from first click to signed deal — so the first ads-won customers land around <b style="color:var(--text)">month '+(a.lagM+1)+'</b>, and the pipeline keeps closing for a couple of months even after spend winds down.':'It starts month 1 — no ramp.')+'</p>';
@@ -2424,10 +2432,10 @@ function render(){
       if(a.budget>0){
         ac+='<div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:8px">'+fmt$(a.budget)+'/mo <span style="font-size:12.5px;font-weight:600;color:var(--muted)">ad spend + '+fmt$(a.fee)+'/mo management</span></div>'
           +'<div style="font-size:11.5px;margin-bottom:8px"><b style="color:var(--text)">'+crA.v+crA.unit+'</b> new customers from ads (modeled — researched Google click cost through the same conversion math; Meta\'s cheaper clicks only help)'
-          +(a.roiAds!=null?' · ads-only return <b style="color:var(--text)">'+fxA(a.roiAds)+'×</b>: '+fmtK(a.adFull*q.yearlyValue)+'/mo in first-year customer value vs '+fmt$(a.budget+a.fee)+'/mo all-in'+(a.lagM>0?' at pace — first closings land ~month '+(a.lagM+1):' — from month 1, no ramp'):'')+'.</div>'
+          +(a.roiAds!=null?' · ads-only <b style="color:var(--text)">revenue ROAS '+fxA(a.roiAds)+'×</b> (a revenue multiple, before margin): '+fmtK(a.adFull*q.yearlyValue)+'/mo in first-year customer value vs '+fmt$(a.budget+a.fee)+'/mo all-in'+(a.lagM>0?' at pace — first closings land ~month '+(a.lagM+1):' — from month 1, no ramp'):'')+'.</div>'
           /* the funnel, HOTH-style: clicks → leads → customers, then the profit line */
           +'<div style="font-size:11.5px;margin-bottom:8px;color:var(--muted)">The funnel: <b style="color:var(--text)">'+Math.round(a.clicksMo).toLocaleString()+' clicks</b>'
-          +(a.leadsMo!=null?' → <b style="color:var(--text)">~'+Math.round(a.leadsMo)+' leads</b> ('+fmt$(a.cpl)+'/lead)':'')
+          +(a.leadsMo!=null?' → <b style="color:var(--text)">~'+Math.round(a.leadsMo)+' qualified opportunities</b> ('+fmt$(a.cpl)+' each)':'')
           +' → <b style="color:var(--text)">'+crA.v+crA.unit+' customers</b> ('+fmt$(a.adCAC)+' each)'
           +(a.netMo>0?' · ≈<b style="color:var(--gold-bright)">'+fmtK(a.netMo)+'/mo net</b> after the client\'s '+a.mgnPct+'% margin':' · ≈break-even on first-year profit at the client\'s margin')+'</div>';
         if(!a.adsViable) ac+='<div style="margin-bottom:6px">&#9888; '+adsSeqLine(s,q,a)+'</div>';
@@ -2451,7 +2459,8 @@ function render(){
           +rowS('SEO/GEO program', fmt$(n.price)+'/mo'+(shareOn?' → '+fmt$(n.series.perfPrice)+'/mo + '+n.share+'% (mo '+n.rampMonth+')':' flat'))
           +rowS('Google + Meta ads', '+ '+fmt$(a.budget)+'/mo spend + '+fmt$(a.fee)+'/mo mgmt')
           +rowS('All-in, month 1', '= '+fmt$(n.price+a.budget+a.fee)+'/mo', true)
-          +'<div style="margin-top:6px;font-size:11.5px">Year one, combined: ~<b style="color:var(--text)">'+combW+' customers won</b> ('+orgW+' organic + '+adsWTxt+' from ads) — '+fmtK(combVal)+' in first-year value vs '+fmtK(combCost)+' invested: <b style="color:var(--gold-bright)">'+(roiC!=null?fxA(roiC):'—')+'×</b> on value created. The month-by-month combined schedule is on the PDF\'s ads page.</div>'
+          +(function(){ const mgnC=(s.margin??BENCH(s).margin); const combNet=combVal*mgnC/100-combCost;
+            return '<div style="margin-top:6px;font-size:11.5px">Year one, combined: ~<b style="color:var(--text)">'+combW+' customers won</b> ('+orgW+' organic + '+adsWTxt+' from ads) — '+fmtK(combVal)+' in first-year value vs '+fmtK(combCost)+' invested: <b style="color:var(--gold-bright)">'+(roiC!=null?fxA(roiC):'—')+'× revenue ROAS</b> (before margin)'+(combNet>0?' · ≈<b style="color:var(--text)">'+fmtK(combNet)+' net profit</b> at the client\'s '+mgnC+'% margin':'')+'. The month-by-month combined schedule is on the PDF\'s ads page.</div>'; })()
           +'</div>';
       }
       ac+='<div style="margin-top:6px;color:var(--muted2);font-size:11.5px">'
@@ -2643,7 +2652,17 @@ function render(){
           +' Any win landed during the build months is <b>share-free</b>. '
         : 'the same flat '+fmt$(n.price)+' fee every month, win or no win. ')
         +'Year one under this pattern totals <b>'+fmt$(epT.eventY1)+'</b>.')
-      +(mPos>0&&!q.contractStyle?' The program starts <b>earning more each month than it costs</b> around <b>month '+mPos+'</b> — where the bars clear the line'+(beM>0?' — and has fully repaid the build months by <b>month '+beM+'</b>.':'.'):'')+(q.contractStyle&&epT.first&&epT.winsYr<=4?' <b>One win pays for the entire year</b>: a single '+fmt$(q.yearlyValue)+' contract covers the program many times over.':'')
+      +(mPos>0&&!q.contractStyle?' The program starts <b>earning more each month than it costs</b> around <b>month '+mPos+'</b> — where the bars clear the line'+(beM>0?' — and has fully repaid the build months by <b>month '+beM+'</b>.':'.'):'')
+      /* the "one win pays for the year" claim is MARGIN-AWARE (Payton, Aug 17): count the
+         transactions whose gross PROFIT covers the year-one program cost — never the old
+         flat "one win covers it" when one win's profit doesn't */
+      +(function(){ if(!(q.contractStyle&&epT.first&&epT.winsYr<=4)) return '';
+        const mgnW=(s.margin??BENCH(s).margin)/100, y1CostW=(!q.contractStyle)?n.series.invoice.reduce(function(a2,b2){return a2+b2;},0):epT.eventY1;
+        const nW=Math.max(1,Math.ceil(y1CostW/Math.max(1,q.yearlyValue*mgnW)));
+        const word=['','One','Two','Three','Four','Five'][nW]||String(nW);
+        return nW===1
+          ? ' <b>One win pays for the entire year</b>: a single '+fmt$(q.yearlyValue)+' contract brings ~'+fmt$(q.yearlyValue*mgnW)+' in gross profit at the modeled margin — more than the year\'s program cost.'
+          : ' <b>'+word+' average closed transactions more than cover the annual program cost</b> at the modeled '+Math.round(mgnW*100)+'% margin ('+nW+' × ~'+fmt$(q.yearlyValue*mgnW)+' gross profit vs '+fmt$(y1CostW)+' billed).'; })()
       +' '+(shareOn
         ? (n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build (fixed fee only)':'<b>Month 1</b> is the build (fixed fee only)')+'; the share starts <b>month '+n.rampMonth+'</b> — no new wins, no share.'
         : (n.rampMonth>2?'<b>Months 1–'+(n.rampMonth-1)+'</b> are the build':'<b>Month 1</b> is the build')+' — wins ramp to full pace from there.')
@@ -2746,7 +2765,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-63';
+const BUILD='NR-20260814-64';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3589,7 +3608,14 @@ function buildPDF(mode){
   }
   if(pAds) pdDraw('The blue segments','are ads-won customers stacked on top of the organic gold — '+(aP.lagM>0?'the clicks start month 1 and the first closings land around month '+(aP.lagM+1)+' (buyers this size take time to decide)':'ads deliver from month 1 with no ramp')+', then the budget tapers as organic fills the demand. The cost bars are the WHOLE bill, added up: program + ad budget (paid to Google & Meta, not to us) + management fee — month 1: '+fmt$((pInv[0]||0)-(pAC?pAC[0]:0))+' + '+fmt$(aP.months[0].budget)+' + '+fmt$(aP.months[0].fee)+' = '+fmt$(pInv[0]||0)+'. The full schedule is on page 2 — the ads plan.');
   if(false) pdDraw('Where the bars clear the lines,','the program is earning more each month than it costs'+(pPos>=0?' — modeled here at month '+(pPos+1):'')+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
-  else if(q.contractStyle&&pEp.winsYr<=4) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract covers the program many times over — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
+  else if(q.contractStyle&&pEp.winsYr<=4){
+    /* margin-aware (Payton, Aug 17): count transactions whose gross PROFIT covers the year */
+    const mgnW=(s.margin??BENCH(s).margin)/100, y1CostW=(!q.contractStyle)?pCumC[11]:pEp.eventY1;
+    const nW=Math.max(1,Math.ceil(y1CostW/Math.max(1,q.yearlyValue*mgnW)));
+    const word=['','One','Two','Three','Four','Five'][nW]||String(nW);
+    if(nW===1) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract brings ~'+fmt$(q.yearlyValue*mgnW)+' in gross profit at the modeled margin — more than the year\'s program cost, which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
+    else pdDraw(word+' average closed transactions more than cover the annual program cost','at the modeled '+Math.round(mgnW*100)+'% margin: '+nW+' × ~'+fmt$(q.yearlyValue*mgnW)+' gross profit vs '+fmt$(y1CostW)+' billed — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
+  }
   else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
   pdDraw('The cost bars, in exact dollars:', !(n.share>0) ? 'a flat '+fmt$(n.price)+' retainer bills every month — one predictable number, no per-win billing of any kind; the client keeps 100% of every dollar of revenue.' : 'months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build — and any customers won during the build are share-free. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(pEp.feeWaive?' — and at this contract size the fixed fee is WAIVED in any win month: the share only':'')+', and a month with no wins bills just the fixed fee. '
     +((pdCr.monthly&&!q.contractStyle)
@@ -3632,7 +3658,7 @@ function buildPDF(mode){
     const hA=26;
     box(L,58,hA,'MONTHLY AD BUDGET', aP.budget>0?fmt$(aP.budget)+'/mo':'$0', adBudgetDirty?'set by agreement — the auto recommendation is '+fmt$(aP.budgetAuto):'auto — fills the capacity organic isn\'t using; never more than half the market\'s clicks', DARK, true, true);
     box(L+62,58,hA,'MANAGEMENT FEE', aP.budget>0?fmt$(aP.fee)+'/mo':'—', '15% of spend, 12% above $15k/mo, $500 floor — benchmark-cited below', DARK, true);
-    box(L+124,58,hA,'ADS-ONLY RETURN', aP.roiAds!=null?fxA(aP.roiAds)+'×':'—', aP.budget>0?fmtK(aP.adFull*q.yearlyValue)+'/mo value won vs '+fmt$(aP.budget+aP.fee)+'/mo all-in'+(aP.lagM>0?' at pace — first closings ~month '+(aP.lagM+1):' — month 1, no ramp'):'no budget recommended — the verdict is below', DARK, true);
+    box(L+124,58,hA,'ADS-ONLY ROAS (REVENUE)', aP.roiAds!=null?fxA(aP.roiAds)+'x':'—', aP.budget>0?'revenue multiple, before margin: '+fmtK(aP.adFull*q.yearlyValue)+'/mo value won vs '+fmt$(aP.budget+aP.fee)+'/mo all-in'+(aP.lagM>0?' — first closings ~month '+(aP.lagM+1):' — month 1, no ramp')+' (net profit: the funnel line below)':'no budget recommended — the verdict is below', DARK, true);
     y+=hA+4;
     box(L,89,hA,'COST TO WIN A CUSTOMER WITH ADS', aP.adCAC!=null?fmt$(aP.adCAC):'—', 'researched CPC ÷ conversion rate, vs the '+fmt$(aP.acqAllowed)+' allowed ('+aP.acqPct+'% of customer value) — '+(aP.adsViable?(aP.veryEfficient?'very efficient':'viable'):'inefficient: lean on SEO/GEO'), aP.adsViable?DGOLD:[165,60,40], true);
     box(L+93,89,hA,'MODELED WINS FROM ADS', aP.budget>0?crAP.v+crAP.unit:'0', 'floor-style model: the Google-led budget at the researched Google CPC through the same conversion chain — Meta\'s cheaper clicks only help', DARK, true);
@@ -3642,7 +3668,7 @@ function buildPDF(mode){
     if(aP.budget>0){
       doc.setFont('helvetica','bold'); doc.setFontSize(7.8); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
       doc.text('THE FUNNEL:  '+Math.round(aP.clicksMo).toLocaleString()+' clicks/mo'
-        +(aP.leadsMo!=null?'  »  ~'+Math.round(aP.leadsMo)+' leads ('+fmt$(aP.cpl)+' each)':'')
+        +(aP.leadsMo!=null?'  »  ~'+Math.round(aP.leadsMo)+' qualified opportunities ('+fmt$(aP.cpl)+' each)':'')
         +'  »  '+crAP.v+crAP.unit+' customers ('+fmt$(aP.adCAC)+' each)'
         +(aP.netMo>0?'  »  ~'+fmtK(aP.netMo)+'/mo net profit at the client\'s '+aP.mgnPct+'% margin':''),L,y);
       y+=6;
@@ -3704,7 +3730,8 @@ function buildPDF(mode){
       skRow('Google + Meta ads', '+ '+fmt$(aP.budget)+'/mo spend + '+fmt$(aP.fee)+'/mo management');
       skRow('All-in, month 1', '= '+fmt$(n.price+aP.budget+aP.fee)+'/mo', true);
       doc.setFont('helvetica','normal'); doc.setFontSize(8.2); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-      const skLine=doc.splitTextToSize('Year one, combined: ~'+skCombW+' customers won ('+skOrgW+' organic + '+skAdsW+' from ads) — '+fmtK(skVal)+' in first-year value vs '+fmtK(skCost)+' invested: '+(skROI!=null?fxA(skROI):'—')+'× on value created. The combined 12-month chart is on the next page.',W);
+      const mgnSk=(s.margin??BENCH(s).margin), skNet=skVal*mgnSk/100-skCost;
+      const skLine=doc.splitTextToSize('Year one, combined: ~'+skCombW+' customers won ('+skOrgW+' organic + '+skAdsW+' from ads) — '+fmtK(skVal)+' in first-year value vs '+fmtK(skCost)+' invested: '+(skROI!=null?fxA(skROI):'—')+'x revenue ROAS, before margin'+(skNet>0?'; ~'+fmtK(skNet)+' net profit at the client\'s '+mgnSk+'% margin':'')+'. The combined 12-month chart is on the next page.',W);
       doc.text(skLine,L,y);
       y+=skLine.length*3.5+4.5;
     }
@@ -3857,7 +3884,7 @@ function buildPDF(mode){
     ['SEO visibility score','0-100 visibility in traditional Google search TODAY — what the client already captures, not a quality grade. The projection only counts new customers above this baseline, so lower = bigger gap = more new wins available (and more build work: higher fee, longer ramp). Pulled toward what the rank implies. Carries 65% of the winnable-demand blend.'],
     ['AEO/GEO visibility score','0-100: how often AI assistants mention or recommend the client today. Lower = more of the AI-driven demand is still winnable — a 7/100 honestly projects MORE new wins than a 70/100, because a 70/100 client already captures most of those buyers (and the model never counts or shares what they already win). Most local businesses score under 25. Carries 35% of the winnable-demand blend.'],
     ['Visibility gap','100 minus the visibility score — the untapped demand left to win. Drives both the revenue upside and the effort required.'],
-    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. With AEO/GEO in scope, demand is modeled at +12% — buyers who ask AI assistants directly are demand Google\'s counters never see (2026 studies put AI Overviews alone on ~50% of queries), and that slice only grows.'],
+    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. With AEO/GEO in scope, demand is lifted by a vertical-specific +8–18% — buyers who ask AI assistants directly are demand Google\'s counters never see (B2B research-heavy verticals highest, urgent local services lowest; 2026 studies put AI Overviews alone on ~50% of queries), and that slice only grows.'],
     ['Volume source','Where the search-demand number came from. Demand measured in tools like Keyword Planner, Semrush, or GSC counts in full; estimates are weighted conservatively so demand is never overstated — and the confidence weighting is shown right in the model line.'],
     ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market. Left blank, an industry-typical CPC is used automatically.'],
     ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],

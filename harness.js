@@ -504,14 +504,16 @@ async function liveTests(htmlPath){
   await page.goto(url+'?industry=local&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
   const fun1=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
     math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')}));
-  t('funnel: card shows clicks → leads → customers', /The funnel: [\d,]+ clicks → ~\d+ leads \(\$[\d,]+\/lead\) → /.test(fun1.card), fun1.card.slice(0,300));
+  t('funnel: card shows clicks → qualified opportunities → customers', /The funnel: [\d,]+ clicks → ~\d+ qualified opportunities \(\$[\d,]+ each\) → /.test(fun1.card), fun1.card.slice(0,300));
   t('funnel: card shows the net-after-margin line', /\/mo net after the client|break-even/.test(fun1.card));
-  t('funnel: section 06 walks the funnel with leads and CPL', /become leads/.test(fun1.math) && /per lead/.test(fun1.math));
+  t('funnel: section 06 walks qualified opportunities with cost each', /become qualified opportunities/.test(fun1.math) && /per opportunity/.test(fun1.math));
+  t('funnel: section 06 distinguishes raw web leads from qualified opportunities', /raw web leads run far higher/.test(fun1.math));
   t('funnel: section 06 has the profit-terms line', /in profit terms/i.test(fun1.math));
+  t('ROAS: card labels the ads multiple as revenue ROAS, before margin', /revenue ROAS [\d.]+×.*before margin|revenue ROAS/.test(fun1.card), fun1.card.slice(0,300));
   await page.goto(url+'?industry=ecom&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
   const fun2=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
     math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')}));
-  t('funnel (ecom): no lead stage on the card', !/leads \(/.test(fun2.card), fun2.card.slice(0,260));
+  t('funnel (ecom): no opportunity stage on the card', !/opportunities \(/.test(fun2.card), fun2.card.slice(0,260));
   t('funnel (ecom): section 06 says buyers purchase directly', /purchase directly|no lead stage/i.test(fun2.math));
 
   /* the revenue card reframes for one-time-sale verticals (Payton, Aug 17: "+$956/mo
@@ -525,6 +527,22 @@ async function liveTests(htmlPath){
   await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const rc2=await page.evaluate(()=>({lbl:document.getElementById('o-arrpm-label').textContent}));
   t('revenue card (recurring control): local keeps recurring revenue / mo', rc2.lbl==='New recurring revenue / mo', rc2.lbl);
+
+  /* margin-aware "wins cover the year" + combined stack ROAS/net + industry AI factors (Aug 17) */
+  await page.goto(url+'?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&revshare=0&stay=1',{waitUntil:'load'});
+  const mw=await page.evaluate(()=>({tl:document.getElementById('o-timeline').innerText.replace(/\s+/g,' '),
+    card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')}));
+  t('margin-aware cover claim: no flat "covers the program many times over"', !/covers the program many times over/.test(mw.tl), mw.tl.slice(0,200));
+  t('margin-aware cover claim: transactions-cover phrasing present', /(One win pays for the entire year.*gross profit at the modeled margin|average closed transactions more than cover)/.test(mw.tl));
+  t('stack: combined multiple labeled revenue ROAS with net-profit line', /revenue ROAS \(before margin\)/.test(mw.card) && /(net profit at the client|— The month-by-month)/.test(mw.card), mw.card.slice(-360));
+  await page.goto(url+'?industry=b2b&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const ai1=await page.evaluate(()=>computeQuote(readState()).aiLift);
+  await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const ai2=await page.evaluate(()=>computeQuote(readState()).aiLift);
+  t('AI demand lift varies by vertical (b2b 1.18 vs local 1.08)', Math.abs(ai1-1.18)<1e-9 && Math.abs(ai2-1.08)<1e-9, ai1+' / '+ai2);
+  await page.goto(url+'?industry=b2b&seo=0&geo=1&stay=1',{waitUntil:'load'});
+  const ai3=await page.evaluate(()=>computeQuote(readState()).aiConvLift);
+  t('AI close premium uses the vertical coefficient (b2b GEO-only = 1.55)', Math.abs(ai3-1.55)<1e-9, ai3);
 
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
