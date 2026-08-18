@@ -567,6 +567,18 @@ async function liveTests(htmlPath){
   t('commission tipbox: warns it is NOT the rate charged to customers', /NOT the rate the business charges its customers/i.test(tip));
   t('commission tipbox: states the output effect (margin minus this percentage)', /margin minus this percentage|effective keep-rate/i.test(tip));
 
+  /* taper is a sidenote, never a suggestion (Payton, Aug 18: "make it merely a sidenote —
+     many successful businesses still run ads heavily") */
+  await page.goto(url+'?industry=local&volume=5000&cpc=6&yearly=4000&capacity=8&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const tn=await page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q),a=adsState(s,q,n.rampMonth);
+    return {taper:a.taperStart, math:document.getElementById('ads-math').innerText.replace(/\s+/g,' '),
+            card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')};});
+  t('taper-sidenote: fixture actually tapers', tn.taper!=null, 'taperStart='+tn.taper);
+  t('taper-sidenote: sec-06 frames taper as default, not directive', /the default, not a directive/.test(tn.math), tn.math.slice(-420));
+  t('taper-sidenote: sec-06 says businesses keep running ads to scale', /keep running ads heavily alongside strong organic/.test(tn.math));
+  t('taper-sidenote: card sequencing line carries the sidenote', /modeled default, not a rule/.test(tn.card), tn.card.slice(-320));
+  t('taper-sidenote: no "paying for it twice" preaching anywhere', !/paying for it twice|stops making sense|instead of running forever/.test(tn.math+tn.card));
+
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const noAds=await page.evaluate(()=>({svg:document.getElementById('o-chart').innerHTML,

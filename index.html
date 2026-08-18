@@ -1758,14 +1758,18 @@ function adsState(s,q,rampMonth){
 }
 /* ONE sequencing sentence — computed from industry, footprint, capacity, and efficiency;
    never hardcoded per vertical */
-function adsSeqLine(s,q,a){
+function adsSeqLine(s,q,a,noSide){
+  /* noSide: the PDF honest-answer section sits on the same page as the schedule note,
+     which already carries the taper sidenote — printing it twice on one page is noise
+     AND overflows into the benchmarks footnote (Payton, Aug 18) */
   let t;
   if(!a.adsViable){
     t='Ads are inefficient here: winning a customer with ads costs ~'+fmt$(a.adCAC||0)+' vs the '+fmt$(a.acqAllowed)+' this business can spend to acquire one — lean on SEO/GEO.';
   } else if(a.scaleMode){
     t='Start month 1 and scale: every ~'+fmt$(a.adCAC)+' of spend buys a customer worth '+fmt$(q.yearlyValue)+', and there\'s capacity to take them.';
   } else if(a.organicOn && a.taperStart!=null){
-    t='Start ads month 1 at '+fmt$(a.budget)+'/mo; taper to '+(a.floorB>0?fmt$(a.floorB):'$0')+'/mo around month '+a.taperDone+' as organic fills '+(a.demandLimited?'the winnable demand':'capacity')+'.';
+    t='Start ads month 1 at '+fmt$(a.budget)+'/mo; the modeled budget tapers to '+(a.floorB>0?fmt$(a.floorB):'$0')+'/mo around month '+a.taperDone+' as organic fills '+(a.demandLimited?'the winnable demand':'capacity')+'.'
+      +(noSide?'':' (Sidenote: the taper is the modeled default, not a rule — plenty of successful businesses keep or grow the budget to scale past the organic pace.)');
   } else {
     t='Start ads month 1 at '+fmt$(a.budget)+'/mo — the flow starts when the spend starts, and stops when it stops.';
   }
@@ -2426,7 +2430,7 @@ function render(){
             +(a.netMo>0?'≈<span class="sm-big">'+fmtK(a.netMo)+'/mo net</span>.':'about break-even on first-year profit; the case here is '+(q.retainYears>1?'years two and beyond, which are 100% the client\'s.':'pipeline volume and referrals.'))
             +' This is a modeled floor, not a promise: it prices every click at Google\'s researched rate, and Meta\'s cheaper clicks only help. '+(a.lagM>0?'<b style="color:var(--text)">One honest timing note:</b> the clicks and leads start month 1, but a purchase this size takes about '+(a.lagM+1)+'–'+(a.lagM+2)+' months from first click to signed deal — so the first ads-won customers land around <b style="color:var(--text)">month '+(a.lagM+1)+'</b>, and the pipeline keeps closing for a couple of months even after spend winds down.':'It starts month 1 — no ramp.')+'</p>';
           if(q.nScopes>0&&a.taperStart!=null){
-            am+='<p><b>Why ads don\'t run at full spend forever.</b> Ads and SEO/GEO fish in the same pond: the people searching this market. While the organic program builds (months 1–'+(a.taperStart-1)+'), ads carry the customer flow. Around month '+a.taperStart+', organic is winning '+(a.demandLimited?'that same demand':'enough to fill capacity')+' on its own — so paying for it twice stops making sense, and the budget steps down to '+(a.floorB>0?fmt$(a.floorB)+'/mo by month '+a.taperDone+' to keep the ad accounts warm':'$0 by month '+a.taperDone)+'. Same customers, lower cost.</p>';
+            am+='<p><b>Why the modeled budget tapers.</b> Ads and SEO/GEO fish in the same pond: the people searching this market. While the organic program builds (months 1–'+(a.taperStart-1)+'), ads carry the customer flow. Around month '+a.taperStart+', organic is winning '+(a.demandLimited?'that same demand':'enough to fill capacity')+' on its own, so the modeled plan steps the budget down to '+(a.floorB>0?fmt$(a.floorB)+'/mo by month '+a.taperDone+' to keep the ad accounts warm':'$0 by month '+a.taperDone)+' — the same customers at a lower total cost, and the projection never quietly assumes ad spend runs forever. <span style="color:var(--muted)">Sidenote — the taper is the default, not a directive: many successful, profitable businesses keep running ads heavily alongside strong organic to keep scaling. If growth is the goal and the marketing budget is there, the spend simply holds or grows and every per-customer number above stays the same.</span></p>';
           }
         }
         if(shareOn) am+='<p><b>And the revenue share never touches ads.</b> Ads-won customers are never rev-share billed — the client pays the ad spend plus the management fee, nothing else on this channel. The revenue share bills organic program wins only.</p>';
@@ -2448,7 +2452,7 @@ function render(){
           +(a.netMo>0?' · ≈<b style="color:var(--gold-bright)">'+fmtK(a.netMo)+'/mo net</b> after the client\'s '+a.mgnPct+'% '+keepWord(s)+'':' · ≈break-even on first-year profit at the client\'s margin')+'</div>';
         if(!a.adsViable) ac+='<div style="margin-bottom:6px">&#9888; '+adsSeqLine(s,q,a)+'</div>';
         else ac+='<div style="margin-bottom:6px">'+adsSeqLine(s,q,a)+'</div>';
-        if(q.nScopes>0&&a.taperStart!=null) ac+='<div style="margin-bottom:6px">Ads carry months 1–'+(a.taperStart-1)+' while SEO/GEO builds; then the program takes over and ads taper.</div>';
+        if(q.nScopes>0&&a.taperStart!=null) ac+='<div style="margin-bottom:6px">Ads carry months 1–'+(a.taperStart-1)+' while SEO/GEO builds; from month '+a.taperStart+' the modeled budget tapers as organic wins the same demand.</div>';
       } else {
         ac+='<div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:8px">$0/mo <span style="font-size:12.5px;font-weight:600;color:var(--muted)">recommended</span></div>'
           +'<div style="margin-bottom:6px">'+adsSeqLine(s,q,a)+'</div>';
@@ -2773,7 +2777,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-65';
+const BUILD='NR-20260814-66';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3710,7 +3714,7 @@ function buildPDF(mode){
     /* measured advance — this note wraps to 2–3 lines depending on the taper text; a fixed
        step let line three collide with THE STACK heading (Payton, Aug 17) */
     const schNote=(aP.taperStart!=null
-      ? 'Months 1–'+(aP.taperStart-1)+' run the full budget while organic builds; from month '+aP.taperStart+' the budget steps down to the '+(aP.floorB>0?fmt$(aP.floorB)+'/mo maintenance floor':'$0 floor — organic replaces the ads entirely')+' by month '+aP.taperDone+'. Wins/mo are modeled floors; combined wins never exceed delivery capacity.'
+      ? 'Months 1–'+(aP.taperStart-1)+' run the full budget while organic builds; from month '+aP.taperStart+' the modeled budget steps down to the '+(aP.floorB>0?fmt$(aP.floorB)+'/mo maintenance floor':'$0 floor — organic covers the modeled demand')+' by month '+aP.taperDone+'. Sidenote: the taper is the modeled default, not a directive — the budget can just as well hold or scale if growth is the goal. Wins/mo are modeled floors; combined wins never exceed delivery capacity.'
       : (aP.organicOn? 'No taper modeled in year one at these inputs — the budget holds; wins/mo are modeled floors and combined wins never exceed delivery capacity.'
                      : 'Ads-only plan: the budget holds every month — the flow starts when the spend starts and stops when it stops. Wins/mo are modeled floors, capped at delivery capacity.'))
       +' Win columns count whole customers — a 0-win month just means the next customer lands a little later; the year-one totals are what matter.'
@@ -3750,14 +3754,14 @@ function buildPDF(mode){
     doc.text('JUST GOOGLE ADS? JUST SEO/GEO? OR BOTH? — THE HONEST ANSWER',L,hy,{charSpace:.8}); hy+=6.4;
     pdDraw('Just ads:','fast and exclusive — leads can start in days and every lead is yours alone, not shared with three competitors. The trade: it stops the moment the spend stops. You are renting visibility, never building it.');
     pdDraw('Just SEO/GEO:','a 6–18 month payoff you OWN — rankings, reviews, and AI-answer presence keep producing after the work is paid for. The asset compounds; the ramp is real.');
-    pdDraw('Both:','ads bridge the ramp — they carry the customer flow while the organic program builds, and once organic wins the same demand, the ad budget tapers instead of running forever. '+adsSeqLine(s,q,aP));
+    pdDraw('Both:','ads bridge the ramp — they carry the customer flow while the organic program builds. '+adsSeqLine(s,q,aP,true));
     pdDraw('The follow-up discipline caveat:','ads are only fast if lead handling is fast — a lead answered in minutes closes at multiples of one answered in hours, and slow follow-up torches ad budgets. Organic wins are more forgiving; paid ones are not.');
     if(shareOnP) pdDraw('The revenue share never touches ads:','ads-won customers are never rev-share billed. The client pays the ad spend plus the management fee on this channel, nothing else — the revenue share bills organic program wins only.');
     else pdDraw('What ads cost, all-in:','the ad spend plus the management fee — nothing else on this channel, ever. Every dollar an ads-won customer brings is the client\'s to keep.');
     /* the last bullet is optional — draw it only when it AND the benchmarks line still fit
        above the footer band; the benchmarks line then draws at the true cursor (no clamp,
        no overlap — Payton, Aug 17) */
-    if(s.footprint!=='nongeo' && hy<254) pdDraw('Foundational wins help everything at once:','a tuned Google Business Profile and a steady review pipeline lift ad quality scores, local rankings, and AI answers together — the first weeks of organic work make the ad dollars work harder too.');
+    if(s.footprint!=='nongeo' && hy<251) pdDraw('Foundational wins help everything at once:','a tuned Google Business Profile and a steady review pipeline lift ad quality scores, local rankings, and AI answers together — the first weeks of organic work make the ad dollars work harder too.');
     hy+=1;
     doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
     const bmLines=doc.splitTextToSize('Management-fee benchmarks: 10–20% of monthly ad spend is the published norm (15–20% most common at $5–15k/mo, sliding to 12–15% above $15k) with flat monthly minimums of $500–$2,000 — OuterBox, NewMedia and CorePPC 2026 pricing guides, cited with live links on the inputs page. Modeled ad wins are floors, not guarantees.',W);
@@ -3823,7 +3827,7 @@ function buildPDF(mode){
     ['"How do things actually get ranked?"',
      'Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.'],
     (adsOnP&&aP&&aP.budget>0) ? ['"Why is the ad budget capped — and how does the ads management fee work?"',
-     'Two guardrails and one fee, all in the open. The budget is never allowed to buy more than HALF of the market\'s clicks — half of the total monthly searches × the researched cost per click — because past that point extra dollars chase buyers who simply aren\'t searching. The management fee follows the published industry model (10–20% of monthly ad spend is the norm): 15% of spend here, sliding to 12% on budgets above $15,000/mo because managing a bigger budget is not proportionally more work, with a $500/mo minimum so a small account still gets real management hours. And the structure keeps us honest: when the organic program starts winning the same demand, the plan tapers the ad budget — cutting our own fee — instead of letting spend run forever.'] : null
+     'Two guardrails and one fee, all in the open. The budget is never allowed to buy more than HALF of the market\'s clicks — half of the total monthly searches × the researched cost per click — because past that point extra dollars chase buyers who simply aren\'t searching. The management fee follows the published industry model (10–20% of monthly ad spend is the norm): 15% of spend here, sliding to 12% on budgets above $15,000/mo because managing a bigger budget is not proportionally more work, with a $500/mo minimum so a small account still gets real management hours. And the structure keeps us honest: when the organic program starts winning the same demand, the modeled plan tapers the ad budget — cutting our own fee — so the projection never quietly assumes spend runs forever. One sidenote: the taper is a default, not advice to stop advertising. Many successful businesses keep running ads heavily alongside strong organic to keep scaling — if that\'s the goal, the budget simply holds or grows, with the same fee model and the same per-customer math.'] : null
   ].filter(Boolean);
   const fColW=(W-8)/2;
   /* auto-MAX fit: largest type that packs all questions into two columns without overflow.
@@ -3900,6 +3904,7 @@ function buildPDF(mode){
     adsOnP ? ['Half-the-market click ceiling','A spending guardrail on the ad budget: it may never buy more than half of all the clicks this market produces in a month (half of total searches × cost per click) — past that point, extra spend chases people who aren\'t searching. Even a manually raised budget only gets credit for the wins that ceiling\'s clicks can deliver.'] : null,
     adsOnP ? ['Ads management fee — 15% / 12% / $500 floor','Running the ad accounts is charged as a percent of spend, the published industry model (10–20% is the 2026 norm): 15% of monthly spend, sliding to 12% above $15,000/mo because the work doesn\'t scale one-for-one with budget, and never less than $500/mo so small accounts still get real management hours. Always billed as spend + fee — the ad money itself goes to Google & Meta, not to us.'] : null,
     adsOnP ? ['ROAS — return on ad spend','A revenue multiple: the first-year customer value the ads win ÷ the all-in ads cost (spend + management fee). It measures revenue, before the client\'s margin — the margin-adjusted net-profit view is always shown separately beside it.'] : null,
+    adsOnP ? ['Budget taper','The modeled step-down of ad spend once the organic program is winning the same demand — included so the projection never quietly bills full ad spend forever. A default, not a rule: many successful, profitable businesses keep running ads heavily alongside strong organic to keep scaling, and the plan works the same way if the budget holds or grows.'] : null,
     ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],
     ['Retention','How many years a typical customer stays. Sets the monthly churn in the 12-month projection.'],
     ['AOV x purchases / year','E-commerce: average order value times orders per year = the yearly customer value.'],
