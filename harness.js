@@ -83,7 +83,7 @@ function independent(q, acqPct, budgetIn){
   const clicksMo=(cpc>0&&budget>0)?budget/cpc:0;
   const leadsMo=(lc&&clicksMo>0)?clicksMo*(close/lc):null;
   const cpl=(leadsMo>0)?budget/leadsMo:null;
-  const mgnPct=q.margin;
+  const mgnPct=Math.max(5,(q.margin||0)-(q.commission||0));   // effective keep-rate (margin net of the client's own sales commission)
   const grossMo=adFull*q.yearlyValue*(mgnPct||0)/100;
   const netMo=grossMo-(budget+fee(budget));
   return {adCAC, acqAllowed, adsViable, veryEfficient, budgetAuto, budget, fee:fee(budget),
@@ -237,6 +237,14 @@ function edgeTests(){
   const noLead={...fun, leadclose:null};
   a=independent(noLead,15,3000);
   t('funnel: e-commerce style (no lead stage) — leads and CPL are null', a.leadsMo===null && a.cpl===null);
+
+  // -- EFFECTIVE KEEP-RATE (Aug 17): commission subtracts from margin in every profit figure
+  const comm={...fun, commission:10};
+  a=independent(comm,15,3000);
+  t('keep-rate: commission subtracts from margin (50 − 10 = 40)', a.mgnPct===40 && near(a.netMo, a.adFull*comm.yearlyValue*0.40-(3000+a.fee), 1e-6));
+  const commHi={...fun, margin:12, commission:10};
+  a=independent(commHi,15,3000);
+  t('keep-rate: floored at 5% so profit math never zeroes out', a.mgnPct===5);
 }
 
 /* ---------- live cross-check against the real calculator ---------- */
@@ -269,7 +277,7 @@ async function liveTests(htmlPath){
                     capStretch:q.capStretch, newCust:q.newCust, vol:q.vol, capApplied:q.capApplied,
                     nScopes:q.nScopes, rampMonth:n.rampMonth, rampSpan:q.rampSpan,
                     contractStyle:q.contractStyle, industry:s.industry,
-                    leadclose:BENCH(s).leadclose??null, margin:(s.margin??BENCH(s).margin)},
+                    leadclose:BENCH(s).leadclose??null, margin:(s.margin??BENCH(s).margin), commission:(s.commission||0)},
               acq:s.acq, dirty:adBudgetDirty,
               budgetField:(document.getElementById('adbudget').value||'').replace(/[^0-9.]/g,'')};
     });
@@ -534,7 +542,7 @@ async function liveTests(htmlPath){
     card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')}));
   t('margin-aware cover claim: no flat "covers the program many times over"', !/covers the program many times over/.test(mw.tl), mw.tl.slice(0,200));
   t('margin-aware cover claim: transactions-cover phrasing present', /(One win pays for the entire year.*gross profit at the modeled margin|average closed transactions more than cover)/.test(mw.tl));
-  t('stack: combined multiple labeled revenue ROAS with net-profit line', /revenue ROAS \(before margin\)/.test(mw.card) && /(net profit at the client|— The month-by-month)/.test(mw.card), mw.card.slice(-360));
+  t('stack: combined multiple labeled revenue ROAS (net line prints only when positive)', /revenue ROAS \(before margin\)/.test(mw.card) && /(net profit at the client|The month-by-month)/.test(mw.card), mw.card.slice(-360));
   await page.goto(url+'?industry=b2b&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const ai1=await page.evaluate(()=>computeQuote(readState()).aiLift);
   await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
@@ -543,6 +551,21 @@ async function liveTests(htmlPath){
   await page.goto(url+'?industry=b2b&seo=0&geo=1&stay=1',{waitUntil:'load'});
   const ai3=await page.evaluate(()=>computeQuote(readState()).aiConvLift);
   t('AI close premium uses the vertical coefficient (b2b GEO-only = 1.55)', Math.abs(ai3-1.55)<1e-9, ai3);
+
+  /* commission → effective keep-rate on the surfaces (Payton, Aug 17: "are you mistaking the
+     sales commission input for the percent he charges?") */
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&commission=10&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const kc1=await page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q);
+    return {mgn:adsState(s,q,n.rampMonth).mgnPct, math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')};});
+  t('keep-rate UI: commission 10 on 65% margin → 55% effective', kc1.mgn===55, kc1.mgn);
+  t('keep-rate UI: profit line says effective margin when commission > 0', /effective margin \(after their sales commission\)/.test(kc1.math), kc1.math.slice(-300));
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&commission=0&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  const kc2=await page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q);
+    return {mgn:adsState(s,q,n.rampMonth).mgnPct, math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')};});
+  t('keep-rate UI: commission 0 → full 65% margin, plain "margin" word', kc2.mgn===65 && !/effective margin \(after/.test(kc2.math));
+  const tip=await page.evaluate(()=>document.querySelectorAll('#commission')[0].closest('.fgroup').querySelector('.tipbox').innerText.replace(/\s+/g,' '));
+  t('commission tipbox: warns it is NOT the rate charged to customers', /NOT the rate the business charges its customers/i.test(tip));
+  t('commission tipbox: states the output effect (margin minus this percentage)', /margin minus this percentage|effective keep-rate/i.test(tip));
 
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
