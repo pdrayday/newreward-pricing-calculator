@@ -990,7 +990,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel" id="lbl-capacity">Delivery capacity
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The MOST new customers this business could physically take on per month — crew hours, chairs, build slots, install teams. When set, projections are capped at this number <b>plus an industry-specific stretch</b> — because when real demand shows up, businesses find a way. How much way is researched per business type: nearly rigid custom construction gets ~+10% (subs are booked months out), appointment and crew businesses ~+25-30% (longer books, overbooking), B2B services ~+40% (a bench running 70-80% utilization can flex), and nationwide e-commerce up to ~+65% (elastic 3PL fulfillment absorbs surges). Multi-location and national networks add a little more by load-balancing between sites. The model never promises wins wildly beyond what they could serve, but it leans optimistic on purpose. For a few-contracts-a-year business use a decimal — a builder who could deliver 6 homes a year is 0.5/mo. For an at-scale e-commerce brand (eight/nine-figure revenue, elastic fulfillment) the honest ceiling is hundreds or thousands per month — use the evidence-backed number or leave it blank for the elastic benchmark; never cap a big brand at a small-shop number. Left blank, an industry-typical capacity applies automatically — per location, scaled by the footprint — so a custom home builder (~0.7 builds/mo) and a med spa (~30 new patients/mo) are never judged by the same ceiling.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">The MOST new customers this business could physically take on per month — crew hours, chairs, build slots, install teams. When set, projections are capped at this number <b>plus an industry-specific stretch</b> — because when real demand shows up, businesses find a way. How much way is researched per business type: nearly rigid custom construction gets ~+10% (subs are booked months out), appointment and crew businesses ~+25-30% (longer books, overbooking), B2B services ~+40% (a bench running 70-80% utilization can flex), and nationwide e-commerce up to ~+65% (elastic 3PL fulfillment absorbs surges). Multi-location and national networks add a little more by load-balancing between sites. The model never promises wins wildly beyond what they could serve, but it leans optimistic on purpose. For a few-contracts-a-year business use a decimal — a builder who could deliver 6 homes a year is 0.5/mo. For an at-scale e-commerce brand (eight/nine-figure revenue, elastic fulfillment) the honest ceiling is hundreds or thousands per month — use the evidence-backed number or leave it blank for the elastic benchmark; never cap a big brand at a small-shop number. Left blank, an industry-typical capacity applies automatically — per location, scaled by the footprint — so a custom home builder (~0.7 builds/mo) and a med spa (~30 new patients/mo) are never judged by the same ceiling. <b>One exception, on purpose:</b> a borderless B2B business whose customer is a transaction worth $1,500/yr or less (lead-generation funnels, self-serve software, digital products) has no physical throughput to cap — left blank, its ceiling follows demand instead of a vertical rung.</span></button>
         </label>
         <div class="fwrap"><input type="number" id="capacity" class="has-suffix" placeholder="no limit" min="0" step="0.1"><span class="suffix">/mo</span></div>
         <div class="auto-note" id="note-capacity"></div>
@@ -1403,7 +1403,20 @@ function computeQuote(s){
      industry-typical capacity applies — per location/service line, scaled by footprint —
      because a custom home builder (~0.7 new builds/mo) and a med spa (~30 new patients/mo)
      live in different physical realities. Both get the industry-specific stretch when they bind. */
-  const capAuto = Math.round(ind.cap * units * foot.capMult * 10)/10;
+  const capTypical = Math.round(ind.cap * units * foot.capMult * 10)/10;
+  /* SCALABLE-DELIVERY LAW (Payton, Sept 15 — My Accident Payout: a national lead-gen funnel
+     selling $300 leads was capped at the "B2B / SaaS typical ~25/mo" while demand supported
+     ~226/mo). The capacity ceiling models HUMAN throughput. A borderless B2B business whose
+     customer is a low-ticket transaction — a lead sold, a self-serve seat, a digital product —
+     has no crew, chairs, or consult slots: fulfillment is automated and scales with demand.
+     So with capacity left blank, a nongeo/national footprint, the B2B / SaaS preset, and a
+     customer worth $1,500/yr or less, the auto ceiling FOLLOWS DEMAND (the demand-supported number
+     itself, never below the typical rung) instead of the human-throughput rung. A stated
+     capacity always wins; local/high-ticket/ultra stay human-bound at any footprint; e-commerce
+     already carries an elastic ceiling. */
+  const SCALABLE_TICKET = 1500;
+  const scalableDelivery = !(s.capacity>0) && s.industry==='b2b' && (s.footprint==='nongeo'||s.footprint==='national') && yearlyValue<=SCALABLE_TICKET;
+  const capAuto = scalableDelivery ? Math.max(capTypical, Math.ceil(newCustDemand)) : capTypical;
   const capBase = (s.capacity>0) ? s.capacity : capAuto;
   const capSource = (s.capacity>0) ? 'stated' : 'auto';
   /* stretch multiplier — researched per industry: construction is nearly rigid (subs booked
@@ -1545,7 +1558,7 @@ function computeQuote(s){
 
   return {difficulty, price, share, perfBase, twinShare, ongShareBase, yearlyValue, yrIsAuto, aovYear, retainYears, ltv,
           seoEff, seoEntered, rankImplied, rankNow,
-          newCust, newCustDemand, capApplied, capStretch, capBase, capSource, capAuto, stretchMult, aiConvLift, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
+          newCust, newCustDemand, capApplied, capStretch, capBase, capSource, capAuto, capTypical, scalableDelivery, stretchMult, aiConvLift, arrAddedPM, mrrPC, attribFactor, visGap, chFactor, volQ, aiLift,
           /* CONTRACT-STYLE: a win is a signed deal worth its first-year value — B2B/SaaS,
              ultra high-ticket, and any high-ticket vertical at $10k+ per customer. These
              render as discrete wins (like custom homes) and bill the share at signing;
@@ -1785,6 +1798,10 @@ function resetAdBudget(){ adBudgetDirty=false; render(); return false; }
    equalizer). Floor 5% so a data-entry slip can never print zero/negative profit math. */
 function keepPct(s){ return Math.max(5,(s.margin??BENCH(s).margin)-(s.commission||0)); }
 function keepWord(s){ return (s.commission||0)>0?'effective margin (after their sales commission)':'margin'; }
+/* inside a parenthetical, the bracketed form nests "(…(…))" — use the comma form there;
+   keepShort is for one-line PDF strips where width is the constraint (Sept 8 audit) */
+function keepWordIn(s){ return (s.commission||0)>0?'effective margin, after their sales commission':'margin'; }
+function keepShort(s){ return (s.commission||0)>0?'effective margin':'margin'; }
 
 /* LOST-REVENUE numbers — ONE source for the site card and the PDF page-1 block (numbers-
    correspond law): the gap IS the program's modeled added pace; today's capture is the same
@@ -2287,7 +2304,7 @@ function render(){
   set('o-roi-sub', rrCons!=null
       ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost '+(n.share>0?'(reduced fee + share)':'(flat fee)')+'. '
         +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+(function(){ const mgn=keepPct(s), gpMo=q.newCust*q.yearlyValue*mgn/100, netMo=gpMo-(n.series.ongoingCost||0);
-        return netMo>0 ? 'In client profit terms: the modeled pace adds ≈'+fmtK(gpMo)+'/mo in gross profit (at their '+mgn+'% '+keepWord(s)+') against ≈'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in cost — ≈'+fmtK(netMo)+'/mo net to the client. ' : ''; })()
+        return netMo>0 ? 'In client profit terms: the modeled pace adds ≈'+fmtK(gpMo)+'/mo in gross profit (at their '+mgn+'% '+keepWordIn(s)+') against ≈'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in cost — ≈'+fmtK(netMo)+'/mo net to the client. ' : ''; })()
       +'Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
       +(document.getElementById('scopeAds').checked?' This is the organic SEO/GEO program alone — Google + Meta ads are priced separately on the gold Paid Media card below, where the combined stack is shown.':'')
       : (document.getElementById('scopeAds').checked
@@ -2592,7 +2609,9 @@ function render(){
       : '';
   document.getElementById('note-capacity').innerHTML = q.capApplied
       ? '<b>Capacity cap active:</b> market demand supports ~'+(q.newCustDemand<3?q.newCustDemand.toFixed(1):Math.round(q.newCustDemand))+'/mo — projections are capped at <b>'+q.capStretch+'/mo</b>: '+(q.capSource==='stated'?'their stated '+s.capacity+'/mo':'the '+BENCH(s).name.toLowerCase()+' typical ~'+q.capAuto+'/mo for this footprint')+' plus the +'+Math.round((q.stretchMult-1)*100)+'% stretch this kind of business can realistically find when demand shows up.'+(q.capSource==='auto'?' Set their real ceiling to refine it.':'')
-      : (s.capacity>0 ? '' : 'Auto: '+BENCH(s).name+' typical ≈ <b>'+q.capAuto+'/mo</b> at this footprint ('+BENCH(s).cap+' × '+q.units+' unit'+(q.units>1?'s':'')+' × '+FOOT[s.footprint].capMult+') — set the real ceiling if known.');
+      : (s.capacity>0 ? '' : (q.scalableDelivery
+          ? '<b>Auto — delivery scales with demand:</b> a borderless business whose customer is a transaction worth $1,500/yr or less (a lead sold, a self-serve seat, a digital product) has no crew, chairs, or consult slots to fill, so the ceiling follows the demand this program can win — <b>~'+q.capAuto+'/mo</b> — instead of the '+BENCH(s).name.toLowerCase()+' typical ~'+q.capTypical+'/mo, which is a rung for human-delivered services. Set a real operational ceiling if one exists (partner intake limits, fulfillment contracts).'
+          : 'Auto: '+BENCH(s).name+' typical ≈ <b>'+q.capAuto+'/mo</b> at this footprint ('+BENCH(s).cap+' × '+q.units+' unit'+(q.units>1?'s':'')+' × '+FOOT[s.footprint].capMult+') — set the real ceiling if known.'));
   document.getElementById('note-cpc').innerHTML = (s.cpc==null)
       ? 'Auto: '+BENCH(s).name+' typical = <b>$'+BENCH(s).cpc+'</b>/click — set the real CPC if known' : '';
   /* volume source only matters once a volume is actually entered — hide it until then */
@@ -2709,7 +2728,7 @@ function render(){
         cmpSM+='Flat retainer: <b style="color:var(--gold-bright)">'+fmt$(q.price)+'/mo</b>, every month \u2014 '+fmt$(q.price*12)+'/yr.<br>'
           +'Hybrid: '+fmt$(q.perfBase)+'/mo base, plus '+q.twinShare+'% of each signed contract \u2014 <b style="color:var(--gold-bright)">'+fmt$(Math.round(perWinSM))+'</b> per '+fmt$(q.yearlyValue)+' win, billed only in the month that win lands. Every other month bills just the '+fmt$(q.perfBase)+' base.<br>'
           +'The share looks big in a win month \u2014 but over the year the two structures reconcile. At the modeled pace (~'+wSM+' wins/yr): 12 &times; '+fmt$(q.perfBase)+' + '+wSM+' &times; '+fmt$(Math.round(perWinSM))+' = <b style="color:var(--gold-bright)">'+fmt$(Math.round(hyYrSM))+'/yr</b> &asymp; '+fmt$(q.price*12)+'/yr flat. Same yearly cost, identical revenue projection \u2014 so the projected ROI comes out the same.<br>'
-          +'And each '+fmt$(Math.round(perWinSM))+' share bill only ever rides on a '+fmt$(q.yearlyValue)+' contract signed that month (\u2248'+fmt$(Math.round(grossSM))+' gross profit at '+mgnSM+'% '+keepWord(s)+') \u2014 the share is a small fraction of the win it is charged against, and a no-win month never bills it. The equality holds at the modeled pace: sign fewer builds than modeled and the hybrid bills less than the flat fee; sign more and it bills more \u2014 only because more contracts landed, with the client keeping everything above the small share of each extra win. Until the share starts (month '+n.rampMonth+') the hybrid bills the full fee \u2014 identical to the flat retainer from day one.';
+          +'And each '+fmt$(Math.round(perWinSM))+' share bill only ever rides on a '+fmt$(q.yearlyValue)+' contract signed that month (\u2248'+fmt$(Math.round(grossSM))+' gross profit at '+mgnSM+'% '+keepWordIn(s)+') \u2014 the share is a small fraction of the win it is charged against, and a no-win month never bills it. The equality holds at the modeled pace: sign fewer builds than modeled and the hybrid bills less than the flat fee; sign more and it bills more \u2014 only because more contracts landed, with the client keeping everything above the small share of each extra win. Until the share starts (month '+n.rampMonth+') the hybrid bills the full fee \u2014 identical to the flat retainer from day one.';
       } else {
         cmpSM+='Flat retainer: <b style="color:var(--gold-bright)">'+fmt$(q.price)+'/mo</b>, every month.<br>'
           +'Hybrid: '+fmt$(q.perfBase)+' base + '+q.twinShare+'% share &times; '+fmt$(Math.round(q.ongShareBase))+' modeled new-win value/mo = '+fmt$(q.perfBase)+' + '+fmt$(Math.round(shareBillSM))+' = <b style="color:var(--gold-bright)">'+fmt$(Math.round(hybridTotSM))+'/mo</b> at the modeled pace.<br>'
@@ -2730,7 +2749,7 @@ function render(){
       '<p><b>The share only ever applies to new customers our work wins.</b> Existing customers, repeat business, referrals, and anything the client finds on their own are <span class="sm-big">never touched</span> — the revenue baseline is measured before we start, and everything below it is off-limits. We are not taking a percentage of the business they already built.</p>'
       +'<p><b>100% verifiable proof, or nothing.</b> A win only counts when it can be <span class="sm-big">proven</span> to have come from this program — tracked calls, forms, and bookings. If we can\'t prove we won it, we don\'t take a dime of share on it. Period.</p>'
       +'<p><b>One proven win, in exact dollars:</b> a new customer worth '+fmt$(q.yearlyValue)+' in first-year value &times; '+n.share+'% share = <span class="sm-big">'+fmt$(q.yearlyValue*n.share/100)+'</span> — billed as the money actually lands: a signed contract bills its first-year value in the month it\'s won, while a repeat-purchase customer (med spa, e-commerce, memberships) bills monthly on what they actually spend through their first 12 months — never beyond. The client keeps the other '+fmt$(q.yearlyValue*(1-n.share/100))+' — and 100% of every repeat purchase after year one. The share is on revenue, not profit — and the rate is sized to this program\'s fee structure and modeled win value, capped at 10%.</p>'
-      +'<p><b>The profit math on a single win — in the client\'s favor, every time.</b> A '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+fmt$(perWin)+' — a customer who brings &asymp;<span class="sm-big">'+fmt$(grossWin)+' in gross profit</span> (at their '+mgnPct+'% '+keepWord(s)+') they wouldn\'t otherwise have. They keep &asymp;'+fmt$(keepWin)+' of that first-year profit — and the share <span class="sm-big">never touches anything after year one</span>: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.')+'</p>'
+      +'<p><b>The profit math on a single win — in the client\'s favor, every time.</b> A '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+fmt$(perWin)+' — a customer who brings &asymp;<span class="sm-big">'+fmt$(grossWin)+' in gross profit</span> (at their '+mgnPct+'% '+keepWordIn(s)+') they wouldn\'t otherwise have. They keep &asymp;'+fmt$(keepWin)+' of that first-year profit — and the share <span class="sm-big">never touches anything after year one</span>: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.')+'</p>'
       +(function(){
         let rampEnd=n.rampMonth-1;
         n.series.invoice.forEach(function(v,i){ if(i+1>=n.rampMonth && v<n.series.ongoingCost-0.5) rampEnd=i+1; });
@@ -2777,7 +2796,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-66';
+const BUILD='NR-20260814-68';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2864,7 +2883,7 @@ function researchWithAI(){
     +'- margin: the GROSS margin typical for this exact vertical, SNAPPED to multiples of 5 using the middle of the published range (custom home builders 20, roofing 30, med spas 65, law 55, SaaS 80, e-commerce 50). Deviate from the middle only on a named business-specific fact.\n'
     +'- acq: percent of revenue this business would sensibly spend to win a new customer (10-20 typical; large one-time-ticket businesses often run lower).\n'
     +'- commission: percent of the gross sale this business already pays ITS OWN staff, reps, or referral partners (construction 1-3, everyday local 3-8, med spa/membership 8-12, SaaS ~10; solo operators with no splits = 0). NEVER the rate the business charges its own customers — a real-estate agent\'s ~3% listing-side commission is their REVENUE (already inside customer value), not a commission cost.\n'
-    +'- capacity: the MOST new customers this business could physically take on per MONTH (crew size, chairs, consult slots, build slots — decimals allowed: 3 homes a year = 0.25). Derive it from evidence about THIS business — team size on the about/team page, LinkedIn headcount, portfolio dates and project counts, review volume, "currently building N homes" claims — and cite THAT evidence; a generic vertical cost guide does not state the throughput of THIS company and must never be its capacity source. State the signal you found, then SNAP to this ladder: 0.1 / 0.15 / 0.2 / 0.25 / 0.3 / 0.4 / 0.5 / 0.7 / 1 / 2 / 3 / 5 / 8 / 10 / 15 / 20 / 30 / 40 / 60 / 100 / 150 / 250 / 400 / 600 / 1,000 (rungs above 100 are for at-scale e-commerce/marketplace brands and require revenue or order-volume evidence). A rung is only defensible if evidence supports it — if torn between two evidence-backed rungs take the higher; with no evidence either way take the vertical-typical rung, never an optimistic one. Scale sanity for ultra: custom homes take 12-18 months, so a small crew (~5 people) runs 2-4 builds concurrently and completes roughly 2-4 homes a YEAR (0.2-0.35/mo) — an 0.5/mo ceiling belongs to a multi-crew operation with evidence of ~6 completions a year. UNIT MATCH — capacity counts ONLY customers of the same kind the customer-value input prices: if yearly is a $1M custom build, renovations and small side jobs do NOT add capacity slots — a mixed-work business gets the ceiling for the modeled offer alone, and the Why must name what was excluded ("renovations excluded — they do not fill build slots for the modeled offer"). QUOTE your throughput evidence: if no page states a number, derive it from dated portfolio entries and say so ("4 Parade of Homes entries across 2017-2024 = low single-digit builds/yr") — NEVER write a throughput figure the cited page does not state or the portfolio does not show. State the TRUE physical ceiling — the calculator itself adds an INDUSTRY-SPECIFIC stretch on top (about +10% for rigid build businesses like custom homes, +25-30% for appointment/crew businesses, +40% for B2B services, up to +65% for elastic nationwide e-commerce) and caps every projection there; NEVER pre-inflate the base to be optimistic, the stretch IS the optimism. Fill it whenever research supports an estimate; left blank, the calculator applies an industry-typical capacity for the footprint automatically (a custom home builder and a med spa get very different ceilings), so blank is safe but researched is better.\n'
+    +'- capacity: the MOST new customers this business could physically take on per MONTH (crew size, chairs, consult slots, build slots — decimals allowed: 3 homes a year = 0.25). Derive it from evidence about THIS business — team size on the about/team page, LinkedIn headcount, portfolio dates and project counts, review volume, "currently building N homes" claims — and cite THAT evidence; a generic vertical cost guide does not state the throughput of THIS company and must never be its capacity source. State the signal you found, then SNAP to this ladder: 0.1 / 0.15 / 0.2 / 0.25 / 0.3 / 0.4 / 0.5 / 0.7 / 1 / 2 / 3 / 5 / 8 / 10 / 15 / 20 / 30 / 40 / 60 / 100 / 150 / 250 / 400 / 600 / 1,000 (rungs above 100 are for at-scale e-commerce/marketplace brands and require revenue or order-volume evidence). A rung is only defensible if evidence supports it — if torn between two evidence-backed rungs take the higher; with no evidence either way take the vertical-typical rung, never an optimistic one. Scale sanity for ultra: custom homes take 12-18 months, so a small crew (~5 people) runs 2-4 builds concurrently and completes roughly 2-4 homes a YEAR (0.2-0.35/mo) — an 0.5/mo ceiling belongs to a multi-crew operation with evidence of ~6 completions a year. UNIT MATCH — capacity counts ONLY customers of the same kind the customer-value input prices: if yearly is a $1M custom build, renovations and small side jobs do NOT add capacity slots — a mixed-work business gets the ceiling for the modeled offer alone, and the Why must name what was excluded ("renovations excluded — they do not fill build slots for the modeled offer"). QUOTE your throughput evidence: if no page states a number, derive it from dated portfolio entries and say so ("4 Parade of Homes entries across 2017-2024 = low single-digit builds/yr") — NEVER write a throughput figure the cited page does not state or the portfolio does not show. State the TRUE physical ceiling — the calculator itself adds an INDUSTRY-SPECIFIC stretch on top (about +10% for rigid build businesses like custom homes, +25-30% for appointment/crew businesses, +40% for B2B services, up to +65% for elastic nationwide e-commerce) and caps every projection there; NEVER pre-inflate the base to be optimistic, the stretch IS the optimism. Fill it whenever research supports an estimate; left blank, the calculator applies an industry-typical capacity for the footprint automatically (a custom home builder and a med spa get very different ceilings), so blank is safe but researched is better. SCALABLE-DELIVERY EXCEPTION: lead-generation funnels, marketplaces, self-serve SaaS, and digital products (the customer is an automated transaction — no crew, chairs, or slots) must NOT be snapped to a human-throughput rung. Leave capacity BLANK — on a nongeo/national footprint with industry=b2b and yearly at or below 1500 the calculator lets the ceiling follow demand — or state a real operational ceiling only if one exists (partner-network intake limits, fulfillment contracts) and cite it. A human-delivered B2B service at that ticket (bookkeeping, support retainers) DOES need a stated capacity from headcount evidence.\n'
     +'- yearly: the FULL first-year revenue from ONE new customer, including typical repeat visits, packages, or memberships inside year one — a med spa patient is several visits and often a package, not one treatment. Derive from their PUBLISHED prices × typical purchase pattern (state the calculation), then SNAP to the nearest: 300 / 500 / 750 / 1,000 / 1,500 / 2,000 / 2,500 / 3,000 / 4,000 / 5,000 / 7,500 / 10,000 / 12,500 / 15,000 / 20,000 / 25,000 / 30,000 / 40,000 / 50,000 / 75,000 / 100,000 / 150,000 / 250,000 / 400,000 / 500,000 / 750,000 / 1,000,000. If two rungs are both defensible, take the HIGHER one. NO PUBLISHED PRICES (typical for B2B services and custom work)? ANY page type is acceptable evidence as long as it EXPLICITLY STATES the figure you use: a published price/cost study stating the range (e.g. a 2026 custom-software cost report stating the $75k\u2013$250k project range and ~$132k average), or a company-profile/revenue page (LinkedIn, Prospeo, Crunchbase) when the number cited is actually printed on it \u2014 e.g. a stated $20M annual revenue anchoring a SHOWN derivation (revenue \u00f7 evidenced active-client count \u2248 value per client), citing the page that states EACH link of the chain. What is never acceptable is citing a page for a figure it does not state. FEE-ON-ASSETS BUSINESSES (RIAs, wealth managers): yearly = the SEC-filed average client AUM (stated on ADV-derived profiles) \u00d7 the fee rate their ADV Part 2 brochure STATES; assume ~1% ONLY when the brochure rate is unavailable and say so in the Why; add any stated first-year planning fee. Their multi-year retention belongs in the retention field, never inflated into year one. No figure-stating source at all? Leave yearly blank (benchmark).\n'
     +'- LOW-SIDE REALISM CHECK (everyday and med-spa-style local services): sanity-test volume x 0.15 x (convrate/100) x 12. If it implies fewer than roughly 12 new customers a YEAR for an established local service with real demand, your volume, conversion, or footprint is understated — fix the inputs rather than under-selling the business. This check NEVER runs in reverse and NEVER applies to ultra or high-ticket verticals: you must not raise convrate, volume, or any demand-side input above its canonical or evidence-backed value to make implied wins line up with delivery capacity — capacity is a CAP the calculator applies on its own, not a target to hit, and tuning demand inputs to capacity is circular reasoning. If implied demand lands below capacity, that is a finding, not an error (for ultra, a couple of won projects a year is a strong result). Deviating from a convrate canonical requires a NAMED business fact — their published close rate, a stated lead-to-job ratio — never "it would under-sell them" and never "to match capacity".\n'
     +'- ULTRA-HIGH-TICKET REALISM CHECK (industry=ultra — customer value $100k+: custom home builders, large remodels, solar farms, commercial projects): these businesses sign a handful of contracts per YEAR, not per month — and over-promising here destroys trust. Use a conversion rate BELOW 1 (0.1-0.5; decimals are accepted), a genuinely small phrase-cluster volume (a "custom home builder <city>" cluster is typically a few hundred searches/mo, not thousands), and years=1 for one-time contracts. Sanity-test your own output: multiply volume x 0.15 x (convrate/100) x 12 — if that exceeds the number of projects this business could physically deliver in a year, lower the volume or conversion until it is realistic. Even 1-2 added contracts a year is a strong, honest ROI at these ticket sizes; the calculator will display customers per year automatically.\n- AT-SCALE BRAND CHECK (e-commerce/national brands with evidence of eight/nine-figure revenue): never quote a big brand with small-shop inputs. (1) CAPACITY: derive their current acquisition run-rate (stated revenue \u00f7 first-year customer value \u00f7 12); an elastic DTC brand\'s ceiling must never sit below ~5% of that run-rate — use the evidence-backed high rung (150-1,000) or leave capacity BLANK so the calculator\'s elastic e-commerce benchmark applies (blank is the safest choice at scale). (2) DEMAND: a multi-product national brand\'s defensible core may span SEVERAL commercial clusters — the category head, each major product line they sell, and branded search; derive EACH per the volume chain and SUM them (ladder cap 250,000), naming every cluster counted in the Why. Anchoring a nine-figure brand to one sub-cluster UNDERSELLS its real search market. (3) The calculator models only search + AI-answer demand above their baseline — say so in the Why so a brand built on other channels (affiliate/MLM/retail) reads the projection as the SEARCH program\'s upside, not the whole business.\n\n'
@@ -3341,7 +3360,7 @@ function buildPDF(mode){
       ['Locations / service lines', String(q.units)+((s.markets&&s.markets.length)?' — '+s.markets.map(function(m){return m.n;}).filter(Boolean).join(', '):'')].concat(rx('units','Locations or distinct service lines the program must cover.',SRC_SITE?[SRC_SITE]:'Their site / listings')),
       ['Phrase volume', q.vol.toLocaleString()+' /mo'+(q.volIsAuto?' (est.)':'')].concat(rx('volume', q.volIsAuto?'2026 demand baseline for this vertical at this footprint.':('Researched cluster demand, band-snapped for reproducibility.'+((s.markets&&s.markets.some(function(m){return m.v>0;}))?' Split: '+s.markets.map(function(m){return (m.n||'market')+' '+(m.v||0).toLocaleString();}).join(' · ')+'.':'')), q.volIsAuto?[SRC_KWPV]:[VSRC[s.volsource]||SRC_KWPV])),
       ['Volume source', selText('volsource')].concat(rx('volsource','Where the demand number came from; estimates are confidence-weighted in the math.',VSRC[s.volsource]?[VSRC[s.volsource]]:'—')),
-      ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto)')+' (cap '+q.capStretch+'/mo)'+(q.capApplied?'':' — demand is the limiter, not capacity')].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch above it.':'Industry-typical ceiling for this footprint; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch.', s.capacity>0?(SRC_SITE?['Team / operations research',SRC_SITE]:'Team / operations research'):BM)),
+      ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto'+(q.scalableDelivery?' — follows demand':'')+')')+(q.scalableDelivery?'':' (cap '+q.capStretch+'/mo)')+(q.capApplied?'':' — demand is the limiter, not capacity')].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch above it.':(q.scalableDelivery?'Borderless transactional business (customer worth $1,500/yr or less; no crew or consult slots) — fulfillment scales with demand, so the auto ceiling follows the demand-supported number rather than a human-throughput rung; set a real operational ceiling if one exists.':'Industry-typical ceiling for this footprint; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch.'), s.capacity>0?(SRC_SITE?['Team / operations research',SRC_SITE]:'Team / operations research'):(q.scalableDelivery?'Demand model — the researched demand itself; no human-throughput benchmark applies':BM))),
       ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', [SRC_WS])),
       ['Average search rank', String(s.rank??'—')].concat(rx('rank','Their average Google position for money phrases today.',SRC_SERP?[SRC_SERP]:'Checked rankings')),
       ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':''), rxW('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.'), [SRC_NR]],
@@ -3443,9 +3462,16 @@ function buildPDF(mode){
      scope) skips the projection page entirely without losing them */
   const pEp=eventPlan(q,n);
   let hy=0;
-  const pdDraw=function(lead,rest){
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-    doc.text(lead,L,hy);
+  /* FIT-TO-PAGE FLOW (Sept 8 audit): paragraph sections used to draw straight down from hy
+     with no floor, so long keep-rate wording + lag copy pushed the last paragraphs under the
+     footer band (page 3) or into the benchmarks footnote (page 2). pdDraw now QUEUES while a
+     flow is open; pdFlush(floorY) measures the queue, steps the font 9 → 7.8 until it fits,
+     and only then drops the lowest-priority paragraphs (prio 3 first, prio 1 never). */
+  let pdQ=null;
+  const pdLayout=function(lead,rest,fs,draw){
+    const lh=fs*0.5222, gap=fs*0.2444;               // 9pt → 4.7mm lines, 2.2mm gap
+    doc.setFont('helvetica','bold'); doc.setFontSize(fs); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+    if(draw) doc.text(lead,L,hy);
     const w1=doc.getTextWidth(lead)+1.6;
     doc.setFont('helvetica','normal');
     const words=rest.split(' ');
@@ -3454,11 +3480,34 @@ function buildPDF(mode){
       const t2=line?line+' '+words[i2]:words[i2];
       if(doc.getTextWidth(t2)<=W-w1){ line=t2; } else break;
     }
-    if(line) doc.text(line,L+w1,hy);
-    hy+=4.7;
+    let h=lh;
+    if(draw && line) doc.text(line,L+w1,hy);
     const rem=words.slice(i2).join(' ');
-    if(rem) doc.splitTextToSize(rem,W).forEach(function(ln){ doc.text(ln,L,hy); hy+=4.7; });
-    hy+=2.2;
+    const rl=rem?doc.splitTextToSize(rem,W):[];
+    if(draw){ hy+=lh; rl.forEach(function(ln){ doc.text(ln,L,hy); hy+=lh; }); hy+=gap; }
+    return h+rl.length*lh+gap;
+  };
+  const pdBegin=function(){ pdQ=[]; };
+  const pdDraw=function(lead,rest,prio){
+    if(pdQ){ pdQ.push({lead:lead,rest:rest,prio:prio||1}); return; }
+    pdLayout(lead,rest,9,true);
+  };
+  const pdFlush=function(floorY){
+    let paras=pdQ.slice(); pdQ=null;
+    const SIZES=[9,8.6,8.2,7.8];
+    let fs=SIZES[SIZES.length-1], dropped=[];
+    const need9=paras.reduce(function(a,p){ return a+pdLayout(p.lead,p.rest,9,false); },0), need78=paras.reduce(function(a,p){ return a+pdLayout(p.lead,p.rest,7.8,false); },0);
+    const fits=function(list,f){ const h=list.reduce(function(a,p){ return a+pdLayout(p.lead,p.rest,f,false); },0); return hy+h<=floorY; };
+    const tryS=function(list){ for(const f of SIZES){ if(fits(list,f)) return f; } return null; };
+    const dropWorst=function(minPrio){ let idx=-1, worst=minPrio-1; paras.forEach(function(p,i){ if(p.prio>worst){ worst=p.prio; idx=i; } }); if(idx<0) return false; dropped.push(paras[idx].lead); paras.splice(idx,1); return true; };
+    let fit=tryS(paras);
+    while(fit==null && dropWorst(3)) fit=tryS(paras);            // 1) shed optional prio-3 asides
+    if(fit==null){ for(const f of [7.4,7]){ if(fits(paras,f)){ fit=f; break; } } }   // 2) emergency sizes before touching prio-2
+    while(fit==null && dropWorst(2)) fit=tryS(paras);            // 3) prio-2 only as a last resort; prio-1 never
+    fs = fit!=null ? fit : 7;
+    if(window.__pdLog) window.__pdLog.push({fs:fs, dropped:dropped, startY:+hy.toFixed(1), floorY:+floorY.toFixed(1), avail:+(floorY-hy).toFixed(1), need9:+need9.toFixed(1), need78:+need78.toFixed(1), n:paras.length});
+    paras.forEach(function(p){ pdLayout(p.lead,p.rest,fs,true); });
+    return fs;
   };
 
   /* ============ PAGE 3 — THE PROJECTION (full page, 12 months) — organic scope only ============ */
@@ -3498,7 +3547,7 @@ function buildPDF(mode){
     key([DARK[0],DARK[1],DARK[2]], pAds?'All-in cost (program + ads)':(n.share>0?'Total cost (fixed + share)':'Total cost (flat fee)'));
   })();
 
-  const pT=46, pB=126, pL2=L+18, pR2=R-4, pgw=(pR2-pL2)/12;
+  const pT=46, pB=116, pL2=L+18, pR2=R-4, pgw=(pR2-pL2)/12;   // pB 126→116 (Sept 8 audit): room for the how-to-read flow
   const pMonthly=custRate(q.newCust).monthly && !q.contractStyle;   // accrual view only for repeat-purchase cadence
   /* monthly cadence: ACCRUAL view — bars are money actually collected that month (same story
      as the ROI figures). sparse cadence: EVENT view — bars are contracts signed. */
@@ -3587,10 +3636,11 @@ function buildPDF(mode){
   doc.text('$0',pL2-3,pB+1.2,{align:'right'});
 
   /* how to read this */
-  hy=pB+20;
+  hy=pB+16;
   doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
   doc.text('HOW TO READ THIS',L,hy,{charSpace:.8}); hy+=6.4;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+  pdBegin();   // queue the paragraphs; pdFlush below fits them above the disclaimer + footer
   const pdCr=custRate(q.newCust);
   const pdPerWin=fmt$(q.yearlyValue*n.share/100);
   const pdMgn=keepPct(s);
@@ -3628,21 +3678,25 @@ function buildPDF(mode){
     if(nW===1) pdDraw('One win pays for the entire year:','a single '+fmt$(q.yearlyValue)+' contract brings ~'+fmt$(q.yearlyValue*mgnW)+' in gross profit at the modeled margin — more than the year\'s program cost, which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
     else pdDraw(word+' average closed transactions more than cover the annual program cost','at the modeled '+Math.round(mgnW*100)+'% '+keepWord(s)+': '+nW+' × ~'+fmt$(q.yearlyValue*mgnW)+' gross profit vs '+fmt$(y1CostW)+' billed — which is why even '+pEp.winsYr+' win'+(pEp.winsYr>1?'s':'')+' a year is a strong return at this ticket size.');
   }
-  else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'));
+  else if(pPos>=0) pdDraw('Where the bars clear the line,','the program is earning more each month than it costs — modeled here at month '+(pPos+1)+(pBe>=0?'; the build months are fully repaid by month '+(pBe+1)+'.':'.'),2);
   pdDraw('The cost bars, in exact dollars:', !(n.share>0) ? 'a flat '+fmt$(n.price)+' retainer bills every month — one predictable number, no per-win billing of any kind; the client keeps 100% of every dollar of revenue.' : 'months 1–'+(n.rampMonth-1)+' bill '+fmt$(n.price)+' fixed only, while we build — and any customers won during the build are share-free. From month '+n.rampMonth+' the fixed fee drops to '+fmt$(n.series.perfPrice)+' and the share begins — billed only when a win lands: one proven win adds '+pdPerWin+' ('+n.share+'% × '+fmt$(q.yearlyValue)+') to that month\'s invoice (a repeat-purchase customer spreads it across their actual first-year purchases)'+(pEp.feeWaive?' — and at this contract size the fixed fee is WAIVED in any win month: the share only':'')+', and a month with no wins bills just the fixed fee. '
     +((pdCr.monthly&&!q.contractStyle)
       ? 'A ramped month lands about '+pdCr.v+' wins — some months a couple more, some fewer — and each win adds '+pdPerWin+' of share spread across its first twelve months, billed only as that customer actually spends (a typical ramped month: ~'+fmt$(n.series.ongoingCost)+'/mo all-in). '
       : 'At the modeled pace ('+pdCr.txt+' once fully ramped — year one lands fewer while we build), most months bill only the fixed '+fmt$(n.series.perfPrice)+' — the chart places each modeled win in an illustrative month (the count is modeled; the exact timing will vary), and '+(pEp.feeWaive?'in a win month the fixed fee is WAIVED — that month bills only the '+pdPerWin+' share':'a win month bills the fee plus '+pdPerWin)+'. ')
     +'Year-one total at this pattern: '+fmt$(!q.contractStyle?pCumC[11]:pEp.eventY1)+'. No proven wins in a month = no share that month.');
-  if(shareOnP) pdDraw('The profit math on a single win — in the client\'s favor, every time:','a '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+pdPerWin+' — a customer who brings ~'+fmt$(pdGross)+' in gross profit (at their '+pdMgn+'% '+keepWord(s)+') they wouldn\'t otherwise have. They keep ~'+fmt$(pdKeep)+' of that first-year profit, and the share never touches anything after year one: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.'));
-  else pdDraw('The profit math on a single win:','one new '+fmt$(q.yearlyValue)+' customer brings ~'+fmt$(pdGross)+' in gross profit (at their '+pdMgn+'% '+keepWord(s)+') they wouldn\'t otherwise have — and on a flat retainer, every dollar of it is theirs, this year and every year after.');
+  if(shareOnP) pdDraw('The profit math on a single win — in the client\'s favor, every time:','a '+n.share+'% share on a '+fmt$(q.yearlyValue)+' customer is '+pdPerWin+' — a customer who brings ~'+fmt$(pdGross)+' in gross profit (at their '+pdMgn+'% '+keepWordIn(s)+') they wouldn\'t otherwise have. They keep ~'+fmt$(pdKeep)+' of that first-year profit, and the share never touches anything after year one: '+(q.retainYears>1?'at their typical '+q.retainYears+'-year retention, years two onward are 100% theirs — and so is every referral.':'every referral and every future purchase is 100% theirs.'),2);
+  else pdDraw('The profit math on a single win:','one new '+fmt$(q.yearlyValue)+' customer brings ~'+fmt$(pdGross)+' in gross profit (at their '+pdMgn+'% '+keepWordIn(s)+') they wouldn\'t otherwise have — and on a flat retainer, every dollar of it is theirs, this year and every year after.',2);
   (function(){ const mgnA=keepPct(s), gpA=q.newCust*q.yearlyValue*mgnA/100, netA=gpA-(n.series.ongoingCost||0);
-    if(netA>0) pdDraw('The client\'s profit math at pace:','~'+fmtK(gpA)+'/mo in new gross profit at the modeled pace (at their '+mgnA+'% '+keepWord(s)+') against ~'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in program cost — ~'+fmtK(netA)+'/mo net to the client, before any real-world compounding.'); })();
-  if(n.share>0) pdDraw('Licensed verticals:','real estate, mortgage, legal, and healthcare clients should have their broker/attorney approve any revenue-share structure before signing — the flat-retainer option (revenue share off) is always available.');
+    if(netA>0) pdDraw('The client\'s profit math at pace:','~'+fmtK(gpA)+'/mo in new gross profit at the modeled pace (at their '+mgnA+'% '+keepWordIn(s)+') against ~'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in program cost — ~'+fmtK(netA)+'/mo net to the client, before any real-world compounding.',3); })();
+  if(n.share>0) pdDraw('Licensed verticals:','real estate, mortgage, legal, and healthcare clients should have their broker/attorney approve any revenue-share structure before signing — the flat-retainer option (revenue share off) is always available.',2);
   pdDraw('This projection never compounds','— the visibility asset does, but these numbers count none of it. The win pace is capped by real market demand, and normal customer turnover levels the monthly pace toward a natural ceiling of ~'+fmtK(pCeil)+'/mo'+(pSteady!=null?(pSteady>12?' (modeled to level off around month '+pSteady+', beyond this window)':' — modeled to level off around month '+pSteady)+'.':'.')+' Any real-world compounding is upside on top.');
+  /* measure the disclaimer first so the paragraph flow is fitted above it AND the footer */
+  doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
+  const discLines=doc.splitTextToSize('Modeled projections from the cited inputs on page '+inputsPg+' — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.'+(adsOnP&&aP&&aP.budget>0?' Blue segments are ads-won customers; the cost bars are all-in (program + ad spend + management). The month-by-month ads schedule and the combined stack are on page 2 — the ads plan.':''),W);
+  pdFlush(283-3-discLines.length*3.2-1);
   hy+=1;
   doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-  doc.text('Modeled projections from the cited inputs on page '+inputsPg+' — potential, not a guarantee. Every estimate is re-verified against live tracking data in the '+q.windowDays+'-day review window.'+(adsOnP&&aP&&aP.budget>0?' Blue segments are ads-won customers; the cost bars are all-in (program + ad spend + management). The month-by-month ads schedule and the combined stack are on page 2 — the ads plan.':''),L,hy,{maxWidth:W});
+  doc.text(discLines,L,hy);
 
   /* footer band */
   doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
@@ -3674,16 +3728,19 @@ function buildPDF(mode){
     y+=hA+4;
     box(L,89,hA,'COST TO WIN A CUSTOMER WITH ADS', aP.adCAC!=null?fmt$(aP.adCAC):'—', 'researched CPC ÷ conversion rate, vs the '+fmt$(aP.acqAllowed)+' allowed ('+aP.acqPct+'% of customer value) — '+(aP.adsViable?(aP.veryEfficient?'very efficient':'viable'):'inefficient: lean on SEO/GEO'), aP.adsViable?DGOLD:[165,60,40], true);
     box(L+93,89,hA,'MODELED WINS FROM ADS', aP.budget>0?crAP.v+crAP.unit:'0', 'floor-style model: the Google-led budget at the researched Google CPC through the same conversion chain — Meta\'s cheaper clicks only help', DARK, true);
-    y+=hA+7;
+    y+=hA+5.5;
 
     /* the funnel in one line — clicks → leads → customers → net profit (HOTH-referenced) */
     if(aP.budget>0){
       doc.setFont('helvetica','bold'); doc.setFontSize(7.8); doc.setTextColor(DARK[0],DARK[1],DARK[2]);
-      doc.text('THE FUNNEL:  '+Math.round(aP.clicksMo).toLocaleString()+' clicks/mo'
-        +(aP.leadsMo!=null?'  »  ~'+Math.round(aP.leadsMo)+' qualified opportunities ('+fmt$(aP.cpl)+' each)':'')
+      /* wrapped + measured (Sept 8 audit: the one-line strip ran off the page edge whenever
+         the keep-rate wording was long or the counts were big) */
+      const funLines=doc.splitTextToSize('THE FUNNEL:  '+Math.round(aP.clicksMo).toLocaleString()+' clicks/mo'
+        +(aP.leadsMo!=null?'  »  ~'+Math.round(aP.leadsMo).toLocaleString()+' qualified opportunities ('+fmt$(aP.cpl)+' each)':'')
         +'  »  '+crAP.v+crAP.unit+' customers ('+fmt$(aP.adCAC)+' each)'
-        +(aP.netMo>0?'  »  ~'+fmtK(aP.netMo)+'/mo net profit at the client\'s '+aP.mgnPct+'% '+keepWord(s)+'':''),L,y);
-      y+=6;
+        +(aP.netMo>0?'  »  ~'+fmtK(aP.netMo)+'/mo net profit at the client\'s '+aP.mgnPct+'% '+keepShort(s):''),W);
+      doc.text(funLines,L,y);
+      y+=5.6+3.4*(funLines.length-1);
     }
     /* phased schedule by month — ads carry the build, then hand off */
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
@@ -3698,7 +3755,7 @@ function buildPDF(mode){
     y+=1.6; doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3); doc.line(L,y,R,y); y+=3.6;
     doc.setFontSize(7.2);
     aP.months.forEach(function(mo){
-      if(aP.taperStart!=null && mo.m>=aP.taperStart){ doc.setFillColor(247,239,222); doc.rect(L-1,y-2.9,R-L+2,3.9,'F'); }
+      if(aP.taperStart!=null && mo.m>=aP.taperStart){ doc.setFillColor(247,239,222); doc.rect(L-1,y-2.7,R-L+2,3.6,'F'); }
       doc.setFont('helvetica', (aP.taperStart!=null&&mo.m===aP.taperStart)?'bold':'normal');
       doc.setTextColor(DARK[0],DARK[1],DARK[2]);
       doc.text(String(mo.m)+((aP.taperStart!=null&&mo.m===aP.taperStart)?'  — taper':''),acX[0],y);
@@ -3708,7 +3765,7 @@ function buildPDF(mode){
       doc.text(String(mo.orgW),acX[4],y);
       doc.text(String(mo.adsW+mo.orgW),acX[5],y);
       doc.text(fmt$((orgInv?(orgInv[mo.m-1]||0):0)+mo.budget+mo.fee),acX[6],y);
-      y+=3.9;
+      y+=3.6;
     });
     doc.setFont('helvetica','italic'); doc.setFontSize(6.8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
     /* measured advance — this note wraps to 2–3 lines depending on the taper text; a fixed
@@ -3721,7 +3778,7 @@ function buildPDF(mode){
       +(aP.lagM>0?' Closings lag the clicks at this ticket size: month-1 spend closes around month '+(aP.lagM+1)+', and the pipeline keeps closing after spend steps down.':'');
     const schLines=doc.splitTextToSize(schNote,W);
     doc.text(schLines,L,y);
-    y+=schLines.length*2.9+4.5;
+    y+=schLines.length*2.8+4.2;
 
     /* THE STACK — organic + ads + all-in, combined: the two prices never blur together */
     if(aP.organicOn && aP.budget>0 && q.price!=null){
@@ -3743,7 +3800,7 @@ function buildPDF(mode){
       skRow('All-in, month 1', '= '+fmt$(n.price+aP.budget+aP.fee)+'/mo', true);
       doc.setFont('helvetica','normal'); doc.setFontSize(8.2); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
       const mgnSk=keepPct(s), skNet=skVal*mgnSk/100-skCost;
-      const skLine=doc.splitTextToSize('Year one, combined: ~'+skCombW+' customers won ('+skOrgW+' organic + '+skAdsW+' from ads) — '+fmtK(skVal)+' in first-year value vs '+fmtK(skCost)+' invested: '+(skROI!=null?fxA(skROI):'—')+'x revenue ROAS, before margin'+(skNet>0?'; ~'+fmtK(skNet)+' net profit at the client\'s '+mgnSk+'% '+keepWord(s)+'':'')+'. The combined 12-month chart is on the next page.',W);
+      const skLine=doc.splitTextToSize('Year one, combined: ~'+skCombW+' customers won ('+skOrgW+' organic + '+skAdsW+' from ads) — '+fmtK(skVal)+' in first-year value vs '+fmtK(skCost)+' invested: '+(skROI!=null?fxA(skROI):'—')+'x revenue ROAS, before margin'+(skNet>0?'; ~'+fmtK(skNet)+' net profit at the client\'s '+mgnSk+'% '+keepWord(s)+'':'')+'. The combined 12-month chart is on page 3.',W);
       doc.text(skLine,L,y);
       y+=skLine.length*3.5+4.5;
     }
@@ -3752,20 +3809,24 @@ function buildPDF(mode){
     hy=y+2;
     doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
     doc.text('JUST GOOGLE ADS? JUST SEO/GEO? OR BOTH? — THE HONEST ANSWER',L,hy,{charSpace:.8}); hy+=6.4;
+    /* measure the benchmarks footnote FIRST — it is the floor the paragraph flow must clear
+       (Sept 8 audit: the old clamp pulled the footnote up INTO the last paragraph whenever the
+       schedule note ran long, e.g. lag verticals) */
+    doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
+    const bmLines=doc.splitTextToSize('Management-fee benchmarks: 10–20% of ad spend is the published norm (15–20% at $5–15k/mo, 12–15% above $15k; $500–$2,000 minimums) — OuterBox, NewMedia and CorePPC 2026 guides, cited with live links on the inputs page. Modeled ad wins are floors, not guarantees.',W);
+    const bmY=281-bmLines.length*3.2;
+    pdBegin();
     pdDraw('Just ads:','fast and exclusive — leads can start in days and every lead is yours alone, not shared with three competitors. The trade: it stops the moment the spend stops. You are renting visibility, never building it.');
     pdDraw('Just SEO/GEO:','a 6–18 month payoff you OWN — rankings, reviews, and AI-answer presence keep producing after the work is paid for. The asset compounds; the ramp is real.');
     pdDraw('Both:','ads bridge the ramp — they carry the customer flow while the organic program builds. '+adsSeqLine(s,q,aP,true));
-    pdDraw('The follow-up discipline caveat:','ads are only fast if lead handling is fast — a lead answered in minutes closes at multiples of one answered in hours, and slow follow-up torches ad budgets. Organic wins are more forgiving; paid ones are not.');
+    pdDraw('The follow-up discipline caveat:','ads are only fast if lead handling is fast — a lead answered in minutes closes at multiples of one answered in hours, and slow follow-up torches ad budgets. Organic wins are more forgiving; paid ones are not.',3);
     if(shareOnP) pdDraw('The revenue share never touches ads:','ads-won customers are never rev-share billed. The client pays the ad spend plus the management fee on this channel, nothing else — the revenue share bills organic program wins only.');
     else pdDraw('What ads cost, all-in:','the ad spend plus the management fee — nothing else on this channel, ever. Every dollar an ads-won customer brings is the client\'s to keep.');
-    /* the last bullet is optional — draw it only when it AND the benchmarks line still fit
-       above the footer band; the benchmarks line then draws at the true cursor (no clamp,
-       no overlap — Payton, Aug 17) */
-    if(s.footprint!=='nongeo' && hy<251) pdDraw('Foundational wins help everything at once:','a tuned Google Business Profile and a steady review pipeline lift ad quality scores, local rankings, and AI answers together — the first weeks of organic work make the ad dollars work harder too.');
+    if(s.footprint!=='nongeo') pdDraw('Foundational wins help everything at once:','a tuned Google Business Profile and a steady review pipeline lift ad quality scores, local rankings, and AI answers together — the first weeks of organic work make the ad dollars work harder too.',3);
+    pdFlush(bmY-2);
     hy+=1;
     doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
-    const bmLines=doc.splitTextToSize('Management-fee benchmarks: 10–20% of monthly ad spend is the published norm (15–20% most common at $5–15k/mo, sliding to 12–15% above $15k) with flat monthly minimums of $500–$2,000 — OuterBox, NewMedia and CorePPC 2026 pricing guides, cited with live links on the inputs page. Modeled ad wins are floors, not guarantees.',W);
-    doc.text(bmLines,L,Math.min(hy,281-bmLines.length*3.2));
+    doc.text(bmLines,L,Math.min(hy,bmY));
 
     /* footer band */
     doc.setFillColor(10,8,6); doc.rect(0,283,210,14,'F');
@@ -3817,7 +3878,7 @@ function buildPDF(mode){
     shareOnP ? ['"Can I skip the revenue share and just pay a flat fee?"',
      'Yes. The fixed-only option keeps the full monthly fee — no discounted fee, and 0% share, ever. Nearly every client chooses the share version, and it is the one we recommend: the fee steps down once wins start, and we only earn more when you provably do — it is the structure built to scale when you scale.'] : null,
     ['"What if we couldn\'t even handle that many new customers?"',
-     'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, '+(shareOnP?'ROI, and the share — ':'and ROI — ')+'is capped at that number plus an industry-specific stretch (+'+Math.round((q.stretchMult-1)*100)+'% here), because when real demand shows up, businesses find a way — but how much way depends on the business: custom construction is nearly rigid (~+10%), appointment and crew businesses stretch ~+25-30%, B2B services flex a bench ~+40%, and nationwide e-commerce rides elastic fulfillment up to ~+65%.'+(q.capApplied?' This proposal is capped at '+q.capStretch+'/mo — your stated '+s.capacity+'/mo plus that stretch — and the market supports even more: that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo plus stretch':'stays inside the industry-typical ~'+q.capAuto+'/mo for your footprint — tell us your real ceiling and we\'ll re-run it in seconds')+'.')],
+     'Then the model shouldn\'t promise them — and it doesn\'t. The calculator takes a delivery-capacity input: the most new customers you could physically take on each month (crew hours, chairs, consult slots, build slots). Every projection — customers, revenue, '+(shareOnP?'ROI, and the share — ':'and ROI — ')+'is capped at that number plus an industry-specific stretch (+'+Math.round((q.stretchMult-1)*100)+'% here), because when real demand shows up, businesses find a way — but how much way depends on the business: custom construction is nearly rigid (~+10%), appointment and crew businesses stretch ~+25-30%, B2B services flex a bench ~+40%, and nationwide e-commerce rides elastic fulfillment up to ~+65%.'+(q.capApplied?' This proposal is capped at '+q.capStretch+'/mo — your stated '+s.capacity+'/mo plus that stretch — and the market supports even more: that headroom is yours whenever you\'re ready to grow into it.':' This proposal '+(s.capacity>0?'stays inside your stated '+s.capacity+'/mo plus stretch':(q.scalableDelivery?'is not capacity-capped at all: a borderless business whose customer is a transaction worth $1,500/yr or less has no crew or consult slots to fill, so the ceiling follows the demand the program can win (~'+q.capAuto+'/mo here) — tell us if a real operational limit exists and we\'ll re-run it in seconds':'stays inside the industry-typical ~'+q.capAuto+'/mo for your footprint — tell us your real ceiling and we\'ll re-run it in seconds'))+'.')],
     ['"Our business isn\'t like other '+BENCH(s).name.toLowerCase()+'s — do generic benchmarks even fit us?"',
      'They don\'t have to — this proposal isn\'t built from a category template. Every researched proposal starts from deep research on YOUR business specifically — your prices, your market, your vertical\'s real customer values, margins, and conversion rates — then verifies each input against published 2026 benchmarks for that exact vertical. The accuracy comes from the research, not the category.'],
     ['"Do I have to sign a long contract — and what do you need to start?"',
@@ -3891,7 +3952,7 @@ function buildPDF(mode){
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
     ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce) — it anchors the published 2026 baselines every figure is verified against. On researched proposals, every input and output is researched for the client\'s specific business and vertical.'],
     ['Market footprint','How wide THIS program fights: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize. Always the scope being quoted NOW — a brand starting with 2 of its 5 cities is a 2-5 market footprint with 2 locations and demand sized to those two cities.'],
-    ['Delivery capacity (stretch cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. Projections are capped at this number plus an industry-specific stretch — deliberately optimistic, but sized to physics: nearly rigid custom construction ~+10%, appointment/crew businesses ~+25-30%, B2B services with bench flex ~+40%, nationwide e-commerce on elastic 3PL fulfillment up to ~+65% (multi-site networks add a little by load-balancing). Left unstated, an industry-typical capacity applies automatically, per location and scaled by the footprint — a custom home builder (~0.7 builds/mo) and a med spa (~30 new patients/mo) are never judged by the same ceiling.'],
+    ['Delivery capacity (stretch cap)','The most new customers the business could physically take on per month — crew hours, chairs, consult slots, build slots. Projections are capped at this number plus an industry-specific stretch — deliberately optimistic, but sized to physics: nearly rigid custom construction ~+10%, appointment/crew businesses ~+25-30%, B2B services with bench flex ~+40%, nationwide e-commerce on elastic 3PL fulfillment up to ~+65% (multi-site networks add a little by load-balancing). Left unstated, an industry-typical capacity applies automatically, per location and scaled by the footprint — a custom home builder (~0.7 builds/mo) and a med spa (~30 new patients/mo) are never judged by the same ceiling. The one deliberate exception: a borderless B2B business whose customer is a transaction worth $1,500/yr or less (lead-generation, self-serve software, digital products) has no physical throughput to cap, so its blank ceiling follows demand instead.'],
     ['Locations / service lines (units)','How many locations or distinct service lines the program covers — count what is in scope, not everything the business owns. Each adds pages, listings, and content: total cost rises, cost per location shrinks. On a 2-5 market footprint this is the NUMBER OF MARKETS in scope, and demand and delivery capacity scale with it.'],
     ['Competitor strength','How strong the businesses already ranking are (site authority, backlinks). The biggest driver of market difficulty.'],
     ['Average search rank','The client\'s average Google position for money phrases. Top-5 speeds up the ramp; page 2+ raises the cost. Blended 50/50 with the SEO visibility score.'],

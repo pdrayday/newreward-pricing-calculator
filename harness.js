@@ -579,12 +579,52 @@ async function liveTests(htmlPath){
   t('taper-sidenote: card sequencing line carries the sidenote', /modeled default, not a rule/.test(tn.card), tn.card.slice(-320));
   t('taper-sidenote: no "paying for it twice" preaching anywhere', !/paying for it twice|stops making sense|instead of running forever/.test(tn.math+tn.card));
 
+  /* SCALABLE-DELIVERY LAW (Payton, Sept 15: "if the demand supports 226/mo it inputs 226 for
+     situations like these") — borderless B2B, low-ticket transaction, capacity blank → the auto
+     ceiling follows demand; every control stays human-bound */
+  const MAP='?client=My+Accident+Payout&industry=b2b&footprint=nongeo&compstr=dominant&units=1&cpc=200&seo=1&geo=1&rank=50&seoScore=12&geoScore=5&volume=250000&volsource=aiprompt&yearly=300&years=1&convrate=2.5&margin=50&acq=15&commission=0&stay=1';
+  const capQ=async(qs)=>{ await page.goto(url+qs,{waitUntil:'load'}); return page.evaluate(()=>{const s=readState(),q=computeQuote(s);
+    return {sc:q.scalableDelivery, applied:q.capApplied, auto:q.capAuto, typ:q.capTypical, stretch:q.capStretch, demand:q.newCustDemand, newCust:q.newCust,
+            note:document.getElementById('note-capacity').innerText.replace(/\s+/g,' ')};}); };
+  const sd=await capQ(MAP);
+  t('scalable-delivery: lead-gen funnel is recognized (b2b + nongeo + $300 ticket + blank capacity)', sd.sc===true, JSON.stringify(sd).slice(0,200));
+  t('scalable-delivery: capacity no longer binds — projection equals the demand-supported pace', sd.applied===false && Math.abs(sd.newCust-sd.demand)<1e-9, 'newCust='+sd.newCust+' demand='+sd.demand);
+  t('scalable-delivery: auto ceiling is the demand number (≥ the typical rung, ≥ demand)', sd.auto>=sd.typ && sd.auto>=sd.demand && sd.auto<sd.demand+1, 'auto='+sd.auto+' typ='+sd.typ);
+  t('scalable-delivery: demand here is far above the old B2B rung (the bug that triggered the law)', sd.demand>100 && sd.typ===25, 'demand='+sd.demand+' typ='+sd.typ);
+  t('scalable-delivery: the capacity note explains it follows demand', /scales with demand|follows the demand/i.test(sd.note), sd.note.slice(0,220));
+  const sdA=await capQ(MAP+'&capacity=40');
+  t('scalable-delivery control: a stated capacity always wins (40 → cap 60 binds)', sdA.sc===false && sdA.applied===true && sdA.stretch===60, JSON.stringify(sdA).slice(0,160));
+  const sdB=await capQ('?industry=b2b&footprint=nongeo&volume=250000&cpc=200&rank=50&seoScore=12&geoScore=5&yearly=8000&years=4&convrate=2.5&seo=1&geo=1&stay=1');
+  t('scalable-delivery control: an $8k/yr B2B customer stays human-bound (typical 25/mo rung)', sdB.sc===false && sdB.auto===25, JSON.stringify(sdB).slice(0,160));
+  const sdC=await capQ('?industry=local&footprint=national&volume=250000&cpc=6&rank=50&seoScore=12&geoScore=5&yearly=300&years=1&convrate=2.5&seo=1&geo=1&stay=1');
+  t('scalable-delivery control: a local-service business stays human-bound even nationally at $300', sdC.sc===false, JSON.stringify(sdC).slice(0,160));
+  const sdD=await capQ('?industry=b2b&footprint=nongeo&volume=250000&cpc=200&rank=50&seoScore=12&geoScore=5&yearly=2000&years=1&convrate=2.5&seo=1&geo=1&stay=1');
+  t('scalable-delivery control: a $2,000/yr B2B customer (above the $1,500 transaction line) stays human-bound', sdD.sc===false && sdD.auto===25, JSON.stringify(sdD).slice(0,160));
+
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const noAds=await page.evaluate(()=>({svg:document.getElementById('o-chart').innerHTML,
     legAds:document.getElementById('legend-ads').hidden, legCost:document.getElementById('legend-cost').textContent}));
   t('chart control: no ads segments when ads off', !/bar-ads/.test(noAds.svg));
   t('chart control: ads legend hidden, cost key restored', noAds.legAds===true && /fixed \+ share/.test(noAds.legCost), noAds.legCost);
+
+  /* PDF fit-to-page flow (Sept 8 audit): the how-to-read (p3) and honest-answer (p2) sections
+     must keep every paragraph AND land above the footer/footnote — no dropped copy, font ≥ 7.8 */
+  for(const [nm,qs] of [
+    ['blake real', '?industry=highticket&footprint=metro&compstr=strong&volume=5000&cpc=4&capacity=2&yearly=50000&convrate=0.1&margin=50&acq=15&commission=0&seo=1&geo=1&ads=1&stay=1'],
+    ['ht commission share 3yr', '?industry=highticket&footprint=multi&volume=6000&cpc=9&convrate=1.2&yearly=30000&years=3&capacity=6&commission=12&seo=1&geo=1&ads=1&stay=1'],
+    ['local national big funnel', '?industry=local&footprint=national&volume=80000&cpc=3&commission=6&seo=1&geo=1&ads=1&stay=1'],
+    ['no ads share', '?industry=highticket&yearly=12000&commission=10&seo=1&geo=1&stay=1'],
+  ]){
+    await page.goto(url+qs,{waitUntil:'load'});
+    await page.addScriptTag({path:'node_modules/jspdf/dist/jspdf.umd.min.js'});
+    const log=await page.evaluate(()=>new Promise(res=>{ window.__pdLog=[];
+      const ro=window.openPdfPreview; window.openPdfPreview=function(){ window.openPdfPreview=ro; res(window.__pdLog); };
+      try{ buildPDF('preview'); }catch(e){ res([{err:e.message}]); } }));
+    t('pdf flow ['+nm+']: builds and logs at least one fitted section', log.length>0 && !log[0].err, JSON.stringify(log).slice(0,200));
+    t('pdf flow ['+nm+']: no paragraph dropped', log.every(x=>x.dropped&&x.dropped.length===0), JSON.stringify(log.map(x=>x.dropped)));
+    t('pdf flow ['+nm+']: font never below 7.8pt', log.every(x=>x.fs>=7.8), JSON.stringify(log.map(x=>x.fs)));
+  }
 
   await browser.close();
 }
