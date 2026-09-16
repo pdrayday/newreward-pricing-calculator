@@ -548,9 +548,24 @@ async function liveTests(htmlPath){
   await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const ai2=await page.evaluate(()=>computeQuote(readState()).aiLift);
   t('AI demand lift varies by vertical (b2b 1.18 vs local 1.08)', Math.abs(ai1-1.18)<1e-9 && Math.abs(ai2-1.08)<1e-9, ai1+' / '+ai2);
+  /* ONE ORGANIC PROGRAM (Payton, Sept 16: "seo is foundational for geo… doing them separately
+     won't make sense") — the two scope switches are gone; one switch drives both, and any
+     legacy link carrying either scope loads the whole program */
   await page.goto(url+'?industry=b2b&seo=0&geo=1&stay=1',{waitUntil:'load'});
-  const ai3=await page.evaluate(()=>computeQuote(readState()).aiConvLift);
-  t('AI close premium uses the vertical coefficient (b2b GEO-only = 1.55)', Math.abs(ai3-1.55)<1e-9, ai3);
+  const op1=await page.evaluate(()=>{const s=readState(),q=computeQuote(s); return {n:q.nScopes, seo:s.seo, geo:s.geo, conv:q.aiConvLift,
+    vis:!!document.getElementById('scopeOrganic'), seoHidden:document.getElementById('scopeSeo').hidden, geoHidden:document.getElementById('scopeGeo').hidden, on:document.getElementById('scopeOrganic').checked};});
+  t('one program: a legacy GEO-only link upgrades to the full SEO + AEO/GEO program', op1.n===2 && op1.seo && op1.geo && op1.on, JSON.stringify(op1));
+  t('one program: AI close premium is the dual-program slice, never the GEO-only 1.55', op1.conv>1 && op1.conv<1.55, op1.conv);
+  t('one program: a single organic switch is visible and the old two are hidden mirrors', op1.vis && op1.seoHidden && op1.geoHidden);
+  await page.goto(url+'?industry=local&organic=0&ads=1&adbudget=2000&stay=1',{waitUntil:'load'});
+  const op2=await page.evaluate(()=>{const s=readState(),q=computeQuote(s); return {n:q.nScopes, on:document.getElementById('scopeOrganic').checked, price:q.price};});
+  t('one program: organic=0 (or seo=0&geo=0) is the ads-only quote', op2.n===0 && !op2.on && op2.price==null, JSON.stringify(op2));
+  await page.goto(url+'?industry=local&stay=1',{waitUntil:'load'});
+  const op3=await page.evaluate(()=>{ const sw=document.getElementById('scopeOrganic'); sw.checked=false; sw.dispatchEvent(new Event('change',{bubbles:true}));
+    const a=computeQuote(readState()).nScopes; sw.checked=true; sw.dispatchEvent(new Event('change',{bubbles:true})); const b=computeQuote(readState()).nScopes; return {off:a,on:b, seo:document.getElementById('scopeSeo').checked, geo:document.getElementById('scopeGeo').checked}; });
+  t('one program: flipping the switch drives both mirrors (0 scopes off, 2 on)', op3.off===0 && op3.on===2 && op3.seo && op3.geo, JSON.stringify(op3));
+  const lblOP=await page.evaluate(()=>document.body.innerText);
+  t('one program: no separate "SEO included" / "AEO / GEO included" rows on the page', !/SEO included|AEO \/ GEO included/.test(lblOP) && /SEO \+ AEO\/GEO program included/.test(lblOP));
 
   /* commission → effective keep-rate on the surfaces (Payton, Aug 17: "are you mistaking the
      sales commission input for the percent he charges?") */

@@ -770,19 +770,17 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   <!-- 02 SERVICE SCOPE & MARKET (the cost-to-deliver levers) -->
   <div class="section">
     <div class="sec-head"><div class="sec-num">02</div><div class="sec-title">Service Scope, Market Value &amp; Search Demand</div></div>
-    <div class="hintnote" style="margin-top:0"><b>These set the recommended price.</b> What you deliver (SEO / GEO), the industry, the market footprint, how many locations or service lines, and how strong the competitors are — together they drive the cost to deliver.</div>
-    <label class="toggle-row" for="scopeSeo">
-      <span class="tlabel">SEO included
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Classic search engine optimization: Google rankings, local map pack, on-page work, content, and authority building so the client gets found.</span></button>
+    <div class="hintnote" style="margin-top:0"><b>These set the recommended price.</b> The organic program (SEO + AEO/GEO, always delivered together), the industry, the market footprint, how many locations or service lines, and how strong the competitors are — together they drive the cost to deliver.</div>
+    <label class="toggle-row" for="scopeOrganic" style="margin-bottom:4px">
+      <span class="tlabel">SEO + AEO/GEO program included
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">The organic program, delivered as <b>one</b> piece of work: classic search engine optimization (Google rankings, the local map pack, on-page work, content, authority) together with answer &amp; generative engine optimization (being the business ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask). SEO is the foundation GEO stands on — AI engines cite the same authority, content, and rankings that classic search rewards — so the two are never sold or priced separately. OFF = an ads-only quote.</span></button>
       </span>
-      <span class="switch"><input type="checkbox" id="scopeSeo" checked><span class="slider"></span></span>
+      <span class="switch"><input type="checkbox" id="scopeOrganic" checked><span class="slider"></span></span>
     </label>
-    <label class="toggle-row" for="scopeGeo" style="margin-bottom:4px">
-      <span class="tlabel">AEO / GEO included
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Answer & generative engine optimization: making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.</span></button>
-      </span>
-      <span class="switch"><input type="checkbox" id="scopeGeo" checked><span class="slider"></span></span>
-    </label>
+    <!-- SEO and GEO are one program (Payton, Sept 16): these mirrors keep every downstream
+         seo/geo code path and legacy ?seo=&geo= links working — both always follow the switch above -->
+    <input type="checkbox" id="scopeSeo" checked hidden aria-hidden="true" tabindex="-1">
+    <input type="checkbox" id="scopeGeo" checked hidden aria-hidden="true" tabindex="-1">
     <label class="toggle-row" for="scopeShare" style="margin-bottom:4px">
       <span class="tlabel">Revenue share included
         <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">ON: the performance partnership — the full fee during the build, then a reduced base plus a share of each proven new customer's first-year value, billed only as wins land. OFF: a straightforward flat retainer — the full fixed fee every month, 0% of client revenue, no fee drop.</span></button>
@@ -2781,7 +2779,7 @@ function render(){
   let txt;
   if(q.price==null && adsOn){
     const aS=adsState(s,q,n.rampMonth);
-    txt = who+' is quoted ads-only — Google + Meta ads at '+(aS.budget>0?fmt$(aS.budget)+'/mo in ad spend plus '+fmt$(aS.fee)+'/mo management, starting month 1 with no ramp':'a recommended $0 budget: ads are inefficient at these economics')+'. '+adsSeqLine(s,q,aS)+' Turn on SEO or AEO/GEO to see the organic program beside it.';
+    txt = who+' is quoted ads-only — Google + Meta ads at '+(aS.budget>0?fmt$(aS.budget)+'/mo in ad spend plus '+fmt$(aS.fee)+'/mo management, starting month 1 with no ramp':'a recommended $0 budget: ads are inefficient at these economics')+'. '+adsSeqLine(s,q,aS)+' Turn on the SEO + AEO/GEO program to see it beside the ads.';
   } else if(q.price==null){
     txt = who+' needs at least one service selected — turn on SEO, AEO/GEO, or both to build the quote.';
   } else {
@@ -2807,7 +2805,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-69';
+const BUILD='NR-20260814-70';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2937,6 +2935,7 @@ function resetAll(){
   document.getElementById('footprint').value='local';
   document.getElementById('compstr').value='moderate';
   document.getElementById('volsource').value='aiprompt';
+  document.getElementById('scopeOrganic').checked = true;
   document.getElementById('scopeSeo').checked = true;
   document.getElementById('scopeGeo').checked = true;
   document.getElementById('scopeAds').checked = false;
@@ -3883,7 +3882,9 @@ function buildPDF(mode){
     ['"Can SEO/GEO really return 10×? That number seems high."',
      'They can — and the economics are why. Once you rank, in Google or in AI answers, every additional customer arrives without buying another click, so the return on a fixed monthly fee really can reach 10× and beyond. Your exact multiple depends on industry, deal size, margins, and footprint — a $500,000 custom home needs a couple of wins a year to outrun the fee, while a $900/yr service needs steady volume — which is exactly why this calculator prices from your inputs, not a template. Every figure is modeled against published 2026 projections, capped conservatively, and re-verified against your live data at the review window.'],
     ['"What exactly does New Reward do — and what is GEO?"',
-     'We score how you show up in Google and AI answers, fix what holds you back, and prove the improvements from your own data — one path from gap to growth. SEO earns rankings in classic Google search; GEO (generative-engine optimization, also called AEO) shapes how AI systems like ChatGPT, Perplexity, Gemini, and Claude describe and recommend your brand. This program runs both together.'],
+     'We score how you show up in Google and AI answers, fix what holds you back, and prove the improvements from your own data — one path from gap to growth. SEO earns rankings in classic Google search; GEO (generative-engine optimization, also called AEO) shapes how AI systems like ChatGPT, Perplexity, Gemini, and Claude describe and recommend your brand. They are one program, always delivered together: SEO is the foundation GEO stands on — AI engines cite the same authority, content, and rankings that classic search rewards — so we never sell one without the other.'],
+    ['"Can I buy SEO or GEO on its own?"',
+     'No — on purpose. AI engines don\'t invent their answers; they cite what already ranks and what already carries authority. GEO without SEO has nothing to stand on, and SEO without GEO leaves the fastest-growing slice of demand (buyers who ask AI directly) to a competitor. Splitting them would also mean paying for the shared foundation twice — the technical, content, and authority work is the same work. So the organic program is priced once, as one piece of work; the only real choices are the footprint you start with, the revenue share vs. a flat fee, and whether to add Google + Meta ads alongside it.'],
     ['"Does the projected growth just climb forever?"',
      'No. The visibility asset itself does compound — authority, content, and AI presence keep strengthening over time — but this projection counts none of it. The modeled win pace is capped by real market demand (monthly searches × a capped share of clicks), and customer turnover pulls the monthly pace toward a natural ceiling where new wins roughly equal customers lost. Growth is front-loaded by the ramp, then levels to a steady pace — so any real-world compounding is pure upside on top of these numbers. Markets with faster turnover — e-commerce, national — level out sooner; geo-bound businesses hold a local ceiling.'],
     shareOnP ? ['"Can I skip the revenue share and just pay a flat fee?"',
@@ -3895,7 +3896,7 @@ function buildPDF(mode){
     ['"Do I have to sign a long contract — and what do you need to start?"',
      'No — there are no contracts, period. We do ask that you stay at least 6 months, because SEO and GEO compound and the results need that runway. You stay because it works, not because paper says so. To start, we need access to your site, analytics, and the profiles we\'ll work on (Google Business, listings, review platforms) — we confirm each connection before claiming anything is live, and you approve work before it ships.'],
     ['"Can we start with one thing instead of everything?"',
-     'Yes — in two ways. On services: begin with SEO only or AEO/GEO only, recommending whichever fits your needs, budget, market, and industry — and steering you away from what you don\'t need yet. On territory: start by winning one local area before tackling a multi-market or metro program — a smaller footprint means less demand to chase and less to build, so a lower monthly fee. Start where the math is tightest, then expand as results come in.'],
+     'Yes — on territory and on paid media, not by splitting the organic work. SEO and AEO/GEO are one program (SEO is the foundation GEO stands on, so a half-program would cost more and deliver less). What you can scale is the footprint: start by winning one local area before tackling a multi-market or metro program — a smaller footprint means less demand to chase and less to build, so a lower monthly fee. And Google + Meta ads are optional on top, added only where the math says they are efficient for your business. Start where the math is tightest, then expand as results come in.'],
     ['"How do things actually get ranked?"',
      'Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.'],
     (adsOnP&&aP&&aP.budget>0) ? ['"Why is the ad budget capped — and how does the ads management fee work?"',
@@ -3958,8 +3959,9 @@ function buildPDF(mode){
   const gTop=29;
 
   const GLOSS=[
-    ['SEO — Search Engine Optimization','Winning traditional Google results: rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
-    ['AEO / GEO — Answer & Generative Engine Optimization','Making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask.'],
+    ['The organic program — SEO + AEO/GEO','One piece of work, never sold in halves: classic search optimization and answer/generative-engine optimization delivered together. SEO is the foundation GEO stands on — AI engines cite the same authority, content, and rankings that classic search rewards — so the program is priced once, as a whole. Paid ads are the only optional add-on.'],
+    ['SEO — Search Engine Optimization','The search half of the organic program: winning traditional Google results — rankings, the local map pack, on-page work, content, and site authority so customers find the business.'],
+    ['AEO / GEO — Answer & Generative Engine Optimization','The AI half of the organic program: making the client the business that ChatGPT, Gemini, Perplexity, and Google AI Overviews recommend when customers ask. Built on the SEO foundation — never delivered without it.'],
     ['Search phrase or city','The anchor phrase a customer types. A label only — the quote is sized on total phrase-cluster demand, not this single query.'],
     ['Industry model','The business type (local service, high-ticket local, ultra high-ticket, B2B/SaaS, e-commerce) — it anchors the published 2026 baselines every figure is verified against. On researched proposals, every input and output is researched for the client\'s specific business and vertical.'],
     ['Market footprint','How wide THIS program fights: one local market, 2-5 markets, a major metro/region, national (many local markets at once), or online/non-geo (borderless e-commerce and SaaS). Wider = more demand, competitors, and pages to optimize. Always the scope being quoted NOW — a brand starting with 2 of its 5 cities is a 2-5 market footprint with 2 locations and demand sized to those two cities.'],
@@ -3970,7 +3972,7 @@ function buildPDF(mode){
     ['SEO visibility score','0-100 visibility in traditional Google search TODAY — what the client already captures, not a quality grade. The projection only counts new customers above this baseline, so lower = bigger gap = more new wins available (and more build work: higher fee, longer ramp). Pulled toward what the rank implies. Carries 65% of the winnable-demand blend.'],
     ['AEO/GEO visibility score','0-100: how often AI assistants mention or recommend the client today. Lower = more of the AI-driven demand is still winnable — a 7/100 honestly projects MORE new wins than a 70/100, because a 70/100 client already captures most of those buyers (and the model never counts or shares what they already win). Most local businesses score under 25. Carries 35% of the winnable-demand blend.'],
     ['Visibility gap','100 minus the visibility score — the untapped demand left to win. Drives both the revenue upside and the effort required.'],
-    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. With AEO/GEO in scope, demand is lifted by a vertical-specific +8–18% — buyers who ask AI assistants directly are demand Google\'s counters never see (B2B research-heavy verticals highest, urgent local services lowest; 2026 studies put AI Overviews alone on ~50% of queries), and that slice only grows.'],
+    ['Estimated phrase volume','Combined monthly searches for the target phrase plus its close variants. Left blank, it is estimated from industry and footprint. Because AEO/GEO is always in scope, demand is lifted by a vertical-specific +8–18% — buyers who ask AI assistants directly are demand Google\'s counters never see (B2B research-heavy verticals highest, urgent local services lowest; 2026 studies put AI Overviews alone on ~50% of queries), and that slice only grows.'],
     ['Volume source','Where the search-demand number came from. Demand measured in tools like Keyword Planner, Semrush, or GSC counts in full; estimates are weighted conservatively so demand is never overstated — and the confidence weighting is shown right in the model line.'],
     ['CPC — cost per click','What one Google Ads click costs for this phrase. High CPC signals a valuable, competitive market. Left blank, an industry-typical CPC is used automatically.'],
     adsOnP ? ['Half-the-market click ceiling','A spending guardrail on the ad budget: it may never buy more than half of all the clicks this market produces in a month (half of total searches × cost per click) — past that point, extra spend chases people who aren\'t searching. Even a manually raised budget only gets credit for the wins that ceiling\'s clicks can deliver.'] : null,
@@ -4056,8 +4058,9 @@ function buildPDF(mode){
 
 /* scope toggles define a different program — clear any negotiated overrides
    so the recommended price always responds to SEO/GEO on/off */
-['scopeSeo','scopeGeo','scopeShare'].forEach(id=>{
-  document.getElementById(id).addEventListener('change', ()=>{ priceDirty=false; shareDirty=false; rampDirty=false; render(); });
+function syncOrganic(){ const on=document.getElementById('scopeOrganic').checked; document.getElementById('scopeSeo').checked=on; document.getElementById('scopeGeo').checked=on; }
+['scopeOrganic','scopeShare'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{ syncOrganic(); priceDirty=false; shareDirty=false; rampDirty=false; render(); });
 });
 /* the ad-budget edit flag must land BEFORE the generic render hook below fires, or the
    auto value would overwrite the keystroke mid-typing */
@@ -4420,9 +4423,14 @@ function applyPrefill(qs){
     try{ arr=JSON.parse(raw); }catch(e1){ try{ arr=JSON.parse(decodeURIComponent(raw)); }catch(e2){ arr=null; } }
     if(Array.isArray(arr)){ researchRationale={}; arr.forEach(function(o){ if(o&&o.f) researchRationale[o.f]={w:o.w||'',s:Array.isArray(o.s)?o.s:(o.s?[String(o.s)]:[])}; }); }
   }
-  if(p.has('seo')) document.getElementById('scopeSeo').checked = p.get('seo')!=='0';
+  if(p.has('seo')||p.has('geo')||p.has('organic')){
+    /* SEO + GEO are one program: a link carrying either scope (or organic=1) turns the whole
+       program on; only seo=0&geo=0 (or organic=0) means ads-only */
+    const on = p.has('organic') ? p.get('organic')!=='0' : ((p.has('seo')&&p.get('seo')!=='0')||(p.has('geo')&&p.get('geo')!=='0'));
+    document.getElementById('scopeOrganic').checked = on;
+    document.getElementById('scopeSeo').checked = on; document.getElementById('scopeGeo').checked = on;
+  }
   if(p.has('revshare')) document.getElementById('scopeShare').checked = p.get('revshare')!=='0';
-  if(p.has('geo')) document.getElementById('scopeGeo').checked = p.get('geo')!=='0';
   if(p.has('ads')) document.getElementById('scopeAds').checked = p.get('ads')!=='0';
   if(p.has('adbudget')){ var abv=parseFloat(String(p.get('adbudget')).replace(/,/g,'')); if(!isNaN(abv)&&abv>=0){ document.getElementById('adbudget').value=Math.round(abv).toLocaleString('en-US'); adBudgetDirty=true; } }
   /* negotiated terms travel with the quote link */
