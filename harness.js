@@ -601,6 +601,18 @@ async function liveTests(htmlPath){
   const sdD=await capQ('?industry=b2b&footprint=nongeo&volume=250000&cpc=200&rank=50&seoScore=12&geoScore=5&yearly=2000&years=1&convrate=2.5&seo=1&geo=1&stay=1');
   t('scalable-delivery control: a $2,000/yr B2B customer (above the $1,500 transaction line) stays human-bound', sdD.sc===false && sdD.auto===25, JSON.stringify(sdD).slice(0,160));
 
+  /* BOOK CHECK (Payton, Sept 16 — Closer Launch): retained B2B services show the steady-state
+     account count their intake implies; scalable-delivery and one-year verticals do not */
+  const CL='?client=Closer+Launch&industry=b2b&footprint=nongeo&compstr=strong&units=1&cpc=12&seo=1&geo=1&rank=50&seoScore=12&geoScore=5&volume=5000&volsource=aiprompt&capacity=3&yearly=150000&years=2&convrate=0.75&margin=40&acq=20&commission=10&stay=1';
+  const bk=await capQ(CL);
+  const bkNum=(bk.note.match(/~(\d+) active accounts/)||[])[1];
+  t('book check: Closer Launch note states the implied steady-state book', /Book check:/.test(bk.note) && bkNum!=null, bk.note.slice(-260));
+  t('book check: the book equals pace × retention years × 12 (~107 here)', bkNum!=null && Math.abs(+bkNum-Math.round(bk.newCust*2*12))<=1, 'book='+bkNum+' pace='+bk.newCust);
+  const bk1=await capQ(MAP);
+  t('book check: absent for scalable-delivery lead-gen (one-year, automated)', !/Book check:/.test(bk1.note));
+  const bk2=await capQ('?industry=highticket&yearly=12000&years=3&capacity=10&seo=1&geo=1&stay=1');
+  t('book check: absent outside B2B (a med spa\'s patient book is not an account book)', !/Book check:/.test(bk2.note));
+
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const noAds=await page.evaluate(()=>({svg:document.getElementById('o-chart').innerHTML,
