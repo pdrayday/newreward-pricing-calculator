@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================================
-   NewReward pricing calculator — ADS FEATURE HARNESS (build NR-20260812-53+)
+   NewReward pricing calculator — regression harness (build NR-20260916-71)
 
    independent(): a from-the-spec reimplementation of the Google+Meta ads math
    (adCAC / budgetAuto / adFee / adCust / phased taper). It deliberately does
@@ -22,23 +22,29 @@ function independent(q, acqPct, budgetIn){
   const feePct = b => b>15000 ? 0.12 : 0.15;
   const fee = b => b>0 ? Math.max(500, Math.round(b*feePct(b)/50)*50) : 0;
   const cpc=q.cpcEff||0, close=q.closeRate;
-  const adCAC=(cpc>0&&close>0)? cpc/close : null;                 // cost to win one customer with ads
+  const adCAC=(cpc>0&&close>0)? cpc/close : null;                 // media-only CAC
   const acqAllowed=(acqPct!=null?acqPct:15)/100*q.yearlyValue;    // what the client says a customer may cost
-  const adsViable=adCAC!=null && adCAC<=acqAllowed;
-  const veryEfficient=adCAC!=null && adCAC<=0.5*acqAllowed;
+  const organicOn=q.nScopes>0;
+  const roomAtPace=Math.max(0,q.capStretch-(organicOn?q.newCust:0));
+  const noRoom=organicOn&&roomAtPace<=1e-9;
   const clickCeil=0.5*q.vol*cpc;                                  // never buy more than half the market's clicks
-  let budgetAuto=0;
-  if(adsViable){
-    let b=Math.max(500, Math.max(0,q.capStretch-q.newCust)*adCAC); // fill remaining capacity; $500 soft floor
+  let budgetCandidate=0;
+  if(adCAC!=null&&roomAtPace>0){
+    let b=Math.max(500,roomAtPace*adCAC);                          // fill remaining capacity; $500 soft floor
     b=Math.min(b, clickCeil);                                      // hard ceiling
     b=Math.round(b/250)*250;                                       // $250 snap
     if(b>clickCeil) b-=250;                                        // snap never breaches the ceiling
-    budgetAuto=Math.max(0,b);
+    budgetCandidate=Math.max(0,b);
   }
-  const budget=budgetIn!=null? Math.max(0,budgetIn) : budgetAuto;
-  const adFull=(cpc>0&&budget>0)? Math.min(budget/cpc*close, q.capStretch) : 0;   // floor-style model
+  const testedBudget=budgetIn!=null?Math.max(0,budgetIn):budgetCandidate;
+  const testedWins=(cpc>0&&testedBudget>0)?Math.min(testedBudget/cpc*close,organicOn?roomAtPace:q.capStretch):0;
+  const allInCAC=testedWins>0?(testedBudget+fee(testedBudget))/testedWins:null;
+  const adsViable=!noRoom&&allInCAC!=null&&allInCAC<=acqAllowed;
+  const veryEfficient=adsViable&&allInCAC<=0.5*acqAllowed;
+  const budgetAuto=adsViable?budgetCandidate:0;
+  const budget=budgetIn!=null?testedBudget:budgetAuto;
+  const adFull=(cpc>0&&budget>0)? Math.min(budget/cpc*close, organicOn?roomAtPace:q.capStretch) : 0;   // floor-style model
   const roiAds=(budget+fee(budget))>0 ? adFull*q.yearlyValue/(budget+fee(budget)) : null;
-  const organicOn=q.nScopes>0;
   const rm=q.rampMonth, span=q.rampSpan||3, rampFull=rm+span-1;
   const fW=m=> m===1?0:Math.min(1,(m-1)/(rm+span-2));
   const demandLimited=!q.capApplied;
@@ -86,7 +92,7 @@ function independent(q, acqPct, budgetIn){
   const mgnPct=Math.max(5,(q.margin||0)-(q.commission||0));   // effective keep-rate (margin net of the client's own sales commission)
   const grossMo=adFull*q.yearlyValue*(mgnPct||0)/100;
   const netMo=grossMo-(budget+fee(budget));
-  return {adCAC, acqAllowed, adsViable, veryEfficient, budgetAuto, budget, fee:fee(budget),
+  return {adCAC, allInCAC, acqAllowed, adsViable, veryEfficient, roomAtPace, noRoom, budgetAuto, budget, fee:fee(budget),
           adFull, roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart,
           taperDone:taperStart!=null?Math.min(12,taperStart+2):null, rampFull, organicOn, months,
           adsWinsYr, adsCostYr, adsWinsYrInt, lagM,
@@ -114,14 +120,13 @@ function edgeTests(){
   t('inviable vertical: auto budget is $0', a.budgetAuto===0);
   t('inviable vertical: fee $0 at $0 budget', a.fee===0);
 
-  // -- viable vertical: local defaults (cpc6/conv3.5%, $1,200/yr, acq15) -> CAC ~171 vs 180
+  // -- fee-aware viability: media CAC squeaks under the limit, but all-in CAC does not
   const loc={...base, cpcEff:6, closeRate:0.035, yearlyValue:1200, capStretch:75, newCust:20, vol:1100};
   a=independent(loc,15,null);
-  t('viable vertical: adCAC ~171', near(a.adCAC,6/0.035,0.01));
-  t('viable vertical: viable', a.adsViable);
-  t('viable vertical: not very-efficient (CAC > half allowed)', !a.veryEfficient);
-  t('viable: auto respects click ceiling (0.5 x 1100 x $6 = $3,300)', a.budgetAuto<=a.clickCeil, a.budgetAuto+' vs ceil '+a.clickCeil);
-  t('viable: auto is $250-snapped', a.budgetAuto%250===0, a.budgetAuto);
+  t('fee-aware: media CAC ~171', near(a.adCAC,6/0.035,0.01));
+  t('fee-aware: all-in CAC includes management', a.allInCAC>a.adCAC, a.allInCAC+' vs '+a.adCAC);
+  t('fee-aware: not viable after management fee', !a.adsViable);
+  t('fee-aware: auto budget is $0', a.budgetAuto===0, a.budgetAuto);
 
   // -- very efficient: ultra (cpc9/conv0.25% -> CAC 3600 vs 10% x 250k = 25k)
   const ult={...base, cpcEff:9, closeRate:0.0025, yearlyValue:250000, capStretch:0.77, newCust:0.3,
@@ -131,10 +136,10 @@ function edgeTests(){
   t('ultra: scale mode (very efficient + demand headroom) -> no taper', a.scaleMode && a.taperStart==null);
   t('ultra: budget floor $500 applies (0.47 slots x $3,600 = $1,692 -> snap)', a.budgetAuto>=500 && a.budgetAuto%250===0, a.budgetAuto);
 
-  // -- budget floor: remaining capacity ~0 -> $500 soft floor (capacity-bound business)
+  // -- no remaining capacity: do not manufacture a $500 recommendation
   const capB={...loc, capApplied:true, newCust:75, capStretch:75};   // organic fills capacity at pace
   a=independent(capB,15,null);
-  t('budget floor: capacity filled -> auto lands on the $500 floor', a.budgetAuto===500, a.budgetAuto);
+  t('capacity filled: auto budget is $0', a.noRoom && a.budgetAuto===0, a.budgetAuto);
 
   // -- budget ceiling: tiny market -> ceiling binds below the floor and wins (hard cap)
   const tiny={...loc, vol:100, capStretch:75, newCust:2};            // ceil = 0.5 x 100 x $6 = $300
@@ -450,7 +455,7 @@ async function liveTests(htmlPath){
     proj:document.getElementById('o-proj-label').textContent,
     ocHidden:document.getElementById('ocards-kicker').hidden,
     ocTxt:document.getElementById('ocards-kicker').textContent}));
-  t('labels: ROI kicker says SEO/GEO organic', /SEO\/GEO organic/.test(lbl.kick), lbl.kick);
+  t('labels: revenue ROAS kicker says SEO/GEO organic', /Revenue ROAS — SEO\/GEO organic/.test(lbl.kick), lbl.kick);
   t('labels: price label says SEO/GEO', /^SEO\/GEO fixed/.test(lbl.price), lbl.price);
   t('labels: share label says organic wins only', /organic wins only/.test(lbl.share), lbl.share);
   t('labels: projection label says combined', /SEO\/GEO \+ ads combined/.test(lbl.proj), lbl.proj);
@@ -466,10 +471,22 @@ async function liveTests(htmlPath){
     proj:document.getElementById('o-proj-label').textContent,
     ocHidden:document.getElementById('ocards-kicker').hidden,
     fan:document.getElementById('flat-ads-note').textContent}));
-  t('labels control (ads off): kicker plain', lblOff.kick==='Projected ROI', lblOff.kick);
+  t('labels control (ads off): kicker plain', lblOff.kick==='Projected Revenue ROAS', lblOff.kick);
   t('labels control (ads off): price label plain', lblOff.price==='Fixed monthly investment');
   t('labels control (ads off): projection label plain', lblOff.proj==='12-Month Projection');
   t('labels control (ads off): pace-cards kicker hidden + flat note empty', lblOff.ocHidden===true && lblOff.fan==='');
+
+  /* Internal visibility scores are authoritative inputs. Rank affects difficulty/ramp only,
+     and geographically bounded B2B links keep the footprint they were researched for. */
+  await page.goto(url+'?industry=b2b&footprint=local&rank=1&seoScore=12&geoScore=4&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  const auth=await page.evaluate(()=>{const s=readState(),q=computeQuote(s); return {
+    footprint:s.footprint, seoEntered:q.seoEntered, seoEff:q.seoEff,
+    options:[...document.getElementById('footprint').options].map(o=>({v:o.value,d:o.disabled})),
+    note:document.getElementById('note-seo').innerText.replace(/\s+/g,' ')};});
+  t('audit score: calculator uses entered SEO score exactly despite rank 1', auth.seoEntered===12 && auth.seoEff===12, JSON.stringify(auth));
+  t('audit score: UI states the internal audit is used directly', /used directly/i.test(auth.note), auth.note);
+  t('B2B footprint: local researched scope remains local', auth.footprint==='local', auth.footprint);
+  t('B2B footprint: all footprint choices remain available', auth.options.every(o=>!o.d), JSON.stringify(auth.options));
 
   /* equal bills draw equal bars (Payton, Aug 17): contract-style chart, ads on — any two
      months with the same all-in bill must render cost bars of the same height */

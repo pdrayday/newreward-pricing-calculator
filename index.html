@@ -789,7 +789,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     </label>
     <label class="toggle-row" for="scopeAds" style="margin-bottom:4px">
       <span class="tlabel">Google + Meta ads included
-        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Adds a managed paid-ads program (Google + Meta) alongside the organic work. The calculator computes whether ads are efficient for <b>this</b> business — what a customer costs to win with ads (their researched click cost ÷ conversion rate) against their acquisition budget — and recommends a monthly budget that fills the capacity organic isn't using yet. The client pays the ad spend plus a management fee: 15% of spend (12% above $15k/mo), $500/mo minimum — inside the published 10–20%-of-spend 2026 agency norm. Ads always bill exactly that way — spend + management fee, never a percentage of anything.</span></button>
+        <button class="tip" type="button" aria-label="help" onclick="event.preventDefault()">?<span class="tipbox">Adds a managed paid-ads program (Google + Meta) alongside the organic work. The calculator tests the <b>all-in</b> cost to win a customer — media spend plus management — against the client's acquisition budget, then recommends spend only when delivery capacity remains after the organic program. The client pays the ad spend plus a management fee: 15% of spend (12% above $15k/mo), $500/mo minimum — inside the published 10–20%-of-spend 2026 agency norm. Ads always bill exactly that way — spend + management fee, never a percentage of anything.</span></button>
       </span>
       <span class="switch"><input type="checkbox" id="scopeAds"><span class="slider"></span></span>
     </label>
@@ -880,16 +880,17 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   <!-- 03 CURRENT VISIBILITY -->
   <div class="section">
     <div class="sec-head"><div class="sec-num">03</div><div class="sec-title">Current Visibility</div></div>
+    <div class="hintnote" style="margin-top:0"><b>New Reward audit inputs.</b> Enter the scores from the internal visibility audit. The calculator uses the SEO and AEO/GEO scores exactly as entered; average rank remains a separate difficulty and ramp signal.</div>
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Average search rank
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the client currently ranks on Google for their money phrases, on average. Position 1–3 wins clicks; past 10 means page two — effectively invisible.<br><br>A poor rank raises the cost to deliver (more catch-up work). A top-5 rank speeds the program up: the ramp shortens and full output arrives a month sooner. It also pulls the SEO visibility score toward what the rank implies — the two are blended 50/50 in the model.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Where the client currently ranks on Google for their money phrases, on average. Position 1–3 wins clicks; past 10 means page two — effectively invisible.<br><br>A poor rank raises the cost to deliver (more catch-up work). A top-5 rank speeds the program up: the ramp shortens and full output arrives a month sooner. Rank is a separate signal and never changes the internally audited SEO visibility score.</span></button>
         </label>
         <div class="fwrap"><input type="number" id="rank" class="has-suffix" value="28" min="1" max="100"><span class="suffix">rank</span></div>
       </div>
       <div class="fgroup">
         <label class="flabel" id="lbl-seoScore">SEO visibility score
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how visible the client is in traditional Google search <b>today</b> — what they already capture, not a quality grade. The model only counts NEW customers above today's baseline, so lower score = bigger gap = more new customers available to win — and more build work, so it also raises the price and lengthens the ramp (via engagement intensity). Carries 65% of the winnable-demand blend (AI visibility carries 35%).<br><br><b>Tied to Average search rank:</b> the model blends this score 50/50 with what the rank implies (position 1 ≈ 95, 3 ≈ 58, 10 ≈ 34, 30 ≈ 21), so the two always pull on each other — a top-3 rank lifts a lowball score, a page-4 rank drags down an optimistic one. The blended value shows below the field.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score from New Reward's internal visibility audit of how visible the client is in traditional Google search <b>today</b> — what they already capture, not a quality grade. The model only counts NEW customers above today's baseline, so lower score = bigger gap = more new customers available to win — and more build work, so it also raises the price and lengthens the ramp (via engagement intensity). Carries 65% of the winnable-demand blend (AI visibility carries 35%).<br><br><b>Authoritative audit input:</b> the calculator uses this score exactly as entered. Average search rank is shown separately as a useful reality check and affects difficulty and ramp timing, but it never overrides the audit.</span></button>
           <span class="flag-pill">gap too small</span>
         </label>
         <div class="fwrap"><input type="number" id="seoScore" class="has-suffix" value="35" min="0" max="100"><span class="suffix">/100</span></div>
@@ -899,7 +900,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel" id="lbl-geoScore">AEO/GEO visibility score
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score of how often AI assistants (ChatGPT, Gemini, Perplexity, AI Overviews) mention or recommend the client <b>today</b> — a measure of what they already capture, NOT a quality grade. Most local businesses score under 25.<br><br><b>Why a lower score projects MORE new customers:</b> the model only counts wins <b>above today's baseline</b> — demand the client already captures is theirs and never counted (or shared). At 7/100, AI answers almost never surface them, so ~93% of AI-driven buyers are still up for grabs → more modeled new wins. At 70/100 they already win most of those buyers → little left to add → fewer modeled new wins. Same logic as a site already ranking #1 having no SEO upside left.<br><br><b>Balanced on the cost side:</b> lower visibility also grades as more build work — a higher fee and a longer ramp — so a low score is never a free lunch. In 2026 ≈35% of discovery runs through AI surfaces, so this gap carries 35% of the winnable-demand blend (search visibility carries 65%).</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">0–100 score from New Reward's internal visibility audit of how often AI assistants (ChatGPT, Gemini, Perplexity, AI Overviews) mention or recommend the client <b>today</b> — a measure of what they already capture, NOT a quality grade. Most local businesses score under 25.<br><br><b>Why a lower score projects MORE new customers:</b> the model only counts wins <b>above today's baseline</b> — demand the client already captures is theirs and never counted (or shared). At 7/100, AI answers almost never surface them, so ~93% of AI-driven buyers are still up for grabs → more modeled new wins. At 70/100 they already win most of those buyers → little left to add → fewer modeled new wins. Same logic as a site already ranking #1 having no SEO upside left.<br><br><b>Authoritative audit input:</b> the calculator uses this score exactly as entered. Lower visibility also grades as more build work — a higher fee and a longer ramp — so a low score is never a free lunch. In 2026 ≈35% of discovery runs through AI surfaces, so this gap carries 35% of the winnable-demand blend (search visibility carries 65%).</span></button>
           <span class="flag-pill">gap too small</span>
         </label>
         <div class="fwrap"><input type="number" id="geoScore" class="has-suffix" value="22" min="0" max="100"><span class="suffix">/100</span></div>
@@ -922,6 +923,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
   <!-- 05 CLIENT ECONOMICS -->
   <div class="section">
     <div class="sec-head"><div class="sec-num">04</div><div class="sec-title">Client Economics — Feasibility</div></div>
+    <div class="hintnote" style="margin-top:0"><b>Client-confirmation checkpoint.</b> Review these economics with the potential client before presenting the final proposal. Confirmed inputs override every industry benchmark.</div>
     <div class="row2">
       <div class="fgroup" id="fg-yearly">
         <label class="flabel">Avg customer value / year
@@ -982,7 +984,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
         <label class="flabel">Sales commission
           <button class="tip" type="button" aria-label="help">?<span class="tipbox">The commission this business already pays <b>its own people</b> on each sale — staff, reps, or referral partners — as a percent of the sale's gross (top-line) revenue. <b>NOT the rate the business charges its customers</b>: a real-estate agent's ~3% listing-side commission is their <i>revenue</i>, already inside Avg customer value / year. <b>How it affects the output:</b> every profit figure in the quote (profit per win, net profit at pace, ads net, the transactions-that-cover-the-year count) uses margin <b>minus</b> this percentage — the effective keep-rate. It does not change the fee or the recommended terms. Solo operators with no splits: enter 0. Typical where it applies: 5–15%.</span></button>
         </label>
-        <div class="fwrap"><input type="number" id="commission" class="has-suffix" value="8" min="0" max="50"><span class="suffix">%</span></div>
+        <div class="fwrap"><input type="number" id="commission" class="has-suffix" placeholder="confirm / 0" min="0" max="50"><span class="suffix">%</span></div>
       </div>
     </div>
     <div class="row2">
@@ -1010,7 +1012,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2" id="fg-adbudget" style="margin-top:14px">
       <div class="fgroup">
         <label class="flabel">Monthly ad budget
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What the client spends on Google + Meta ads each month — the spend itself, paid to the ad platforms (the management fee is added on top). Auto-recommended by the math above: enough clicks to fill the capacity the organic program isn't using, never less than $500, never more than half the market's total clicks. Edit it to any agreed figure and everything recalculates instantly.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">What the client spends on Google + Meta ads each month — the spend itself, paid to the ad platforms (the management fee is added on top). When ads are viable and capacity remains, the auto recommendation buys enough clicks to fill that room, with a $500 spend floor and a hard ceiling of half the market's total clicks. Otherwise the recommendation is $0. Edit it to any agreed figure and everything recalculates instantly.</span></button>
         </label>
         <div class="fwrap"><span class="prefix">$</span><input type="text" inputmode="numeric" autocomplete="off" id="adbudget" class="has-prefix" placeholder="auto"></div>
         <div class="auto-note" id="note-adbudget"></div>
@@ -1026,9 +1028,9 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
 <!-- ================= OUTPUTS ================= -->
 <div class="outputs">
   <div class="opanel">
-    <div class="o-kicker" id="o-kicker">Projected ROI</div>
+    <div class="o-kicker" id="o-kicker">Projected Revenue ROAS</div>
     <div class="o-price"><span id="o-roi">—</span><span class="permo" id="o-roi-unit"></span></div>
-    <div class="o-sub" id="o-roi-sub">Estimated return on the monthly program investment</div>
+    <div class="o-sub" id="o-roi-sub">Modeled revenue won per dollar invested; profit is shown separately</div>
 
     <div class="roi-warn" id="o-roi-warn"></div>
     <div class="roi-ok" id="o-roi-ok"></div>
@@ -1265,8 +1267,8 @@ function intensityGrade(score){
 }
 /* demand-confidence weighting: measured sources count in full; estimates are weighted conservatively */
 const VOLQ = {none:0.80, kwp:1.00, semrush:1.00, gsc:1.00, trends:0.90, aiprompt:0.95, manual:0.85};
-const ROI_TARGET = 1.3;  // viability bar: the run-rate (ongoing) ROI a program should clear
-/* conservative factor applied to the modeled run-rate for the headline ROI: the number shown
+const ROI_TARGET = 1.3;  // viability bar: gross-profit return before program cost
+/* conservative factor applied to the modeled run-rate for the headline revenue ROAS: the number shown
    assumes we capture only part of the modeled demand, so it's the floor of the likely outcome. */
 const ROI_LO = 0.60;
 const DIFF_WORDS = [
@@ -1324,14 +1326,13 @@ function computeQuote(s){
   const volN  = clamp(Math.log10(vol+1)/4.7, 0, 1);
   const difficulty = clamp(Math.round(1.5 + compN*7.5 + 0.9*indN + 0.7*footN + 1.1*cpcN + 0.6*volN), 1, 10);
 
-  /* ---- rank ↔ SEO score: two views of the same reality, so they PULL on each other.
-          The current Google rank implies a visibility level (pos 1 ≈ 95/100, 3 ≈ 58, 10 ≈ 34,
-          30 ≈ 21, 100 ≈ 12) and the model blends the entered SEO score 50/50 with it — a
-          top-3 rank lifts a lowball score, a page-4 rank drags down an optimistic one. ---- */
+  /* ---- audited SEO visibility is authoritative. Rank remains a separate reality check and
+          still affects difficulty, delivery effort, and ramp timing, but it never rewrites the
+          score produced by New Reward's internal audit. rankImplied is display-only context. ---- */
   const rankNow = clamp(s.rank??28, 1, 100);
   const rankImplied = clamp(Math.round(95*Math.pow(rankNow,-0.45)), 5, 95);
   const seoEntered = clamp(s.seoScore??35,0,100);
-  const seoEff = Math.round(0.5*seoEntered + 0.5*rankImplied);
+  const seoEff = seoEntered;
 
   /* ---- in-scope visibility gap: drives both effort (price) and upside (revenue) ---- */
   const nScopes = (s.seo?1:0)+(s.geo?1:0);
@@ -1372,7 +1373,7 @@ function computeQuote(s){
   // conservative 35% AI / 65% classic search. The winnable share is each surface's
   // visibility gap weighted by that mix; a channel not in scope leaves its surface's
   // demand on the table (which is exactly why the bundle wins).
-  const gapSeo = 1 - seoEff/100;   // rank-blended: a top-3 site has little SEO upside left, whatever score was typed
+  const gapSeo = 1 - seoEff/100;   // exact internal-audit score; rank is modeled separately
   const gapGeo = 1 - clamp(s.geoScore??22,0,100)/100;
   const W_AI = 0.35, W_SEARCH = 0.65;
   const chFactor = clamp(nScopes===2 ? W_SEARCH*gapSeo + W_AI*gapGeo
@@ -1613,14 +1614,14 @@ function buildSeries(q, price, share){
   const year1Rev = mrr.reduce((a,b)=>a+b,0);
   const year1Attrib = year1Rev*q.attribFactor;
   const year1Cost = price!=null ? invoice.reduce((a,b)=>a+b,0) : null;
-  /* YEAR-1 ROI — VALUE-CREATED BASIS: the customers won inside year one carry their FULL
+  /* YEAR-1 REVENUE ROAS — VALUE-CREATED BASIS: customers won inside year one carry their FULL
      first-year value (that value was created by year-one work — a December win's remaining
      purchases land in months 13+ but were won here). Cash actually collected in-year is
      still reported separately (year1Rev) so both numbers stay visible and honest. */
   let wonYr=0; for(let m=1;m<=12;m++) wonYr += q.newCust*fW(m);
   const y1Created = wonYr*q.yearlyValue*q.attribFactor;
   const exitMRR = mrr[11];
-  // run-rate (ongoing) ROI: month-12 attributable revenue vs the FULL ongoing cost —
+  // run-rate (ongoing) revenue ROAS: month-12 attributable revenue vs the FULL ongoing cost —
   // the reduced fixed fee PLUS the landed-basis share at full ramp (honest denominator):
   // at steady state the share applies to cohorts inside their first 12 months, on what
   // they actually spend (churn included) — matching how the invoice line actually bills.
@@ -1628,7 +1629,7 @@ function buildSeries(q, price, share){
   const ongoingCost = perfPrice!=null ? (q.contractStyle
       ? perfPrice + share/100*(q.newCust*q.yearlyValue*q.attribFactor)     // contracts: full share per win, booked
       : perfPrice + share/100*(q.newCust*q.mrrPC*s12*q.attribFactor)) : null;
-  /* VALUE-CREATED BASIS (same yardstick as Year-1 ROI): a fully-ramped month wins
+  /* VALUE-CREATED BASIS (same yardstick as year-1 revenue ROAS): a fully-ramped month wins
      ~newCust customers carrying their full first-year value, vs the full ongoing monthly
      cost. Measuring ongoing on collected-cash while Y1 measured value created made the
      ramp year look BETTER than full pace — same program, two different rulers. */
@@ -1663,29 +1664,38 @@ let adBudgetDirty=false;   // true once the rep edits the budget — auto stops 
 /* budgetIn = null → the auto recommendation. Everything else derives from q. */
 function computeAds(s,q,rampMonth,budgetIn){
   const cpc = q.cpcEff||0, close=q.closeRate;          // researched CPC + the SAME conversion chain
-  const adCAC = (cpc>0&&close>0) ? cpc/close : null;   // cost to win one customer with ads
+  const adCAC = (cpc>0&&close>0) ? cpc/close : null;   // media-only CAC, before management
   const acqPct = s.acq!=null ? s.acq : 15;
   const acqAllowed = acqPct/100*q.yearlyValue;         // what the client says a customer may cost
-  const adsViable = adCAC!=null && adCAC<=acqAllowed;
-  const veryEfficient = adCAC!=null && adCAC<=0.5*acqAllowed;
+  const organicOn = q.nScopes>0;
+  const roomAtPace = Math.max(0, q.capStretch-(organicOn?q.newCust:0));
+  const noRoom = organicOn && roomAtPace<=1e-9;
   /* auto budget: fill the capacity organic isn't using at pace; never buy more than half the
-     market's clicks. $500 meaningful minimum (soft), the click ceiling is HARD, $250 snap.
-     Not viable → recommend $0 and say why in plain words. */
+     market's clicks. The $500 spend floor applies only when there is real capacity left. The
+     management fee is included in the viability test — media that looks cheap before the fee
+     can still be an unprofitable recommendation at a tiny budget. */
   const clickCeil = 0.5*q.vol*cpc;
-  let budgetAuto = 0;
-  if(adsViable){
-    let b = Math.max(500, Math.max(0, q.capStretch-q.newCust)*adCAC);
+  let budgetCandidate = 0;
+  if(adCAC!=null && roomAtPace>0){
+    let b = Math.max(500, roomAtPace*adCAC);
     b = Math.min(b, clickCeil);
     b = Math.round(b/250)*250;
     if(b>clickCeil) b-=250;                            // the snap never breaches the hard cap
-    budgetAuto = Math.max(0,b);
+    budgetCandidate = Math.max(0,b);
   }
-  const budget = budgetIn!=null ? Math.max(0,budgetIn) : budgetAuto;
+  const testedBudget = budgetIn!=null ? Math.max(0,budgetIn) : budgetCandidate;
+  const testedFee = adsFee(testedBudget);
+  const testedWins = (cpc>0&&testedBudget>0) ? Math.min(testedBudget/cpc*close, organicOn?roomAtPace:q.capStretch) : 0;
+  const allInCAC = testedWins>0 ? (testedBudget+testedFee)/testedWins : null;
+  const adsViable = !noRoom && allInCAC!=null && allInCAC<=acqAllowed;
+  const veryEfficient = adsViable && allInCAC<=0.5*acqAllowed;
+  const budgetAuto = adsViable ? budgetCandidate : 0;
+  const budget = budgetIn!=null ? testedBudget : budgetAuto;
   const fee = adsFee(budget);
   /* modeled ads pace — a FLOOR-style model: the blended Google-led budget priced at the
      researched Google CPC through the SAME vertical conversion chain. Meta's cheaper clicks
      make this a floor, never a promise — it prints as "modeled" everywhere it appears. */
-  const adFull = (cpc>0&&budget>0) ? Math.min(budget/cpc*close, q.capStretch) : 0;
+  const adFull = (cpc>0&&budget>0) ? Math.min(budget/cpc*close, organicOn?roomAtPace:q.capStretch) : 0;
   const roiAds = (budget+fee)>0 ? adFull*q.yearlyValue/(budget+fee) : null;   // steady-state pace (closings may lag the clicks — lagM below)
   /* phased 12-month schedule. Organic pace rides the projection's own ramp curve; months
      1..rampFull run ads at the full budget (they carry the flow while organic builds). From
@@ -1695,7 +1705,6 @@ function computeAds(s,q,rampMonth,budgetIn){
      demand pool: past that point ads buy clicks the organic program already wins). Very
      efficient ads WITH demand headroom never taper — every dollar keeps buying customers
      the organic click share alone would not reach. */
-  const organicOn = q.nScopes>0;
   const rm = rampMonth||q.rampMonth, span=q.rampSpan||3;
   const rampFull = rm+span-1;
   const fW = m => m===1?0:Math.min(1,(m-1)/(rm+span-2));
@@ -1757,7 +1766,7 @@ function computeAds(s,q,rampMonth,budgetIn){
   const mgnPct   = keepPct(s);   // effective keep-rate: margin net of the client's own sales commission
   const grossMo  = adFull*q.yearlyValue*mgnPct/100;
   const netMo    = grossMo-(budget+fee);
-  return {adCAC, acqAllowed, acqPct, adsViable, veryEfficient, budgetAuto, budget, fee, adFull,
+  return {adCAC, allInCAC, acqAllowed, acqPct, adsViable, veryEfficient, roomAtPace, noRoom, budgetAuto, budget, fee, adFull,
           roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart, taperDone, rampFull,
           organicOn, months, adsWinsYr, adsCostYr, adsWinsYrInt, lagM,
           leadClose:lc, clicksMo, leadsMo, cpl, mgnPct, grossMo, netMo};
@@ -1774,10 +1783,12 @@ function adsSeqLine(s,q,a,noSide){
      which already carries the taper sidenote — printing it twice on one page is noise
      AND overflows into the benchmarks footnote (Payton, Aug 18) */
   let t;
-  if(!a.adsViable){
-    t='Ads are inefficient here: winning a customer with ads costs ~'+fmt$(a.adCAC||0)+' vs the '+fmt$(a.acqAllowed)+' this business can spend to acquire one — lean on SEO/GEO.';
+  if(a.noRoom){
+    t='The organic program already fills the stated delivery capacity at full pace, so the recommended ad budget is $0. Turn ads on only if the client confirms more capacity or wants paid demand during the organic build.';
+  } else if(!a.adsViable){
+    t='Ads are inefficient here: the all-in modeled acquisition cost is ~'+fmt$(a.allInCAC||a.adCAC||0)+' vs the '+fmt$(a.acqAllowed)+' this business can spend to acquire one — lean on SEO/GEO.';
   } else if(a.scaleMode){
-    t='Start month 1 and scale: every ~'+fmt$(a.adCAC)+' of spend buys a customer worth '+fmt$(q.yearlyValue)+', and there\'s capacity to take them.';
+    t='Start month 1 and scale: every ~'+fmt$(a.allInCAC||a.adCAC)+' all-in buys a customer worth '+fmt$(q.yearlyValue)+', and there\'s capacity to take them.';
   } else if(a.organicOn && a.taperStart!=null){
     t='Start ads month 1 at '+fmt$(a.budget)+'/mo; the modeled budget tapers to '+(a.floorB>0?fmt$(a.floorB):'$0')+'/mo around month '+a.taperDone+' as organic fills '+(a.demandLimited?'the winnable demand':'capacity')+'.'
       +(noSide?'':' (Sidenote: the taper is the modeled default, not a rule — plenty of successful businesses keep or grow the budget to scale past the organic pace.)');
@@ -2127,9 +2138,10 @@ function renderEventChart(q,n,ep,el){
     +g+'</svg>';
 }
 
-/* ===== Viability guardrail (target = ROI_TARGET, the ongoing run-rate return) =========
-   A program is "viable" when its run-rate (ongoing) return clears ROI_TARGET — meaning,
-   once built, it's clearly worth the client's spend. Below that, this flags the demand
+/* ===== Viability guardrail (profit-aware, using the client's confirmed keep-rate) =====
+   The displayed multiple is revenue ROAS. Viability converts it to gross-profit return
+   using margin minus sales commission, so a 1.3x revenue multiple is never mistaken for
+   profitability in a 30% margin business. Below target, this flags the demand
    levers (search volume, conversion, SEO+GEO visibility gap, volume-source confidence)
    and, when our cost-to-deliver exceeds what the market can return, says so honestly and
    suggests a tighter footprint. */
@@ -2157,39 +2169,43 @@ function evalRoiGuardrail(s,q,n){
 
   const fx=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
   const rr=n.runRate, rrTxt = fx(rr);
+  const keepRate=keepPct(s)/100;
+  const targetRoas=ROI_TARGET/keepRate;   // revenue ROAS needed to clear the profit-return target
+  const profitReturn=rr*keepRate;
+  const y1ProfitReturn=n.roi*keepRate;
   const y1Txt = fx(Math.min(n.roi, n.runRate??n.roi));   // shown Y1 never exceeds the full ongoing pace
-  if(rr>=ROI_TARGET){
+  if(profitReturn>=ROI_TARGET){
     ok.classList.add('show');
-    ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the conservative ongoing return is <b>'+fx(rr*ROI_LO)
-      +'×</b> (modeled '+rrTxt+'×; year 1 already returns '+y1Txt+'× on value created) — enough demand and margin to move forward.'
+    ok.innerHTML='&#10003; <b>Viable — worth both sides.</b> At '+fmt$(n.price)+'/mo the conservative ongoing revenue ROAS is <b>'+fx(rr*ROI_LO)
+      +'×</b> (modeled '+rrTxt+'×; year 1 revenue ROAS '+y1Txt+'×). At the client\'s '+Math.round(keepRate*100)+'% '+keepWord(s)+', modeled gross-profit return is '+fx(profitReturn)+'× before the program cost — enough demand and margin to move forward.'
       /* second rail: published 2026 benchmarks put SEO break-even at months 5–12, so a year one
          that never breaks even is usually a sign of UNDERSTATED inputs, not a bad program */
-      +(n.roi<1
-        ? '<br><span style="opacity:.85">&#9888; <b>Year 1 lands under the 1.3× bar ('+y1Txt+'× on value created) at these inputs</b> — that should not happen for a real, established business. Before presenting, double-check the phrase volume (combined across all locations), conversion rate, and customer value: understated inputs are the usual cause.</span>'
+      +(y1ProfitReturn<1
+        ? '<br><span style="opacity:.85">&#9888; <b>Year 1 does not recover the program cost from gross profit ('+y1Txt+'× revenue ROAS at '+Math.round(keepRate*100)+'% '+keepShort(s)+')</b> — before presenting, double-check the phrase volume, conversion rate, customer value, and client economics.</span>'
         : '');
     return;
   }
 
   const items=[];
 
-  /* ---- single-variable solvers now target a 1.3× RUN-RATE (ongoing) return ---- */
+  /* ---- solvers target the revenue ROAS required for a 1.3x gross-profit return ---- */
   const roiWith=(patch)=>{
     const q2=computeQuote(Object.assign({},s,patch));
     const r=buildSeries(q2,n.price,n.share).runRateROI;
     return r==null?0:r;
   };
-  // smallest value in [lo,hi] (ROI rises with the value) that reaches 1.3×; null if even hi falls short
+  // smallest value in [lo,hi] that reaches the margin-adjusted target; null if hi falls short
   const solveUp=(field,lo,hi)=>{
-    if(roiWith({[field]:hi})<ROI_TARGET) return null;
+    if(roiWith({[field]:hi})<targetRoas) return null;
     let a=lo,b=hi;
-    for(let i=0;i<46;i++){const m=(a+b)/2; if(roiWith({[field]:m})>=ROI_TARGET) b=m; else a=m;}
+    for(let i=0;i<46;i++){const m=(a+b)/2; if(roiWith({[field]:m})>=targetRoas) b=m; else a=m;}
     return b;
   };
   // largest equal SEO/GEO score that still reaches 1.3× (lower score = bigger gap = higher ROI)
   const solveScore=()=>{
-    if(roiWith({seoScore:0,geoScore:0})<ROI_TARGET) return null;
+    if(roiWith({seoScore:0,geoScore:0})<targetRoas) return null;
     let a=0,b=100;
-    for(let i=0;i<46;i++){const m=(a+b)/2; if(roiWith({seoScore:m,geoScore:m})>=ROI_TARGET) a=m; else b=m;}
+    for(let i=0;i<46;i++){const m=(a+b)/2; if(roiWith({seoScore:m,geoScore:m})>=targetRoas) a=m; else b=m;}
     return a;
   };
   const round2=(v)=>{const p=Math.pow(10,Math.max(0,Math.floor(Math.log10(Math.max(v,1)))-1));return Math.round(v/p)*p;};
@@ -2197,11 +2213,11 @@ function evalRoiGuardrail(s,q,n){
 
   /* viability verdict: is our cost-to-deliver above what this market can return at 1.3× ongoing?
      If so, it's not a fit at this scope — suggest the widest footprint that WOULD be viable. */
-  const ceil2x=n.series.ceil2x;
+  const ceil2x=q.newCust*q.yearlyValue*q.attribFactor/targetRoas;
   if(ceil2x < n.price){
     /* a national online store or SaaS can't "go local" — footprint tightening isn't a real
        fix for non-geo businesses, so point them at the demand and scope levers instead */
-    const nonGeo = (s.industry==='ecom'||s.industry==='b2b') && s.footprint==='national';
+    const nonGeo = s.footprint==='nongeo';
     let sug='';
     if(!nonGeo){
       const order=['nongeo','national','metro','multi','local'];
@@ -2213,12 +2229,12 @@ function evalRoiGuardrail(s,q,n){
         if(s.volume>0) patch.volume=Math.round(s.volume*FOOT[order[i]].reach/FOOT[s.footprint].reach);
         const q2=computeQuote(Object.assign({},s,patch));
         const r2=buildSeries(q2,q2.price,q2.share).runRateROI;
-        if(r2>=ROI_TARGET){ sug=' A '+FOOT[order[i]].name+' program (~'+fmt$(q2.price)+'/mo) would be viable at '+(r2>=10?Math.round(r2):r2.toFixed(1))+'× ongoing.'; break; }
+        if(r2>=targetRoas){ sug=' A '+FOOT[order[i]].name+' program (~'+fmt$(q2.price)+'/mo) would be viable at '+(r2>=10?Math.round(r2):r2.toFixed(1))+'× revenue ROAS.'; break; }
       }
     }
-    items.push('<b>Not viable at this scope.</b> Delivering '+(q.nScopes===2?'SEO + GEO':(s.seo?'SEO':'GEO'))
+    items.push('<b>Not viable at this scope.</b> Delivering '+(q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO':'AEO/GEO'))
       +' properly for '+FOOT[s.footprint].name+' costs ~'+fmt$(n.price)+'/mo, but this market only supports ~'
-      +fmt$(ceil2x)+'/mo for a 1.3× ongoing return.'
+      +fmt$(ceil2x)+'/mo while preserving a 1.3× gross-profit return at the client\'s '+Math.round(keepRate*100)+'% '+keepShort(s)+'.'
       +(sug|| (nonGeo
         ? ' This business sells nationally, so a tighter footprint isn\'t the fix — verify the real search demand in Keyword Planner or Semrush (a national keyword set is usually far larger than an unchecked estimate), broaden the keyword cluster, or trim the scope to one channel.'
         : ' Recommend a tighter footprint, a narrower scope, or building demand first.')));
@@ -2226,18 +2242,18 @@ function evalRoiGuardrail(s,q,n){
 
   /* even at best-case other levers, can volume alone get there? */
   const best=computeQuote(Object.assign({},s,{convrate:30,seoScore:0,geoScore:0,volsource:'kwp'}));
-  const demandCeiling = !(buildSeries(best,n.price,n.share).runRateROI>=ROI_TARGET);
+  const demandCeiling = !(buildSeries(best,n.price,n.share).runRateROI>=targetRoas);
 
-  /* Estimated phrase volume always feeds the ROI equation — flag it whenever the
+  /* Estimated phrase volume always feeds the ROAS equation — flag it whenever the
      return is short, not only when it's the single binding constraint. */
   flagRoi('volume');
   {
     const vt=solveUp('volume', q.vol, Math.max(q.vol*60,300000));
     items.push('<b>Estimated phrase volume — ~'+q.vol.toLocaleString()+' searches/mo.</b> '
-      +'It drives the ROI directly; more demand (a higher-volume phrase, wider footprint, or more keywords) lifts the return.'
-      +(demandCeiling ? ' <b>This is the binding constraint — even best-case conversion and a full gap can\'t reach 1.3× at today\'s volume.</b>' : '')
-      +(vt!=null ? fix('Target ≈ '+round2(vt).toLocaleString()+' searches/mo for a 1.3× return.')
-                 : ' At the current conversion and gap, volume alone won\'t reach 1.3× — raise those too.'));
+      +'It drives revenue ROAS directly; more demand (a higher-volume phrase, wider footprint, or more keywords) lifts the return.'
+      +(demandCeiling ? ' <b>This is the binding constraint — even best-case conversion and a full gap cannot clear the profit-aware viability target at today\'s volume.</b>' : '')
+      +(vt!=null ? fix('Target ≈ '+round2(vt).toLocaleString()+' searches/mo to clear the profit-aware target.')
+                 : ' At the current conversion and gap, volume alone will not clear the target — raise those too.'));
   }
 
   const conv=s.convrate??BENCH(s).conv;
@@ -2245,9 +2261,9 @@ function evalRoiGuardrail(s,q,n){
     flagRoi('convrate');
     const ct=solveUp('convrate', conv, 100);
     items.push('<b>Conversion rate is '+conv+'%.</b> Visit-to-customer averages ~4% for local services (5–8% is good) — sharpen lead response, offers, and landing pages.'
-      +(ct!=null && ct<=10 ? fix('Target ≈ '+Math.ceil(ct)+'% for a 1.3× return.')
-        : ct!=null ? fix('Reaching 1.3× on conversion alone would need ≈'+Math.ceil(ct)+'% — above what\'s realistic; lean on demand or the visibility gap instead.')
-                   : ' Conversion alone won\'t reach 1.3× — combine it with the other flags.'));
+      +(ct!=null && ct<=10 ? fix('Target ≈ '+Math.ceil(ct)+'% to clear the profit-aware return target.')
+        : ct!=null ? fix('Clearing the target on conversion alone would need ≈'+Math.ceil(ct)+'% — above what\'s realistic; lean on demand or the visibility gap instead.')
+                   : ' Conversion alone will not clear the target — combine it with the other flags.'));
   }
 
   if(q.chFactor<0.6){
@@ -2255,15 +2271,15 @@ function evalRoiGuardrail(s,q,n){
     const sc=solveScore();
     items.push('<b>Visibility gap is only '+Math.round(q.chFactor*100)+'%.</b> The client is already fairly '
       +'visible, so little untapped demand is left to win.'
-      +(sc!=null ? fix('A 1.3× return needs the gap near '+Math.round(100-sc)+'% (visibility at/below ~'+Math.round(sc)+'/100).')
-                 : ' Even a full gap won\'t reach 1.3× alone — lean on demand and conversion.'));
+      +(sc!=null ? fix('The profit-aware target needs the gap near '+Math.round(100-sc)+'% (visibility at/below ~'+Math.round(sc)+'/100).')
+                 : ' Even a full gap will not clear the target alone — lean on demand and conversion.'));
   }
 
   if(q.volQ<1){
     flagRoi('volsource');
     const rv=roiWith({volsource:'kwp'});
     items.push('<b>Confirm the volume source.</b> Check the demand in Keyword Planner, Semrush, or GSC to firm up the estimate.'
-      +fix('Verified, the projection is ≈ '+(rv>=10?Math.round(rv):rv.toFixed(1))+'×'+(rv>=ROI_TARGET?', clearing 1.3×.':'.')));
+      +fix('Verified, the projection is ≈ '+(rv>=10?Math.round(rv):rv.toFixed(1))+'× revenue ROAS'+(rv>=targetRoas?', clearing the profit-aware target.':'.')));
   }
 
   if(!items.length){
@@ -2272,9 +2288,9 @@ function evalRoiGuardrail(s,q,n){
 
   setBelow(true);
   warn.classList.add('show');
-  warn.innerHTML='<div class="rw-kick">&#9888; Below a 1.3× ongoing return — '+rrTxt+'× at '+fmt$(n.price)+'/mo</div>'
+  warn.innerHTML='<div class="rw-kick">&#9888; Below the profit-aware viability target — '+rrTxt+'× revenue ROAS at '+fmt$(n.price)+'/mo</div>'
     +'<ul><li>'+items.join('</li><li>')+'</li></ul>'
-    +'<div class="rw-foot">For the program to be worth the client\'s investment, the ongoing (run-rate) return should clear 1.3×. Raise the red inputs, tighten the footprint, or verify demand.</div>';
+    +'<div class="rw-foot">At the client\'s '+Math.round(keepRate*100)+'% '+keepShort(s)+', revenue ROAS must clear '+fx(targetRoas)+'× to produce at least a 1.3× gross-profit return before program cost. Raise the red inputs, tighten the footprint, or verify demand.</div>';
 }
 
 function render(){
@@ -2284,8 +2300,8 @@ function render(){
 
   const n = getNegotiated(q);
 
-  /* ROI headline — year-1, conservative attribution */
-  /* Headline = run-rate (ongoing) ROI — what the program returns once built. Year-1 (the
+  /* Revenue-ROAS headline — year-1, conservative attribution */
+  /* Headline = run-rate (ongoing) revenue multiple once built. Year-1 (the
      ramp/investment year) is shown as context underneath, since SEO/GEO compounds over 12–24 mo. */
   const rr = n.runRate, y1 = n.roi;
   /* displayed returns cap at 30×+ — beyond that the number stops being credible and starts over-promising */
@@ -2294,16 +2310,17 @@ function render(){
      modeled run-rate, so showing both ends keeps the big number and the verdict in agreement
      (a lone conservative figure could read "1.2×" beside a green Viable box). */
   const rrCons = rr!=null ? rr*ROI_LO : null;
-  set('o-roi', rrCons!=null ? fx(rrCons)+'–'+fx(rr)+'×' : '—');
+  const rrBand = rrCons!=null ? (fx(rrCons)===fx(rr) ? fx(rr)+'×' : fx(rrCons)+'–'+fx(rr)+'×') : '—';
+  set('o-roi', rrBand);
   /* mobile quick-jump pill mirrors the headline */
   const mjt=document.getElementById('mjump-txt');
-  if(mjt) mjt.textContent = q.price==null ? 'See results' : fmt$(n.price)+'/mo · '+fx(rrCons)+'–'+fx(rr)+'× return';
-  set('o-roi-unit', rrCons!=null ? ' ongoing return' : '');
+  if(mjt) mjt.textContent = q.price==null ? 'See results' : fmt$(n.price)+'/mo · '+rrBand+' ROAS';
+  set('o-roi-unit', rrCons!=null ? ' ongoing revenue ROAS' : '');
   set('o-roi-sub', rrCons!=null
-      ? 'Run-rate once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost '+(n.share>0?'(reduced fee + share)':'(flat fee)')+'. '
-        +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× on value created (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 already returns '+fx(y1)+'× on value created — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+(function(){ const mgn=keepPct(s), gpMo=q.newCust*q.yearlyValue*mgn/100, netMo=gpMo-(n.series.ongoingCost||0);
+      ? 'Revenue ROAS once built — '+fx(rrCons)+'× conservative floor to '+fx(rr)+'× modeled: ≈'+fmtK(q.newCust*q.yearlyValue)+'/mo in first-year customer value won at full pace vs ≈'+fmt$(n.series.ongoingCost)+'/mo ongoing cost '+(n.share>0?'(reduced fee + share)':'(flat fee)')+'. '
+        +(y1>=rr ? 'Year 1 already reaches the full pace — '+fx(Math.min(y1,rr))+'× revenue ROAS (the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed) even while the program builds. ' : 'Year 1 reaches '+fx(y1)+'× revenue ROAS — the ~'+Math.max(1,Math.round(n.series.wonYr))+' customers won in year one × their full first-year value, against everything billed — while the program builds; from there it runs at the full '+fx(rr)+'× pace. ')+(function(){ const mgn=keepPct(s), gpMo=q.newCust*q.yearlyValue*mgn/100, netMo=gpMo-(n.series.ongoingCost||0);
         return netMo>0 ? 'In client profit terms: the modeled pace adds ≈'+fmtK(gpMo)+'/mo in gross profit (at their '+mgn+'% '+keepWordIn(s)+') against ≈'+fmt$(Math.round(n.series.ongoingCost||0))+'/mo all-in cost — ≈'+fmtK(netMo)+'/mo net to the client. ' : ''; })()
-      +'Every figure is modeled against published 2026 SEO/GEO industry benchmarks — not guesses.'
+      +'The model combines New Reward\'s audited visibility scores, client-confirmed economics, and cited industry benchmarks.'
       +(document.getElementById('scopeAds').checked?' This is the organic SEO/GEO program alone — Google + Meta ads are priced separately on the gold Paid Media card below, where the combined stack is shown.':'')
       : (document.getElementById('scopeAds').checked
         ? 'SEO/GEO are toggled off — this is an ads-only quote: the budget, management fee, and return are on the Google + Meta ads card below.'
@@ -2403,9 +2420,11 @@ function render(){
       if(noteAB) noteAB.innerHTML = adBudgetDirty
         ? 'edited — the math above recommends '+fmt$(a.budgetAuto)+' &nbsp;·&nbsp; <a onclick="return resetAdBudget()">use auto</a>'
           +(a.budget>a.clickCeil?'<br>&#9888; above the half-the-market click ceiling ('+fmtK(a.clickCeil)+') — the model only counts wins that many clicks can deliver; spend past it buys no modeled customers':'')
-        : (a.adsViable
-          ? 'auto — based on capacity and CPC: fills the capacity organic isn\'t using, at ~'+fmt$(a.adCAC)+' per ads-won customer'
-          : 'auto — $0: ads are inefficient for this business (~'+fmt$(a.adCAC||0)+' to win a customer with ads vs the '+fmt$(a.acqAllowed)+' their acquisition budget allows)');
+        : (a.noRoom
+          ? 'auto — $0: the organic program already fills the stated delivery capacity at full pace'
+          : (a.adsViable
+            ? 'auto — fills the capacity organic isn\'t using, at ~'+fmt$(a.allInCAC)+' all-in per ads-won customer (spend + management)'
+            : 'auto — $0: ads are inefficient for this business (~'+fmt$(a.allInCAC||a.adCAC||0)+' all-in to win a customer vs the '+fmt$(a.acqAllowed)+' their acquisition budget allows)'));
       const fxA=v=>v>30?'30+':(v>=10?String(Math.round(v)):v.toFixed(1));
       const crA=custRate(a.adFull);
 
@@ -2413,13 +2432,15 @@ function render(){
       const amEl=document.getElementById('ads-math');
       if(amEl){
         const convTxt=parseFloat((q.closeRate*100).toFixed(2));
-        let am='<p><b>Ads are simple: you buy clicks, and some clicks become customers.</b> One Google click in this market costs about <span class="sm-big">$'+(q.cpcEff||0)+'</span> (researched for this exact phrase and area). Out of every 100 visitors, about <b style="color:var(--text)">'+convTxt+'</b> become paying customers. So winning ONE customer with ads costs about $'+(q.cpcEff||0)+' ÷ '+convTxt+'% = <span class="sm-big">'+(a.adCAC!=null?fmt$(a.adCAC):'—')+'</span>.</p>'
+        let am='<p><b>Ads are simple: you buy clicks, and some clicks become customers.</b> One Google click in this market costs about <span class="sm-big">$'+(q.cpcEff||0)+'</span> (researched for this exact phrase and area). Out of every 100 visitors, about <b style="color:var(--text)">'+convTxt+'</b> become paying customers. So the media cost to win ONE customer is about $'+(q.cpcEff||0)+' ÷ '+convTxt+'% = <span class="sm-big">'+(a.adCAC!=null?fmt$(a.adCAC):'—')+'</span>, before the management fee.</p>'
           +'<p><b>Is that a good deal for this business?</b> A new customer here is worth '+fmt$(q.yearlyValue)+' in their first year, and this business is willing to spend '+a.acqPct+'% of that — <span class="sm-big">'+fmt$(a.acqAllowed)+'</span> — to win one. '
-          +(a.adsViable
+          +(a.noRoom
+            ? 'The organic program already fills the stated delivery capacity at full pace, so the recommended ad budget is <span class="sm-big">$0</span>. Paid media becomes an option when the client confirms more capacity or wants temporary demand during the organic build.</p>'
+          : a.adsViable
             ? (a.veryEfficient
-              ? fmt$(a.adCAC)+' is less than HALF of '+fmt$(a.acqAllowed)+' — ads are a genuine bargain in this market.</p>'
-              : fmt$(a.adCAC)+' is under the '+fmt$(a.acqAllowed)+' line — ads pay for themselves here. A solid deal, not a steal.</p>')
-            : fmt$(a.adCAC||0)+' is MORE than the '+fmt$(a.acqAllowed)+' this business allows — every ads-won customer would cost more than they\'re supposed to. That\'s why the recommended budget is <span class="sm-big">$0</span>: put the money into SEO/GEO, where the same demand is won organically.</p>');
+              ? fmt$(a.allInCAC)+' all-in is less than HALF of '+fmt$(a.acqAllowed)+' — ads are a genuine bargain in this market.</p>'
+              : fmt$(a.allInCAC)+' all-in is under the '+fmt$(a.acqAllowed)+' line — ads pay for themselves here. A solid deal, not a steal.</p>')
+            : fmt$(a.allInCAC||a.adCAC||0)+' all-in is MORE than the '+fmt$(a.acqAllowed)+' this business allows — every ads-won customer would cost more than it should. That\'s why the recommended budget is <span class="sm-big">$0</span>: put the money into SEO/GEO, where the same demand is won organically.</p>');
         if(a.adsViable){
           /* whole customers only — sparse verticals speak per YEAR (matching the pace cards),
              so "0.77 a month" or "modeled to bring 0" never prints */
@@ -2432,14 +2453,14 @@ function render(){
             +(q.nScopes>0
               ? 'This business can handle about <b style="color:var(--text)">'+capN+'</b> new customer'+(capN>1?'s':'')+cUnit+', and the organic program is modeled to bring <b style="color:var(--text)">'+orgTxt+'</b> — leaving room for about <b style="color:var(--text)">'+roomN+'</b> more. '
               : 'With no organic program in scope, ads carry the whole flow — this business can handle about <b style="color:var(--text)">'+capN+'</b> new customer'+(capN>1?'s':'')+cUnit+'. ')
-            +'Multiply the room ads can fill by the '+(a.adCAC!=null?fmt$(a.adCAC):'—')+' each ads-won customer costs, and you get the monthly spend that fills it. Then two guardrails: never less than <b style="color:var(--text)">$500</b> (below that, ads can\'t learn what works), and never more than half the market\'s total clicks — half of '+q.vol.toLocaleString()+' searches × $'+(q.cpcEff||0)+' = <b style="color:var(--text)">'+fmtK(a.clickCeil)+'</b> — because you can\'t buy customers who aren\'t searching. Rounded to a clean number: <span class="sm-big">'+fmt$(a.budgetAuto)+'/mo</span>'+(adBudgetDirty?' recommended — this quote uses the agreed <span class="sm-big">'+fmt$(a.budget)+'/mo</span>':'')+'.</p>';
+            +'Multiply the room ads can fill by the '+(a.adCAC!=null?fmt$(a.adCAC):'—')+' media cost per customer, and you get the platform spend that fills it. Then two guardrails: never less than <b style="color:var(--text)">$500</b> (below that, ads can\'t learn what works), and never more than half the market\'s total clicks — half of '+q.vol.toLocaleString()+' searches × $'+(q.cpcEff||0)+' = <b style="color:var(--text)">'+fmtK(a.clickCeil)+'</b> — because you can\'t buy customers who aren\'t searching. The calculator then adds management and verifies the <b style="color:var(--text)">'+fmt$(a.allInCAC)+' all-in CAC</b> still fits the client\'s acquisition budget. Rounded to a clean number: <span class="sm-big">'+fmt$(a.budgetAuto)+'/mo</span>'+(adBudgetDirty?' recommended — this quote uses the agreed <span class="sm-big">'+fmt$(a.budget)+'/mo</span>':'')+'.</p>';
         }
         if(a.budget>0){
           am+='<p><b>The management fee — and who gets paid what.</b> The ad budget is not our money: <b style="color:var(--text)">'+fmt$(a.budget)+' goes to Google and Meta</b> — it buys the clicks. Running those ads well is the real work on our side — building the campaigns, testing the messages, cutting what wastes money — and the industry norm for it is 10–20% of ad spend; this program charges <b style="color:var(--text)">15%</b> (12% above $15k/mo), never less than $500/mo: <span class="sm-big">'+fmt$(a.fee)+'/mo</span>. So the ads line on any bill is always the same simple addition: '+fmt$(a.budget)+' (to Google &amp; Meta) + '+fmt$(a.fee)+' (to us) = <span class="sm-big">'+fmt$(a.budget+a.fee)+'/mo</span>'+(q.nScopes>0&&q.price!=null?' — and on top of the SEO/GEO program fee, the whole month is '+fmt$(n.price)+' + '+fmt$(a.budget+a.fee)+' = <b style="color:var(--text)">'+fmt$(n.price+a.budget+a.fee)+' all-in</b>':'')+'.</p>'
             +'<p><b>What that buys — the funnel, start to finish.</b> '+fmt$(a.budget)+' ÷ $'+(q.cpcEff||0)+' per click ≈ <b style="color:var(--text)">'+Math.round(a.clicksMo).toLocaleString()+' visitors</b> a month'
             +(a.leadsMo!=null
-              ? '; about <b style="color:var(--text)">'+Math.round(a.leadsMo)+' become qualified opportunities</b> — the consult-ready conversations, not raw enquiries (raw web leads run far higher in number but close at only ~0.5–3%; we count the ones that matter) — at ≈<b style="color:var(--text)">'+fmt$(a.cpl)+' per opportunity</b>. At the researched ~'+Math.round(a.leadClose*100)+'% close rate on qualified opportunities in this vertical, that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.adCAC)+' per customer won'+(a.adFull<a.clicksMo*q.closeRate-1e-6?' — delivery capacity holds the pace there':'')+')'
-              : '; buyers here purchase directly — no lead stage — so at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.adCAC)+' per customer won)')
+              ? '; about <b style="color:var(--text)">'+Math.round(a.leadsMo)+' become qualified opportunities</b> — the consult-ready conversations, not raw enquiries (raw web leads run far higher in number but close at only ~0.5–3%; we count the ones that matter) — at ≈<b style="color:var(--text)">'+fmt$(a.cpl)+' per opportunity</b>. At the researched ~'+Math.round(a.leadClose*100)+'% close rate on qualified opportunities in this vertical, that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.allInCAC||a.adCAC)+' all-in per customer won'+(a.adFull<a.clicksMo*q.closeRate-1e-6?' — delivery capacity holds the pace there':'')+')'
+              : '; buyers here purchase directly — no lead stage — so at '+convTxt+'% that\'s <span class="sm-big">'+crA.txt.replace(/^~/,'about ')+'</span> (≈'+fmt$(a.allInCAC||a.adCAC)+' all-in per customer won)')
             +' — worth ~'+(crA.monthly?fmtK(a.adFull*q.yearlyValue)+'/mo':fmtK(a.adFull*12*q.yearlyValue)+' a year')+' in first-year value against the '+fmt$(a.budget+a.fee)+'/mo all-in cost'+(a.roiAds!=null?' ('+fxA(a.roiAds)+'× revenue ROAS — a revenue multiple, not profit)':'')+'. '
             +'<b>And in profit terms</b> — the number that actually lands in the client\'s pocket: at their '+a.mgnPct+'% '+keepWord(s)+' those customers bring ≈'+fmtK(a.grossMo)+'/mo in gross profit vs '+fmt$(a.budget+a.fee)+'/mo all-in — '
             +(a.netMo>0?'≈<span class="sm-big">'+fmtK(a.netMo)+'/mo net</span>.':'about break-even on first-year profit; the case here is '+(q.retainYears>1?'years two and beyond, which are 100% the client\'s.':'pipeline volume and referrals.'))
@@ -2463,7 +2484,7 @@ function render(){
           /* the funnel, HOTH-style: clicks → leads → customers, then the profit line */
           +'<div style="font-size:11.5px;margin-bottom:8px;color:var(--muted)">The funnel: <b style="color:var(--text)">'+Math.round(a.clicksMo).toLocaleString()+' clicks</b>'
           +(a.leadsMo!=null?' → <b style="color:var(--text)">~'+Math.round(a.leadsMo)+' qualified opportunities</b> ('+fmt$(a.cpl)+' each)':'')
-          +' → <b style="color:var(--text)">'+crA.v+crA.unit+' customers</b> ('+fmt$(a.adCAC)+' each)'
+          +' → <b style="color:var(--text)">'+crA.v+crA.unit+' customers</b> ('+fmt$(a.allInCAC||a.adCAC)+' all-in each)'
           +(a.netMo>0?' · ≈<b style="color:var(--gold-bright)">'+fmtK(a.netMo)+'/mo net</b> after the client\'s '+a.mgnPct+'% '+keepWord(s)+'':' · ≈break-even on first-year profit at the client\'s margin')+'</div>';
         if(!a.adsViable) ac+='<div style="margin-bottom:6px">&#9888; '+adsSeqLine(s,q,a)+'</div>';
         else ac+='<div style="margin-bottom:6px">'+adsSeqLine(s,q,a)+'</div>';
@@ -2501,7 +2522,7 @@ function render(){
   const adsChart = adsOn && q.price!=null && adsState(s,q,n.rampMonth).budget>0;
   /* CHANNEL-LABEL LAW (Payton, Aug 17): with ads on, every output is either grouped under an
      SEO/GEO label or explicitly marked combined — no unlabeled organic-only number anywhere */
-  set('o-kicker', (adsOn&&q.price!=null)?'Projected ROI — SEO/GEO organic':'Projected ROI');
+  set('o-kicker', (adsOn&&q.price!=null)?'Projected Revenue ROAS — SEO/GEO organic':'Projected Revenue ROAS');
   set('o-price-lbl', adsOn?'SEO/GEO fixed monthly investment':'Fixed monthly investment');
   set('o-share-lbl', adsOn?'Revenue share — organic wins only':'Revenue share');
   const fanEl=document.getElementById('flat-ads-note');
@@ -2550,7 +2571,7 @@ function render(){
      geo-bound footprint. Only borderless online businesses (nongeo) get a slightly lower
      bar (80/100), since their citations lean more on off-site authority. */
   const scopeWarn = document.getElementById('scope-warn');
-  const seoSc = q.seoEff;   // rank-blended SEO visibility
+  const seoSc = q.seoEff;   // authoritative internal-audit SEO visibility
   const localSeg = (s.industry==='local'||s.industry==='highticket'||s.industry==='ultra') && s.footprint!=='nongeo';
   const bundleBar = s.footprint==='nongeo' ? 80 : 90;
   if(s.geo && !s.seo && seoSc < bundleBar){
@@ -2597,10 +2618,11 @@ function render(){
      (and it was already hidden in the reverse case) — so the comparison never appears. */
   document.getElementById('o-adsave').classList.remove('show');
 
-  /* rank ↔ SEO score blend note — shows the effective score whenever it differs from the entry */
-  document.getElementById('note-seo').innerHTML = (q.seoEff!==q.seoEntered)
-      ? 'Pulled by rank '+q.rankNow+' (implies ≈'+q.rankImplied+'/100): model uses <b>'+q.seoEff+'/100</b>'
-      : '';
+  /* the internal audit score is authoritative; rank is context, never an override */
+  const auditMissing=s.seoScore==null||s.geoScore==null;
+  document.getElementById('note-seo').innerHTML = auditMissing
+      ? '<b>Internal audit required before presenting.</b> This preview temporarily uses '+q.seoEff+'/100 SEO and '+(s.geoScore??22)+'/100 AEO/GEO; enter New Reward\'s audited scores to finalize the quote.'
+      : '<b>Internal audit scores used directly.</b> Rank '+q.rankNow+' is modeled separately for difficulty and ramp timing.';
 
   document.getElementById('note-industry').innerHTML = researchedQuote
       ? '&#10003; <b>Researched:</b> these inputs and outputs are researched for this specific business and verified against published <b>2026 benchmarks</b> for their exact vertical, market, and footprint.'
@@ -2805,7 +2827,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260814-70';
+const BUILD='NR-20260916-71';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -2827,7 +2849,7 @@ function researchWithAI(){
   const mktList=(typeof mktsMax==='function'&&mktsMax()>0&&typeof mktsUserEdited!=='undefined'&&mktsUserEdited)?mktsNames():[];   // only a scope the rep set BY HAND this session is client-fixed
   const ps=readState();
   const prior=(ps.volume>0||ps.yearly>0||ps.aov>0||(typeof researchedQuote!=='undefined'&&researchedQuote))?
-    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. The REPRODUCIBILITY CONTRACT requires you to REUSE THEM VERBATIM, changing a field ONLY where you can name the specific NEW fact that moved it (and say so in that field\'s Why) — OR where the prior value violates a methodology rule (category-average CPC, wrong head anchor, out-of-band volume without a phrase-stating source, non-stating citation): ACCURACY OUTRANKS REPRODUCIBILITY, so a rule-breaking prior must be re-derived by the rules, naming the broken rule in the Why. seoScore/geoScore are exempt. SCOPE IS ALSO EXEMPT: the prior\'s footprint/units/markets/volume describe the PREVIOUS QUOTE\'S scope, which may have been deliberately narrowed for that pitch (a start-small quote). Unless THIS prompt contains a CLIENT-SPECIFIED MARKETS block, scope the FULL company fresh — footprint, units, markets, and volume re-derived from everything the business actually operates, as if pitching the whole company for the first time. When a market from the prior reappears in your fresh scope, REUSE its per-market demand VERBATIM, and reuse every economics fact (customer value, retention, conversion, margin, CPC, acquisition, commission; capacity re-sized to the full scope) verbatim unless a named NEW fact moved it. PRECEDENCE: the borderless rule outranks this prior — if this business is B2B/SaaS (ALWAYS borderless, no exceptions) or otherwise sells borderless (e-com/DTC), discard any geo footprint/units/markets shown here and classify footprint=nongeo units=1.\n'
+    ('PRIOR ESTIMATE — an earlier research run (or the current quote) already holds these values. Reuse a prior field verbatim unless a named new fact or a methodology error requires changing it, and explain every change. SCOPE IS EXEMPT: unless this prompt contains a CLIENT-SPECIFIED MARKETS block, re-derive the full company scope from actual service reach. Reuse economics and per-market demand where the same market reappears. SEO and AEO/GEO scores are not research fields; omit them unless New Reward\'s internal audit supplied them.\n'
     +'industry='+ps.industry+' footprint='+ps.footprint+' units='+ps.units
     +(ps.volume>0?' volume='+ps.volume:'')
     +((typeof mktsSerialize==='function'&&mktsMax()>0&&MKTS.some(function(m){return (m.n&&m.n.trim())||m.v>0;}))?' markets='+mktsSerialize():'')
@@ -2862,16 +2884,16 @@ function researchWithAI(){
       +'(b) When two adjacent ladder bands are both defensible, take the band NEAREST this anchor (equidistant \u2192 the higher) \u2014 this tie-break is what makes independent runs land on the same number. '
       +'(c) For geo scopes, any city\'s own deterministic estimate = '+(typeof IND!=='undefined'&&IND[indSel2]?IND[indSel2].vol.toLocaleString('en-US'):'the industry benchmark')+'/mo \u00d7 min(15,(city population in thousands \u00f7 400)^0.85) \u2014 anchor each market with it.\n\n'
     : '';
-  const prompt='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs. [prompt build '+BUILD+']\n\n'
+  const promptRaw='You are pricing a NewReward SEO/GEO program. Do DEEP RESEARCH on the business below and return calculator inputs. [prompt build '+BUILD+']\n\n'
     +'Business website: '+url+'\n\n'
     +prior
     +refBlock
-    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+((mktFoot==='multi'||mktFoot==='national')?', set footprint='+mktFoot+' and units='+mktList.length:'')+', size capacity to the locations serving '+(mktList.length>1?'these markets':'this market')+' only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order, VOL = that market\'s cluster searches/mo) in the link. BORDERLESS EXCEPTION — this block assumes a geo-bound business. If this business is B2B or SaaS (industry=b2b — ALWAYS borderless, no exceptions) or otherwise sells BORDERLESS (SaaS, software development, B2B services delivered remotely, e-commerce/DTC — clients anywhere, offices are only offices), the named \"markets\" above are OFFICE LOCATIONS, not service markets: IGNORE this block — set footprint=nongeo and units=1, OMIT &markets= from the link, and state in the footprint row\'s Why that the borderless rule overrode the supplied market list. This exception OUTRANKS both this block and any PRIOR ESTIMATE.\n\n':'')
+    +(mktList.length? 'CLIENT-SPECIFIED MARKET'+(mktList.length>1?'S':'')+' — FIXED, DO NOT CHANGE OR ADD TO THEM: '+mktList.join('; ')+'. This engagement covers EXACTLY '+(mktList.length>1?'these markets':'this market')+', even if the business operates in more. Research EACH named market\'s phrase-cluster demand separately, show the per-market split in the volume row\'s Why, set volume to the SUM of the clusters'+((mktFoot==='multi'||mktFoot==='national')?', set footprint='+mktFoot+' and units='+mktList.length:'')+', size capacity to this scope only, and include &markets=City~VOL|City~VOL (URI-encoded, one entry per market in this order). For B2B, honor named service markets but do not mistake office addresses for service markets.\n\n':'')
     +'BE RESEARCHED, DETERMINISTIC, AND CONSERVATIVE — BUT LEAN REALISTIC. Derive every number from stable facts — their published prices and services, their market and city size, and industry cost studies — then round to clean figures (e.g. $750,000, not $763,250) so the same business produces the same values every run. When a range is defensible, choose the TYPICAL (middle) figure, not the low end — and if your draft inputs start to look TOO conservative for a real, established business (implying almost no wins a year, or a program that could never pay for itself), correct toward realistic rather than defending the low end. The calculator already applies its own conservative safeguards on top of your inputs (volume-source haircuts, ramp delays, churn, and a conservative display floor), so stacking low-end inputs onto those safeguards systematically under-sells real businesses. Reserve true low-end picks for fields where the research is genuinely thin. Leave a field blank ONLY if research turns up nothing usable: blanks fall back to a broad 4-bucket industry benchmark, and a generic benchmark is always worse than a researched, business-specific figure. A custom home builder and a med spa are both "high-ticket local" yet have completely different customer values, margins, search volumes, and conversion rates — your job is to capture THOSE differences.\n\n'
-    +'REPRODUCIBILITY CONTRACT — TREAT THIS LIKE A DETERMINISTIC FUNCTION. The same business researched twice minutes apart MUST produce the SAME table and the SAME link, field for field. Three rules make that true: (1) DERIVE, never impressionistically estimate — every value must come from a named source or a stated calculation, and two runs from the same facts land on the same number. (2) SNAP every numeric field to its ladder below — ladders exist so independent runs converge; never output a value between rungs. (3) STICK — if a prior estimate for this business exists anywhere (an earlier prefilled link, a prior table, a figure the user states), reuse it VERBATIM for every field, changing only a field where you can name the specific NEW fact that moved it, and say so in the Why column. Differences are expected months apart as markets move; minutes apart they are an error. PRECEDENCE — ACCURACY OUTRANKS REPRODUCIBILITY. When rules pull in opposite directions, resolve in this order: (1st) HARD CLASSIFICATION RULES (borderless b2b→nongeo, unit definitions, citation integrity — the page must state the figure); (2nd) METHODOLOGY RULES (phrase-level CPC never category averages, head anchor = the declared phrase, buying-intent variants, multiplier and reference-anchor bands, stated derivation chains); (3rd) STICKINESS / PRIOR ESTIMATE. A prior value that VIOLATES a rule above it is NOT protected by stickiness — it was produced by a broken methodology: discard it, re-derive by the rules, and name in the Why which rule the prior broke. Stickiness exists to stop two CORRECT derivations from drifting; it never preserves an incorrect one. ONE EXCEPTION: seoScore and geoScore are directional estimates only and exempt from this contract — New Reward runs its own internal visibility audit that supersedes them before anything is presented, so run-to-run variance on those two fields is acceptable.\n\n'
+    +'REPRODUCIBILITY CONTRACT — TREAT THIS LIKE A DETERMINISTIC FUNCTION. The same business researched twice minutes apart MUST produce the SAME table and link. (1) DERIVE every value from a named source or stated calculation. (2) SNAP every numeric field to the ladder below. (3) STICK to prior estimates unless a named new fact or methodology error requires a change. Resolve conflicts in this order: hard classification and citation rules, methodology, then prior stickiness. Actual service reach determines footprint for every industry, including B2B. SEO and AEO/GEO scores are omitted unless New Reward\'s internal audit explicitly supplied them.\n\n'
     +'Classification rules — follow exactly:\n'
-    +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands. HYBRID PROFESSIONAL SERVICES (wealth managers/RIAs, law, accounting, consultancies, agencies) straddle b2b and highticket \u2014 decide by WHO PAYS and HOW DEMAND SEARCHES, as a HARD 1st-tier rule so two runs can never flip: (a) customers are INDIVIDUAL consumers/households (retail wealth management, personal legal, medical, financial planning) \u2192 highticket with a GEO footprint \u2014 their demand is geo-anchored (\'financial advisor salt lake city\', \'near me\') even when the service can be delivered virtually, and the borderless b2b rule NEVER applies to consumer-facing firms; (b) customers are BUSINESSES (dev shops, B2B consultancies, agencies) \u2192 b2b/nongeo per the borderless rule; (c) genuinely mixed books \u2192 classify by the majority of revenue and name the split in the Why. If a prior run classified the other way, the WHO-PAYS test decides and the Why must say so. LICENSED-VERTICAL FLAG: when the business operates in a licensing-restricted referral vertical (real estate agents/brokerages, mortgage/lending, legal, healthcare), add to the industry row\'s Why: \'transaction-linked revenue share requires broker/attorney review (RESPA guidance; state licensing rules such as Utah Code 61-2f-401) — flat-retainer option available\' — never present a share structure as pre-approved.\n'
-    +'- footprint: "national" = a brand winning MANY physical markets nationwide (set units to the real location count — the model scores capture per local market). "nongeo" = borderless online businesses with no physical service areas (e-commerce, SaaS, DTC) — the model applies the big-market capture damper there instead. A business with ONE physical location serving one city/area is ALWAYS "local". B2B/SaaS, software development, and consulting firms WHOSE CUSTOMERS ARE BUSINESSES sell BORDERLESS: classify them footprint=nongeo with units=1 — units for them means distinct product/solution lines (usually 1), and their OFFICE LOCATIONS ARE NEVER MARKETS: never set footprint or units from an office count. NO EXCEPTIONS — even a firm with several offices or on-site delivery is ONE borderless program: footprint=nongeo, units=1, and NEVER emit &markets= for a b2b business. Use "multi" only if it explicitly lists 2–5 locations or cities, "metro" only if it serves a whole major metro/region, "national" only if it sells nationwide with no geographic limit. When unsure, choose local.\n'
+    +'- industry: "ultra" for custom home builders, design-build firms, large remodels, solar farms, and commercial projects — one-time contracts worth $100k+; "highticket" for med spa, clinic, cosmetic/dental, legal, roofing, HVAC and similar high-value local services; "local" for everyday local services (salon, auto repair, cleaning); "b2b" for B2B services or SaaS; "ecom" for online stores / national brands. HYBRID PROFESSIONAL SERVICES (wealth managers/RIAs, law, accounting, consultancies, agencies) straddle b2b and highticket — decide industry by WHO PAYS: consumer/household buyers use highticket; business buyers use b2b. Then classify footprint separately from actual service reach. Genuinely mixed books follow the majority of revenue. LICENSED-VERTICAL FLAG: when the business operates in a licensing-restricted referral vertical (real estate agents/brokerages, mortgage/lending, legal, healthcare), add to the industry row\'s Why: \'transaction-linked revenue share requires broker/attorney review (RESPA guidance; state licensing rules such as Utah Code 61-2f-401) — flat-retainer option available\' — never present a share structure as pre-approved.\n'
+    +'- footprint: "national" = a brand winning MANY physical markets nationwide (set units to the real location count — the model scores capture per local market). "nongeo" = a borderless online business with no geographic service limit — the model applies the big-market capture damper there instead. A business with ONE physical location serving one city/area is ALWAYS "local". B2B is not automatically borderless: use local, multi, or metro when delivery or selling is geographically bounded; use nongeo only when customers can be served without geographic limits. Offices alone are not markets. Use "multi" only for 2–5 markets, "metro" only for a whole major metro/region, and "national" only for many physical markets nationwide. When unsure, choose local.\n'
     +'- units: the number of physical locations the business actually operates (count them; default 1). NEVER inflate — a single-location business is units=1.\n'
     +'- volume sanity for common home services (gutters, roofing, HVAC, plumbing) serving a metro: count the FULL cluster — installation + replacement + repair + near-me variants across the whole service area. Major-metro clusters for these services typically run 3,000-8,000 searches/mo; entering just the head phrase understates demand badly.\n'
     +'- units vs footprint: if the locations serve DIFFERENT cities or areas, set footprint to multi (2-5 markets), set units to the NUMBER OF MARKETS, and size the volume across exactly those markets; units>1 with footprint=local is only correct when every location shares ONE market.\n'
@@ -2880,7 +2902,7 @@ function researchWithAI(){
     +'- volume: the COMBINED phrase-cluster demand across ALL locations/service lines counted in units — a 2-location business serving two cities needs both cities\' demand added together.\n'
     +'- convrate: for everyday call-heavy local services 2.5-4 is realistic; high-ticket quote-driven services run ~1-2; reserve sub-1 rates for B2B and ultra-high-ticket contracts.\n'
     +'- compstr: decide by rule, not vibe. dominant = household-name national brands or very high-authority sites hold most of the top results. strong = established multi-year players with real authority hold them. moderate = a mixed field with visible gaps (the default). weak = thin, outdated, or few competitors. If torn between two labels, take the STRONGER one and name the competitor that justifies it.\n'
-    +'- seoScore (0–100) and geoScore (0–100): how visible they are TODAY. A deep-researched ESTIMATE is fine here — these are the only two fields exempt from the reproducibility contract, because New Reward runs its own internal visibility audit that replaces them before anything is presented. Most local businesses are SEO 25–40 and GEO 5–20; only score higher with clear evidence of strong rankings or AI mentions.\n'
+    +'- seoScore and geoScore: OMIT both from the link unless New Reward\'s internal visibility-audit scores were explicitly supplied in this prompt. Do not research or estimate them. Show "blank — pending New Reward audit" in the table when they were not supplied.\n'
     +'- rank: their average Google position for money phrases (1–100). If measured by checking, state the exact position; if estimated, snap to 3 / 5 / 8 / 12 / 20 / 30 / 50. cpc: the MONEY PHRASE\'s own published cost-per-click (or the median across the commercial cluster\'s buying-intent phrases), snapped to whole dollars ($2–6 everyday local, $8–25 medical/legal/SaaS). NEVER use a broad category average that blends informational keywords — it systematically understates the money cluster and is a methodology error. STICKINESS: if a prior CPC exists and your fresh phrase-level figure lands within ±30% of it, keep the prior; a bigger gap means one figure was a category average — use the phrase-level one.\n'
     +'- For E-COMMERCE only, you MAY set aov (typical order value, read from their product/pricing pages) and freq (orders per year; use 12 for a clear monthly subscription) — these build the customer value. If not clearly determinable, leave both blank.\n'
     +'VERTICAL STANDARDS TABLE — the starting rung for EVERY economic input, per vertical. Pick the row matching the business\'s ACTUAL vertical subtype (WHO-PAYS decides between rows); deviate from a value ONLY with a named, cited business-specific fact. Field order: conv% | margin% | retention yrs | CPC $ | commission% | acq% | capacity/mo per location | first-year value derivation:\n- everyday local trades (plumbing, HVAC repair, electrical, garage doors): 3.5 | 45 | 3 | 4 | 5 | 15 | 20 | avg job $300-600 x ~2 jobs/yr = $500-1,500\n- salon / spa / beauty: 3.5 | 55 | 3 | 3 | 8 | 15 | 30 | visit $60-120 x 8-12 visits/yr = $750-1,500\n- cleaning / landscaping (recurring plans): 3.5 | 45 | 3 | 3 | 5 | 15 | 25 | $150-300/mo plan = $2,000-3,500/yr\n- auto repair: 3.5 | 50 | 3 | 3 | 3 | 12 | 40 | $400-700/visit x ~2/yr = $1,000-1,500\n- dental / medical practice: 2.5 | 60 | 4 | 8 | 5 | 12 | 25 | new-patient first year $800-1,500 (hygiene + treatment)\n- med spa / aesthetics: 2.5 | 65 | 3 | 8 | 10 | 15 | 30 | $250-400/visit x 4-6 visits = $1,500-2,500\n- legal (PI / family / criminal): 1.5 | 55 | 1 | 15 | 5 | 15 | 10 | matter value $3,000-10,000; years=1\n- roofing / windows / exteriors: 1.5 | 40 | 1 | 10 | 8 | 15 | 20 | project $8,000-15,000; years=1\n- HVAC replacement / install: 1.5 | 40 | 1 | 10 | 8 | 15 | 15 | system $8,000-14,000; years=1\n- REAL ESTATE AGENTS: 0.25 (0.1 luxury-only) | 50 | 1 | 4 | 0 (solo; NEVER the agent\'s own listing-side rate — that is their revenue) | 15 | 2 | avg sale price x ~2.5-2.7% one-side GCI\n- financial advisors / RIAs (consumer): 1.5 | 65 | 5 | 12 | 10 | 15 | 3 | SEC-filed avg client AUM x ADV-stated fee (~1% if unstated)\n- custom home builders / design-build (ultra): 0.25 | 20 | 1 | 9 | 2 | 10 | 0.25 | contract $500k-1M+; years=1\n- large remodel / solar / commercial (ultra): 0.25 | 25 | 1 | 12 | 3 | 10 | 0.4 | project $100k-400k; years=1\n- B2B SaaS (product): 0.75 | 80 | 4 | 20 | 10 | 18 | 10 | ACV from their pricing page; $10k-30k typical mid-market\n- custom software / dev shops / B2B agencies: 0.75 | 40 | 2 | 12 | 10 | 20 | 3 | project $75k-250k (published avg ~$132k), snap $150k\n- staffing / recruiting: 0.75 | 35 | 2 | 12 | 10 | 15 | 5 | placement ~20-25% of salary = $15k-25k/placement\n- e-commerce consumables / subscription DTC: 2.5 | 55 | 2 | 2 | 5 (up to 30-40 affiliate/MLM, cite the comp plan) | 20 | blank at scale | AOV x purchases/yr from published prices\n- e-commerce durable goods: 2 | 50 | 1 | 2 | 5 | 15 | blank at scale | AOV x 1-1.5 purchases/yr\nA business not on this list takes the CLOSEST row by economics (ticket size, purchase cadence, who pays) and names the row it borrowed in the Why. The table sets the rung; the field rules below govern derivation chains, ladders, snapping, and required citations.\n\nDEEP-RESEARCH THE CLIENT ECONOMICS — fill ALL of these with business-specific figures (this is where accuracy is won):\n'
@@ -2900,15 +2922,20 @@ function researchWithAI(){
     +'Then give me BOTH of the following:\n\n'
     +'(1) A FOUR-column markdown table titled "Calculator Inputs" (columns "Input", "Value", "Why", "Sources") with a row for each field: Company, Website, Search phrase, Industry model, Market footprint, Competitor strength, Locations or service lines, Average search rank, SEO visibility score, AEO/GEO visibility score, Typical search ad cost (CPC), Estimated phrase volume, Avg customer value/yr, Typical retention, Conversion rate, Gross margin, Acquisition budget, Sales commission, SEO included, AEO/GEO included. Write "blank (benchmark)" only for a field research could not support. In the "Why" column give a short justification for EVERY value — the specific source, fact, or reasoning it came from (e.g. "published Botox + facial pricing x 4-6 visits/yr", "two locations, both serving St. George", "Keyword Planner range for the phrase cluster", "single-city service area") — so a human can validate every input at a glance. No value without a reason. In the "Sources" column give 1-3 credible sources per row as ACTUAL LINKS — the full URL of the exact page you used (their pricing page URL, the specific Ahrefs/RisingTrends/IBISWorld article, the BBB profile URL). Use a plain named check (e.g. "live SERP check, Jul 2026") ONLY when no URL exists. As many relevant linked sources as genuinely align with the value. CITATION INTEGRITY — non-negotiable: cite a URL for a value ONLY if that page actually states the number, the range it was snapped from, or the fact claimed — a reader who clicks it must be able to find the figure on that page. NEVER attach a related-but-nonsupporting link to dress up a number; citing a page that merely discusses the industry but never states the value is a citation failure. When a value is a calculator canonical or ladder snap (e.g. the high-ticket 1.5 percent visitor-to-customer standard), name it AND its derivation in Sources — "Vertical standard — ~4.8% visitor-to-lead x ~30% close (links)" — and, if helpful, add a link prefixed "context:" that supports the neighborhood of the number without claiming to state it. When a value is derived, show the chain in Why (e.g. "~4.8 percent visitor-to-lead x ~30 percent lead-to-close = ~1.4 percent, snapped to the 1.5 standard") and cite the page(s) that state EACH link of the chain.\n\n'
     +'(2) A prefilled calculator link, on its own line, in this EXACT format — OMIT any field you are leaving blank (never write NUM or a placeholder). CRITICAL: append ONE more parameter, &rationale=, whose value is the URI-encoded compact JSON of the table: an array of {"f":"<link field name>","w":"<a tight 15-25 word SUMMARY of that row\'s Why>","s":["<the full source URLs from your table (or the plain named check when no URL exists)>"]} for every field you filled. This travels into the proposal PDF, which prints the full cited inputs table — so the client sees every source.\n'
-    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&seoScore=0to100&geoScore=0to100&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM&ads=1&adbudget=NUM&rationale=RATIONALE_JSON\n'
+    +base+'?client=NAME&website='+url+'&phrase=MONEY+PHRASE&industry=INDUSTRY&footprint=FOOTPRINT&compstr=COMPSTR&units=NUM&cpc=NUM&seo=1&geo=1&rank=NUM&volume=NUM&volsource=aiprompt&capacity=NUM&yearly=NUM&years=NUM&convrate=NUM&margin=NUM&acq=NUM&commission=NUM&aov=NUM&freq=NUM&ads=1&adbudget=NUM&rationale=RATIONALE_JSON\n'
     +'where RATIONALE_JSON is the URI-encoded JSON array described above — NEVER omit it. Tiny example (two fields): &rationale=%5B%7B%22f%22%3A%22volume%22%2C%22w%22%3A%22Head%20~12k%2Fmo%20plus%20variants%2C%20snapped%20to%2025k%20band%22%2C%22s%22%3A%5B%22https%3A%2F%2Fwww.risingtrends.co%2Fblog%2Fpeptides-trend%22%5D%7D%2C%7B%22f%22%3A%22margin%22%2C%22w%22%3A%22Published%20range%2060-70%2C%20middle%20snapped%22%2C%22s%22%3A%5B%22https%3A%2F%2Fwww.ibisworld.com%2F...%22%5D%7D%5D\n\n'
     +'Valid select values:\n'
     +'- industry: local | highticket | ultra | b2b | ecom\n'
     +'- footprint: local | multi | metro | national | nongeo\n'
     +'- compstr: weak | moderate | strong | dominant\n'
     +'- volsource: aiprompt for researched estimates (the default here); kwp, semrush, or gsc ONLY if the number was actually pulled from that tool\n'
-    +'- ads=1 and adbudget=NUM are OPTIONAL: include ads=1 only when a Google+Meta ads program is part of this pitch. Ads viability is COMPUTED by the calculator (researched CPC ÷ conversion rate vs the acquisition budget) — never argue it yourself, and OMIT adbudget so the calculator recommends the budget, UNLESS you can name a specific cited fact that sets it (e.g. the business\'s stated existing monthly ad spend) — only then include adbudget=NUM with that fact and its source in the rationale.\n'
+    +'- ads=1 and adbudget=NUM are OPTIONAL: include ads=1 only when a Google+Meta ads program is part of this pitch. Ads viability is COMPUTED by the calculator using the all-in acquisition cost (media plus management), remaining delivery capacity, and the client\'s acquisition budget — never argue it yourself, and OMIT adbudget so the calculator recommends the budget, UNLESS you can name a specific cited fact that sets it (e.g. the business\'s stated existing monthly ad spend) — only then include adbudget=NUM with that fact and its source in the rationale.\n'
     +'- markets (REQUIRED for local, multi, and metro footprints; for national ONLY when the business has 10 or fewer locations): City~VOL|City~VOL, URI-encoded — for local give the ONE city and its cluster volume, for metro list the region\'s cities one per entry (up to 10; a single region-total entry only when city splits are unavailable), for multi/national one entry per market in scope; VOL = that market\'s own cluster searches/mo. The calculator pre-fills each named market with its demand under Locations and sums them into the phrase volume, so never omit it where required. MARKETS MUST SUM EXACTLY TO VOLUME: the per-market entries must add to the volume figure exactly — the calculator treats the rows as the source of truth and will override any total that disagrees. When real demand extends beyond the named anchor cities (a metro\'s surrounding areas), add ONE final entry \'Surrounding <region> areas~N\' carrying the remainder, and absorb any ladder-snap difference into that row (or the largest market when there is no remainder row) so the equality is exact. The per-market volumes also weight the delivery cost — a large market carries more of the fee than a small one, so removing markets re-prices honestly. For national with MORE than 10 locations, and ALWAYS for nongeo, OMIT &markets= — but still derive the volume per-market and show that logic in the Why (e.g. "~600/mo average metro cluster x 15 branches").';
+  /* Final corrections deliberately sit last so they supersede legacy prompt language above. */
+  const prompt=promptRaw+'\n\nFINAL CLASSIFICATION OVERRIDES — THESE OUTRANK ANY CONFLICTING RULE ABOVE:\n'
+    +'- B2B is NOT automatically borderless. Choose footprint from actual service reach: local for one market, multi for 2–5 named markets, metro for one region, national for many geographic markets, and nongeo only when customers can be served without geographic limits. Offices alone are not markets, but industrial services, commercial contractors, MSPs, and other B2B firms can be geographically bounded.\n'
+    +'- seoScore and geoScore come from New Reward\'s internal visibility audit. Leave both fields blank unless audited scores were explicitly supplied; write "blank — pending New Reward audit" in the table and omit both parameters from the link. Never invent directional substitutes.\n'
+    +'- Client-economics values must be marked for client confirmation before a final proposal. Research provides a starting point, not a claim that the client verified it.';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     /* Plain NEW CHAT, never Claude Code: the claude.ai/new universal link opens a fresh chat in
@@ -2929,7 +2956,7 @@ function researchWithAI(){
 function resetAll(){
   priceDirty=false; shareDirty=false; rampDirty=false;
   document.querySelectorAll('.inputs input[type=text],.inputs input[type=url]').forEach(i=>i.value='');
-  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,convrate:'',margin:'',acq:15,commission:8,yearly:'',years:'',aov:'',freq:''};
+  const d = {volume:0,cpc:9,rank:28,seoScore:35,geoScore:22,units:1,convrate:'',margin:'',acq:15,commission:'',yearly:'',years:'',aov:'',freq:''};
   for(const k in d) document.getElementById(k).value = d[k];
   document.getElementById('industry').value='local';
   document.getElementById('footprint').value='local';
@@ -3194,12 +3221,12 @@ function buildPDF(mode){
   };
   const h1=28;
   const fxr=v=>v>30 ? '30+' : (v>=10?String(Math.round(v)):v.toFixed(1));
-  const ongTxt = n.runRate!=null ? fxr(n.runRate*ROI_LO)+'–'+fxr(n.runRate)+'×' : '—';
+  const ongTxt = n.runRate!=null ? (fxr(n.runRate*ROI_LO)===fxr(n.runRate) ? fxr(n.runRate)+'×' : fxr(n.runRate*ROI_LO)+'–'+fxr(n.runRate)+'×') : '—';
   const y1Txt  = roi!=null ? fxr(Math.min(roi, n.runRate??roi))+'×' : '—';   // Y1 shown never exceeds full pace
   const scopeTxt = (q.nScopes===2?'SEO + AEO/GEO':(s.seo?'SEO only':s.geo?'AEO/GEO only':'no scope'));
-  /* lead with BOTH ROIs: ongoing (the return once built) is the hero, year-1 (the ramp) sits beside it */
-  box(L,    44,h1,'ONGOING ROI', ongTxt, n.runRate!=null?'floor to modeled — backed by 2026 SEO/GEO benchmarks':'select a service', DGOLD, true, true);
-  box(L+46, 42,h1,'YEAR-1 ROI', y1Txt, roi!=null?(roi>=1?'year-one wins × their first-year value, vs billed':'investment year — the run-rate carries it'):'', DARK, true);
+  /* lead with BOTH revenue-ROAS views: ongoing pace is the hero, year one sits beside it */
+  box(L,    44,h1,'ONGOING REVENUE ROAS', ongTxt, n.runRate!=null?'floor to modeled — revenue before margin':'select a service', DGOLD, true, true);
+  box(L+46, 42,h1,'YEAR-1 REVENUE ROAS', y1Txt, roi!=null?(roi>=1?'year-one value won vs billed':'investment year — the run-rate carries it'):'', DARK, true);
   box(L+90, 42,h1, discP?'FIXED — DISCOUNTED':'FIXED MONTHLY',
       n.price!=null?fmt$(n.price)+'/mo':'—',
       n.share>0?(discP ? 'then '+fmt$(n.series.perfPrice)+'/mo + share (mo '+n.rampMonth+')'
@@ -3373,21 +3400,21 @@ function buildPDF(mode){
       ['Delivery capacity', (s.capacity>0? s.capacity+'/mo stated' : '~'+q.capAuto+'/mo (auto'+(q.scalableDelivery?' — follows demand':'')+')')+(q.scalableDelivery?'':' (cap '+q.capStretch+'/mo)')+(q.capApplied?'':' — demand is the limiter, not capacity')].concat(rx('capacity', s.capacity>0?'Their real physical ceiling; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch above it.':(q.scalableDelivery?'Borderless transactional business (customer worth $1,500/yr or less; no crew or consult slots) — fulfillment scales with demand, so the auto ceiling follows the demand-supported number rather than a human-throughput rung; set a real operational ceiling if one exists.':'Industry-typical ceiling for this footprint; projections cap at +'+Math.round((q.stretchMult-1)*100)+'% stretch.'), s.capacity>0?(SRC_SITE?['Team / operations research',SRC_SITE]:'Team / operations research'):(q.scalableDelivery?'Demand model — the researched demand itself; no human-throughput benchmark applies':BM))),
       ['Search ad cost (CPC)', '$'+(s.cpc??BENCH(s).cpc)+'/click'+(s.cpc==null?' (auto)':'')].concat(rx('cpc', s.cpc==null?'Industry-typical click cost.':'Typical paid-click cost for these phrases.', [SRC_WS])),
       ['Average search rank', String(s.rank??'—')].concat(rx('rank','Their average Google position for money phrases today.',SRC_SERP?[SRC_SERP]:'Checked rankings')),
-      ['SEO visibility score', q.seoEff+'/100'+(q.seoEff!==q.seoEntered?' (rank-blended)':''), rxW('seoScore','Directional estimate of current search visibility — superseded by New Reward\'s internal audit.'), [SRC_NR]],
-      ['AEO/GEO visibility score', (s.geoScore??0)+'/100', rxW('geoScore','Directional estimate of current AI-answer visibility — superseded by New Reward\'s internal audit.'), [SRC_NR]],
+      ['SEO visibility score', s.seoScore==null?'Pending internal audit (preview '+q.seoEff+'/100)':q.seoEff+'/100', s.seoScore==null?'Temporary preview benchmark; replace with New Reward\'s internal visibility audit before presenting.':'New Reward internal visibility audit score, entered manually and used exactly as provided. Rank is modeled separately.', [SRC_NR]],
+      ['AEO/GEO visibility score', s.geoScore==null?'Pending internal audit (preview 22/100)':s.geoScore+'/100', s.geoScore==null?'Temporary preview benchmark; replace with New Reward\'s internal AI-answer visibility audit before presenting.':'New Reward internal AI-answer visibility audit score, entered manually and used exactly as provided.', [SRC_NR]],
       ['Customer value / yr', fmt$(q.yearlyValue)+(q.aovYear>0?' ('+fmt$(s.aov)+' × '+s.freq+'/yr)':(q.yrIsAuto?' (benchmark)':''))].concat(rx(q.aovYear>0?'aov':'yearly', q.yrIsAuto?'Published 2026 first-year customer value baseline for this vertical.':'Derived from their published prices × typical purchase pattern, ladder-snapped.', q.yrIsAuto?BM:(SRC_SITE?[SRC_SITE,SRC_PRICE]:'Their published pricing'))),
       ['Retention', q.retainYears+' yrs (LTV '+fmt$(q.ltv)+')'].concat(rx('years','How long a typical customer keeps paying — sets churn; LTV shown but never projected on.',['Vertical purchase-cycle norm',SRC_CHURN])),
       ['Conversion rate', (s.convrate??BENCH(s).conv)+'%'+(s.convrate>0?'':' (typical)'), rxW('convrate', s.convrate>0?'Visitor-to-customer — the vertical standard, derived from published funnel data (visitor-to-lead × lead-to-close), unless research moved it.':'Vertical standard visitor-to-customer rate — derived from published funnel data: visitor-to-lead benchmark × the vertical\'s lead-to-close rate.'), [SRC_RULER,SRC_WSC]],
       ['Gross margin', (s.margin??BENCH(s).margin)+'%'+(s.margin>0?'':' (typical)')].concat(rx('margin', shareOnP?'Published vertical range, middle, snapped to 5s — sizes the revenue share fairly.':'Published vertical range, middle, snapped to 5s.',[SRC_STERN])),
-      ['Acquisition budget', (s.acq??0)+'%'].concat(rx('acq','What this vertical sensibly spends to win a customer.',['Vertical norm',SRC_CAC])),
-      ['Sales commission', (s.commission??0)+'%'].concat(rx('commission','Comp this business pays its own staff/reps — subtracted from margin in every profit figure (never the rate they charge customers).','Client comp structure / vertical norms')),
+      ['Acquisition budget', (s.acq??15)+'%'+(s.acq==null?' (benchmark)':'')].concat(rx('acq','What this vertical sensibly spends to win a customer.',['Vertical norm',SRC_CAC])),
+      ['Sales commission', s.commission==null?'0% assumed — confirm':s.commission+'%'].concat(rx('commission','Comp this business pays its own staff/reps — subtracted from margin in every profit figure (never the rate they charge customers).','Client comp structure / vertical norms')),
       ['Engagement intensity', q.intensityLabel+(q.seoIntensity?' · SEO '+q.seoIntensity.label:'')+(q.geoIntensity?' · GEO '+q.geoIntensity.label:''), 'Computed from current visibility — lower scores mean more build work.', [SRC_CALC1]],
       ['Market difficulty', q.difficulty+'/10 ('+dw[1]+')', 'Computed from competitor strength, industry, footprint, ad cost, and demand.', [SRC_CALC2]],
       ['Fixed monthly investment', n.price!=null?fmt$(n.price)+'/mo':'—', 'The researched cost to deliver this exact scope, anchored inside the published 2026 market range for SEO + AEO/GEO retainers at this vertical and footprint.', [SRC_AHREFS,SRC_WEBFXG]],
-      ['Projected ROI', n.runRate!=null?fxr(n.runRate*ROI_LO)+'–'+fxr(n.runRate)+'\u00d7 ongoing':'—', 'Computed from THIS quote: modeled new-customer value vs total program cost, capacity-capped — not an industry average. Context: published SEO(+GEO) campaigns average ~9\u00d7 ROAS (3.6–15\u00d7 by industry) with positive ROI in 6–12 months.', [SRC_FPSROI,SRC_PROFY]]
+      ['Projected revenue ROAS', n.runRate!=null?ongTxt+' ongoing':'—', 'Modeled first-year customer value won divided by total program cost, capacity-capped and shown before margin. Gross-profit return is evaluated separately using the client-confirmed effective margin. Context: published SEO(+GEO) campaigns average ~9\u00d7 ROAS (3.6–15\u00d7 by industry) with positive ROI in 6–12 months.', [SRC_FPSROI,SRC_PROFY]]
     ];
     if(adsOnP&&aP) IR.push(['Google + Meta ads', fmt$(aP.budget)+'/mo spend + '+fmt$(aP.fee)+'/mo mgmt'+(adBudgetDirty?'':' (auto)'),
-      'Budget fills the capacity organic isn\'t using, at the researched CPC and conversion rate — never more than half the market\'s clicks. Fee: 15% of spend (12% above $15k/mo), $500 floor — inside the published 10–20%-of-spend norm.'+(shareOnP?' Ads-won customers are never rev-share billed.':''),
+      'Budget is recommended only when capacity remains and the all-in acquisition cost, including management, fits the client\'s confirmed budget — never more than half the market\'s clicks. Fee: 15% of spend (12% above $15k/mo), $500 floor.'+(shareOnP?' Ads-won customers are never rev-share billed.':''),
       [SRC_ADOB,SRC_ADNM,SRC_ADCP]]);
     /* every Sources cell becomes a list of {u,d,link} — URLs render as live, tappable links */
     IR.forEach(function(r2){ r2[3]=(Array.isArray(r2[3])?r2[3]:[r2[3]]).map(norm); });
@@ -3736,7 +3763,7 @@ function buildPDF(mode){
     box(L+62,58,hA,'MANAGEMENT FEE', aP.budget>0?fmt$(aP.fee)+'/mo':'—', '15% of spend, 12% above $15k/mo, $500 floor — benchmark-cited below', DARK, true);
     box(L+124,58,hA,'ADS-ONLY ROAS (REVENUE)', aP.roiAds!=null?fxA(aP.roiAds)+'x':'—', aP.budget>0?'revenue multiple, before margin: '+fmtK(aP.adFull*q.yearlyValue)+'/mo value won vs '+fmt$(aP.budget+aP.fee)+'/mo all-in'+(aP.lagM>0?' — first closings ~month '+(aP.lagM+1):' — month 1, no ramp')+' (net profit: the funnel line below)':'no budget recommended — the verdict is below', DARK, true);
     y+=hA+4;
-    box(L,89,hA,'COST TO WIN A CUSTOMER WITH ADS', aP.adCAC!=null?fmt$(aP.adCAC):'—', 'researched CPC ÷ conversion rate, vs the '+fmt$(aP.acqAllowed)+' allowed ('+aP.acqPct+'% of customer value) — '+(aP.adsViable?(aP.veryEfficient?'very efficient':'viable'):'inefficient: lean on SEO/GEO'), aP.adsViable?DGOLD:[165,60,40], true);
+    box(L,89,hA,'ALL-IN COST TO WIN A CUSTOMER', aP.allInCAC!=null?fmt$(aP.allInCAC):'—', 'media + management vs '+fmt$(aP.acqAllowed)+' allowed ('+aP.acqPct+'% of customer value) — '+(aP.noRoom?'no capacity remaining':aP.adsViable?(aP.veryEfficient?'very efficient':'viable'):'inefficient: lean on SEO/GEO'), aP.adsViable?DGOLD:[165,60,40], true);
     box(L+93,89,hA,'MODELED WINS FROM ADS', aP.budget>0?crAP.v+crAP.unit:'0', 'floor-style model: the Google-led budget at the researched Google CPC through the same conversion chain — Meta\'s cheaper clicks only help', DARK, true);
     y+=hA+5.5;
 
@@ -3986,8 +4013,8 @@ function buildPDF(mode){
     ['Gross margin','What the client keeps from each sale after direct costs.'+(shareOnP?' Higher margins support a higher revenue share.':'')],
     ['Acquisition budget','The percentage of a new customer\'s revenue the client will spend to win them. 10-20% is healthy for growth-mode businesses.'],
     ['Sales commission','Percent of the gross sale this business already pays its own staff, reps, or referral partners — never the rate it charges its customers (an agent\'s listing-side commission is revenue, already inside customer value). Every profit figure in this proposal uses margin net of it.'],
-    ['Ongoing (run-rate) return','The headline ROI band, on the same value-created basis as Year-1: a fully-ramped month\'s won customers × their full first-year value, vs the full ongoing monthly cost ('+(shareOnP?'reduced fee + share':'the flat fee')+'). Shown from conservative floor to modeled — the number that proves the program keeps paying for itself after the build.'],
-    ['Year-1 ROI','Value-created basis: the customers won inside year one × their full first-year value, vs everything invoiced in the first 12 months. A December win\'s remaining purchases land in months 13+, but that value was won by year-one work — so it counts, while cash collected in-year is reported alongside it. Lower than the ongoing return by design: the build happens first.'],
+    ['Ongoing revenue ROAS','The headline revenue-multiple band: a fully-ramped month\'s won customers × their full first-year value, divided by the full ongoing monthly cost ('+(shareOnP?'reduced fee + share':'the flat fee')+'). It is shown before margin, from conservative floor to modeled; gross-profit return is reported separately.'],
+    ['Year-1 revenue ROAS','The customers won inside year one × their full first-year value, divided by everything invoiced in the first 12 months. A December win\'s remaining purchases land in months 13+, but that value was won by year-one work, so it counts; cash collected in-year is reported alongside it. Lower than ongoing ROAS by design because the build happens first.'],
     ['Fixed monthly investment', shareOnP
       ? 'The build-phase fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. Collapses to a small base (70–80% drop) once the revenue share starts — from there, we mostly earn only when proven wins land.'+(pEp.feeWaive?' At this contract size it is waived entirely in any month a win lands.':'')
       : 'The monthly fee: the researched cost to deliver, anchored to published 2026 SEO/GEO market rates for the same scope and market. On a flat retainer it bills unchanged every month — one predictable number.'],
@@ -4168,11 +4195,12 @@ function mktsParse(str){ try{ return String(str).split('|').map(function(t){ con
 function mktsSerialize(){ return MKTS.map(function(m){ return String(m.n||'').replace(/[~|]/g,' ').trim()+'~'+(m.v||0); }).join('|'); }
 function mktsTotal(){ return MKTS.reduce(function(a,m){ return a+(m.v||0); },0); }
 function mktsNames(){ return MKTS.map(function(m){ return String(m.n||'').trim(); }).filter(Boolean); }
+function escAttr(v){ return String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function renderMktsLib(){
   const dl=document.getElementById('mkts-lib'); if(!dl) return;
   const seen={}; let out='';
-  Object.keys(MKTS_LIB).forEach(function(k){ seen[k.toLowerCase()]=1; out+='<option value="'+k.replace(/"/g,'&quot;')+'"></option>'; });
-  Object.keys(US_MKTS).forEach(function(k){ if(!seen[k.toLowerCase()]) out+='<option value="'+k.replace(/"/g,'&quot;')+'"></option>'; });
+  Object.keys(MKTS_LIB).forEach(function(k){ seen[k.toLowerCase()]=1; out+='<option value="'+escAttr(k)+'"></option>'; });
+  Object.keys(US_MKTS).forEach(function(k){ if(!seen[k.toLowerCase()]) out+='<option value="'+escAttr(k)+'"></option>'; });
   dl.innerHTML=out;
 }
 function drawMkts(){
@@ -4192,7 +4220,7 @@ function drawMkts(){
   rows.innerHTML=MKTS.map(function(m,i){
     return '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
       +(mx>1?'<button type="button" class="mkt-x" data-i="'+i+'" title="remove this market (subtracts a location)" style="flex:0 0 28px;height:32px;background:none;border:1px solid rgba(150,140,120,.5);border-radius:8px;color:inherit;cursor:pointer;font-size:15px;line-height:1">×</button>':'')
-      +'<input type="text" class="mkt-n" list="mkts-lib" data-i="'+i+'" value="'+String(m.n||'').replace(/"/g,'&quot;')+'" placeholder="'+(f==='metro'?'Metro / region':'City / market')+'" autocomplete="off" style="flex:1;min-width:0">'
+      +'<input type="text" class="mkt-n" list="mkts-lib" data-i="'+i+'" value="'+escAttr(m.n||'')+'" placeholder="'+(f==='metro'?'Metro / region':'City / market')+'" autocomplete="off" style="flex:1;min-width:0">'
       +'<input type="text" class="mkt-v" data-i="'+i+'" value="'+(m.v?m.v.toLocaleString('en-US'):'')+'" placeholder="searches/mo" inputmode="numeric" autocomplete="off" style="flex:0 0 118px">'
       +'</div>';
   }).join('');
@@ -4288,19 +4316,12 @@ function mktsApply(){   // chips -> units (multi only) + volume, then re-render
   renderMktsLib();
   drawMkts();   // initial state (covers non-prefilled loads)
 })();
-/* HARD RULE — B2B/SaaS is ALWAYS borderless: footprint locked to online/non-geo, one scope,
-   offices are never markets. Applies on manual industry choice AND on any researched link. */
+/* B2B can be local, regional, national, or borderless. SaaS and remote agencies commonly use
+   nongeo, while industrial services, MSPs, commercial contractors, and other B2B firms may
+   sell into named markets. Keep every footprint available and let actual service reach decide. */
 function b2bLock(){
-  const ie=document.getElementById('industry'), fe=document.getElementById('footprint');
-  const b2b=ie.value==='b2b';
-  [...fe.options].forEach(function(o){ o.disabled=b2b&&o.value!=='nongeo'; });
-  if(b2b&&fe.value!=='nongeo'){
-    fe.value='nongeo';
-    const u=document.getElementById('units');
-    mktsSync=true; u.value=1; mktsSync=false;
-    MKTS.length=0; if(typeof drawMkts==='function') drawMkts();
-    if(typeof render==='function') render();
-  }
+  const fe=document.getElementById('footprint');
+  [...fe.options].forEach(function(o){ o.disabled=false; });
 }
 document.getElementById('industry').addEventListener('change',b2bLock);
 b2bLock();
@@ -4366,6 +4387,8 @@ document.getElementById('o-price-edit').addEventListener('change', function(){
 document.getElementById('o-share-edit').addEventListener('input', ()=>{ shareDirty=true; render(); });
 document.getElementById('o-ramp-edit').addEventListener('input', ()=>{ rampDirty=true; render(); });
 
+const INPUT_LIMITS={rank:[1,100],seoScore:[0,100],geoScore:[0,100],cpc:[0,500],units:[1,25],volume:[0,10000000],yearly:[0,100000000],aov:[0,10000000],freq:[0,365],convrate:[0,100],margin:[0,95],acq:[0,60],commission:[0,50],years:[1,20],capacity:[0,100000]};
+
 /* ---- URL prefill: open the calculator with ?client=...&industry=highticket&volume=1200...
    and every matching input is filled. Used by researched demo-prep links. ---- */
 function applyPrefill(qs){
@@ -4380,12 +4403,19 @@ function applyPrefill(qs){
     const el = document.getElementById(id);
     if(!el) return; // field no longer exists (e.g. legacy tracking params) — ignore
     if(el.tagName==='SELECT' && ![...el.options].some(o=>o.value===p.get(id))) return; // ignore bad values
-    if(['volume','yearly','aov'].includes(id)){
-      const nv=parseFloat(String(p.get(id)).replace(/,/g,''));
-      el.value=isNaN(nv)?p.get(id):nv.toLocaleString('en-US');
+    if(INPUT_LIMITS[id]){
+      const raw=parseFloat(String(p.get(id)).replace(/,/g,''));
+      if(isNaN(raw)) return;
+      const nv=Math.min(INPUT_LIMITS[id][1],Math.max(INPUT_LIMITS[id][0],raw));
+      el.value=['volume','yearly','aov'].includes(id)?nv.toLocaleString('en-US'):nv;
     } else el.value = p.get(id);
   });
   researchedQuote=true;   // arrived via a researched prefill link
+  /* Research does not manufacture New Reward's internal audit. Quote-like links that omit
+     either score leave that field visibly blank instead of silently inheriting demo defaults. */
+  const quoteLike=p.has('client')||p.has('website')||p.has('rationale')||p.has('volume');
+  if(quoteLike&&!p.has('seoScore')) document.getElementById('seoScore').value='';
+  if(quoteLike&&!p.has('geoScore')) document.getElementById('geoScore').value='';
   /* per-market chips travel in the link: names + each market's researched demand */
   if(p.has('markets')&&typeof mktsParse==='function'){
     MKTS=mktsParse(p.get('markets'));
@@ -4400,13 +4430,6 @@ function applyPrefill(qs){
        moment of load — a link whose volume disagrees with its own market list is corrected here */
     var mkSum=MKTS.reduce(function(a,m){return a+(m.v||0);},0);
     if(mkSum>0){ var vEl=document.getElementById('volume'); if(vEl) vEl.value=mkSum.toLocaleString('en-US'); }
-  }
-  /* HARD RULE — B2B/SaaS is ALWAYS borderless: a researched link carrying a geo footprint
-     or market chips for a b2b business self-corrects to nongeo / 1 scope / no markets. */
-  if(document.getElementById('industry').value==='b2b'){
-    document.getElementById('footprint').value='nongeo';
-    document.getElementById('units').value=1;
-    MKTS.length=0;
   }
   if(typeof b2bLock==='function') b2bLock();
   if(typeof drawMkts==='function') drawMkts();
@@ -4583,7 +4606,7 @@ render();
 /* HARD INPUT CLAMPS — the model already protects itself, but visible impossible values
    (rank 0, score 150, negative CPC) hurt trust. Values snap into range on change. */
 (function(){
-  var CL={rank:[1,100],seoScore:[0,100],geoScore:[0,100],cpc:[0,500],units:[1,100],volume:[0,10000000],yearly:[0,100000000],aov:[0,10000000],freq:[0,365],convrate:[0,100],margin:[0,95],acq:[0,100],commission:[0,60],years:[1,30],capacity:[0,100000]};
+  var CL=INPUT_LIMITS;
   Object.keys(CL).forEach(function(id){
     var el=document.getElementById(id); if(!el) return;
     el.addEventListener('change',function(){
