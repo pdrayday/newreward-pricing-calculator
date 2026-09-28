@@ -21,9 +21,18 @@ function independent(q, acqPct, budgetIn){
   //     capApplied, nScopes, rampMonth, rampSpan, contractStyle}
   const feePct = b => b>15000 ? 0.12 : 0.15;
   const fee = b => b>0 ? Math.max(500, Math.round(b*feePct(b)/50)*50) : 0;
-  const cpc=q.cpcEff||0, close=q.closeRate;
+  /* CHANNEL-FIT LAW (Sept 28): paid clicks convert at the vertical's paidconv factor; a customer may
+     cost the LARGER of the stated acquisition budget and the payback rule (retained 2+ yrs → a year
+     of gross profit at the keep-rate; one-time → half the gross profit). Tested against the ALL-IN
+     cost per customer (media + management), only while capacity remains (Sept 17 hardening). */
+  const paidConv=q.paidconv??1;
+  const cpc=q.cpcEff||0, close=q.closeRate*paidConv;
   const adCAC=(cpc>0&&close>0)? cpc/close : null;                 // media-only CAC
-  const acqAllowed=(acqPct!=null?acqPct:15)/100*q.yearlyValue;    // what the client says a customer may cost
+  const keepR=Math.max(5,(q.margin||0)-(q.commission||0))/100;
+  const gpYear=q.yearlyValue*keepR;
+  const acqStated=(acqPct!=null?acqPct:15)/100*q.yearlyValue;     // what the client says a customer may cost
+  const paybackAllow=gpYear*((q.retainYears||1)>=2?1.0:0.5);
+  const acqAllowed=Math.max(acqStated,paybackAllow);
   const organicOn=q.nScopes>0;
   const roomAtPace=Math.max(0,q.capStretch-(organicOn?q.newCust:0));
   const noRoom=organicOn&&roomAtPace<=1e-9;
@@ -41,6 +50,9 @@ function independent(q, acqPct, budgetIn){
   const allInCAC=testedWins>0?(testedBudget+fee(testedBudget))/testedWins:null;
   const adsViable=!noRoom&&allInCAC!=null&&allInCAC<=acqAllowed;
   const veryEfficient=adsViable&&allInCAC<=0.5*acqAllowed;
+  const cacEff=allInCAC!=null?allInCAC:adCAC;
+  const paybackMo=(cacEff!=null&&gpYear>0)? cacEff/(gpYear/12) : null;
+  const ltvCac=(cacEff!=null&&cacEff>0)? gpYear*Math.max(1,q.retainYears||1)/cacEff : null;
   const budgetAuto=adsViable?budgetCandidate:0;
   const budget=budgetIn!=null?testedBudget:budgetAuto;
   const adFull=(cpc>0&&budget>0)? Math.min(budget/cpc*close, organicOn?roomAtPace:q.capStretch) : 0;   // floor-style model
@@ -92,7 +104,7 @@ function independent(q, acqPct, budgetIn){
   const mgnPct=Math.max(5,(q.margin||0)-(q.commission||0));   // effective keep-rate (margin net of the client's own sales commission)
   const grossMo=adFull*q.yearlyValue*(mgnPct||0)/100;
   const netMo=grossMo-(budget+fee(budget));
-  return {adCAC, allInCAC, acqAllowed, adsViable, veryEfficient, roomAtPace, noRoom, budgetAuto, budget, fee:fee(budget),
+  return {adCAC, allInCAC, cacEff, acqAllowed, acqStated, paybackAllow, paybackMo, ltvCac, adsViable, veryEfficient, roomAtPace, noRoom, budgetAuto, budget, fee:fee(budget),
           adFull, roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart,
           taperDone:taperStart!=null?Math.min(12,taperStart+2):null, rampFull, organicOn, months,
           adsWinsYr, adsCostYr, adsWinsYrInt, lagM,
@@ -113,7 +125,7 @@ function edgeTests(){
   const base={cpcEff:12, closeRate:0.015, yearlyValue:3000, capStretch:37.5, newCust:8,
               vol:1200, capApplied:false, nScopes:2, rampMonth:4, rampSpan:3, contractStyle:false};
 
-  // -- viability: highticket defaults (cpc12/conv1.5%) -> CAC $800 vs 15% x $3,000 = $450 -> INVIABLE
+  // -- viability: a margin-less fixture (cpc12/conv1.5%) -> CAC $800 vs max(15% x $3,000 = $450, 5%-keep payback $75) -> INVIABLE
   let a=independent(base,15,null);
   t('inviable vertical: adCAC computed', near(a.adCAC,800));
   t('inviable vertical: not viable', !a.adsViable);
@@ -265,7 +277,8 @@ async function liveTests(htmlPath){
   console.log('\n== live cross-check: '+htmlPath+' ==');
 
   const CASES=[
-    {name:'highticket defaults (inviable)', qs:'?industry=highticket&seo=1&geo=1&ads=1'},
+    {name:'highticket defaults (med spa — viable on payback)', qs:'?industry=highticket&seo=1&geo=1&ads=1'},
+    {name:'saas realistic (inviable: $45 clicks, 0.4%)', qs:'?industry=b2b&cpc=45&convrate=0.4&yearly=6000&seo=1&geo=1&ads=1'},
     {name:'local defaults (viable)',        qs:'?industry=local&seo=1&geo=1&ads=1'},
     {name:'ultra (very efficient, event)',  qs:'?industry=ultra&seo=1&geo=1&ads=1'},
     {name:'capacity-bound med spa',         qs:'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2000&capacity=20&acq=15&seo=1&geo=1&ads=1'},
@@ -282,7 +295,8 @@ async function liveTests(htmlPath){
                     capStretch:q.capStretch, newCust:q.newCust, vol:q.vol, capApplied:q.capApplied,
                     nScopes:q.nScopes, rampMonth:n.rampMonth, rampSpan:q.rampSpan,
                     contractStyle:q.contractStyle, industry:s.industry,
-                    leadclose:BENCH(s).leadclose??null, margin:(s.margin??BENCH(s).margin), commission:(s.commission||0)},
+                    leadclose:BENCH(s).leadclose??null, margin:(s.margin??BENCH(s).margin), commission:(s.commission||0),
+                    retainYears:q.retainYears, paidconv:(BENCH(s).paidconv??1)},
               acq:s.acq, dirty:adBudgetDirty,
               budgetField:(document.getElementById('adbudget').value||'').replace(/[^0-9.]/g,'')};
     });
@@ -292,7 +306,7 @@ async function liveTests(htmlPath){
       const ok=(va==null&&vb==null)||(typeof va==='number'&&typeof vb==='number'? near(va,vb,eps||1e-6) : va===vb);
       t(c.name+': '+k+' matches', ok, JSON.stringify(va)+' vs '+JSON.stringify(vb));
     };
-    ['adCAC','acqAllowed','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr','adsWinsYrInt','lagM','leadClose','clicksMo','leadsMo','cpl','grossMo','netMo'].forEach(k=>same(k,0.01));
+    ['adCAC','allInCAC','roomAtPace','noRoom','acqAllowed','acqStated','paybackAllow','paybackMo','ltvCac','adsViable','veryEfficient','budgetAuto','budget','fee','adFull','floorB','taperStart','taperDone','adsWinsYr','adsCostYr','adsWinsYrInt','lagM','leadClose','clicksMo','leadsMo','cpl','grossMo','netMo'].forEach(k=>same(k,0.01));
     const mOk=got.a.months.every((mo,i)=>near(mo.budget,exp.months[i].budget,0.01)&&near(mo.fee,exp.months[i].fee,0.01)
               &&near(mo.ads,exp.months[i].ads,1e-4)&&near(mo.organic,exp.months[i].organic,1e-4)
               &&mo.adsW===exp.months[i].adsW&&mo.orgW===exp.months[i].orgW);
@@ -399,7 +413,8 @@ async function liveTests(htmlPath){
   t('stack: card shows the combined all-in month-1 price', stk.card.indexOf(money(stk.allIn))>=0, money(stk.allIn));
   t('stack: card lists both prices separately', stk.card.indexOf(money(stk.price))>=0 && stk.card.indexOf(money(stk.budget))>=0);
   t('stack: card shows the combined year-one line', /Year one, combined/.test(stk.card));
-  t('separation: ROI sub says organic-alone when ads are on', /organic SEO\/GEO program alone/.test(stk.roiSub));
+  /* Sept 28 (channel fit): with both channels on the headline is the COMBINED return, with each channel alone named beside it */
+  t('separation: ROI sub names each channel alone when ads are on', /Each channel alone: SEO\/GEO .*Google \+ Meta ads .*ROAS/.test(stk.roiSub), stk.roiSub.slice(-200));
   t('chart: timeline explains the blue ads segments', /blue segments are ads-won/i.test(stk.tl));
   t('chart: blue ads segments drawn in the SVG', /bar-ads/.test(stk.svg));
   t('chart: ads legend key visible, cost key reads all-in', stk.legAds===false && /All-in cost/.test(stk.legCost), stk.legCost);
@@ -455,7 +470,7 @@ async function liveTests(htmlPath){
     proj:document.getElementById('o-proj-label').textContent,
     ocHidden:document.getElementById('ocards-kicker').hidden,
     ocTxt:document.getElementById('ocards-kicker').textContent}));
-  t('labels: revenue ROAS kicker says SEO/GEO organic', /Revenue ROAS — SEO\/GEO organic/.test(lbl.kick), lbl.kick);
+  t('labels: revenue-ROAS kicker says SEO/GEO + ads, combined (channel-fit headline)', /revenue ROAS — SEO\/GEO \+ ads, combined/i.test(lbl.kick), lbl.kick);
   t('labels: price label says SEO/GEO', /^SEO\/GEO fixed/.test(lbl.price), lbl.price);
   t('labels: share label says organic wins only', /organic wins only/.test(lbl.share), lbl.share);
   t('labels: projection label says combined', /SEO\/GEO \+ ads combined/.test(lbl.proj), lbl.proj);
@@ -601,7 +616,7 @@ async function liveTests(htmlPath){
 
   /* taper is a sidenote, never a suggestion (Payton, Aug 18: "make it merely a sidenote —
      many successful businesses still run ads heavily") */
-  await page.goto(url+'?industry=local&volume=5000&cpc=6&yearly=4000&capacity=8&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  await page.goto(url+'?industry=local&volume=5000&cpc=14&yearly=1200&capacity=40&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});   // viable-but-not-cheap ads with room at pace → the taper case (very-efficient ads never taper; no-room zeroes the budget)
   const tn=await page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q),a=adsState(s,q,n.rampMonth);
     return {taper:a.taperStart, math:document.getElementById('ads-math').innerText.replace(/\s+/g,' '),
             card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')};});
@@ -644,6 +659,30 @@ async function liveTests(htmlPath){
   t('book check: absent for scalable-delivery lead-gen (one-year, automated)', !/Book check:/.test(bk1.note));
   const bk2=await capQ('?industry=highticket&yearly=12000&years=3&capacity=10&seo=1&geo=1&stay=1');
   t('book check: absent outside B2B (a med spa\'s patient book is not an account book)', !/Book check:/.test(bk2.note));
+
+  /* CHANNEL FIT (Payton, Sept 28: "med spa, pest control, plumbing have a great ROAS on ads; a
+     software company might not — the calculator must distinguish the two") */
+  const cfQ=async(qs)=>{ await page.goto(url+qs,{waitUntil:'load'}); return page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q),a=adsState(s,q,n.rampMonth),cf=channelFit(s,q,n,a);
+    return {mode:cf.mode, viable:a.adsViable, veryEff:a.veryEfficient, basis:a.allowBasis, allow:a.acqAllowed, adCAC:a.adCAC, pb:a.paybackMo, ltv:a.ltvCac, paidConv:a.paidConv, roas:a.roiAds,
+            comb:cf.comb?cf.comb.ret:null, org:cf.org?cf.org.ret:null, kicker:document.getElementById('o-kicker').innerText, roi:document.getElementById('o-roi').innerText,
+            card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '), math:document.getElementById('ads-math').innerText.replace(/\s+/g,' '), roiSub:document.getElementById('o-roi-sub').innerText.replace(/\s+/g,' ')};}); };
+  const spa=await cfQ('?industry=highticket&seo=1&geo=1&ads=1&stay=1');
+  t('channel fit: med-spa preset is VIABLE on the payback rule (was "inefficient" at 15% of first-year value)', spa.viable && spa.basis==='payback' && spa.allow>spa.adCAC, JSON.stringify({allow:spa.allow,adCAC:spa.adCAC,basis:spa.basis}));
+  t('channel fit: med-spa paid clicks convert at 90% of organic (adCAC = 12 ÷ 1.35%)', Math.abs(spa.paidConv-0.9)<1e-9 && Math.abs(spa.adCAC-12/0.0135)<0.01, spa.adCAC);
+  const plumb=await cfQ('?industry=local&seo=1&geo=1&ads=1&stay=1');
+  t('channel fit: local service (plumber) → ADS FIRST, payback under 6 months, ROAS > 4x', plumb.mode==='ads-first' && plumb.pb<=6 && plumb.roas>4, JSON.stringify({mode:plumb.mode,pb:plumb.pb,roas:plumb.roas}));
+  const saas=await cfQ('?industry=b2b&cpc=45&convrate=0.4&yearly=6000&seo=1&geo=1&ads=1&stay=1');
+  t('channel fit: SaaS with $45 clicks at 0.4% → SEO/GEO FIRST, ads inviable, $0 budget', saas.mode==='organic-first' && !saas.viable && /PROJECTED REVENUE ROAS — SEO\/GEO ORGANIC/i.test(saas.kicker), JSON.stringify({mode:saas.mode,adCAC:saas.adCAC,allow:saas.allow,kicker:saas.kicker}));
+  t('channel fit: SaaS paid clicks convert at 70% of organic', Math.abs(saas.paidConv-0.7)<1e-9, saas.paidConv);
+  t('channel fit: the two verticals read differently (ads-first vs organic-first)', plumb.mode!==saas.mode);
+  t('channel fit: combined headline shows the COMBINED return with both channels beside it', /COMBINED/i.test(plumb.kicker) && /×$/.test(plumb.roi) && /Each channel alone: SEO\/GEO .*Google \+ Meta ads .*ROAS/.test(plumb.roiSub), plumb.kicker+' '+plumb.roi+' | '+plumb.roiSub.slice(-160));
+  t('channel fit: combined return = combined value ÷ combined cost (matches the card table)', plumb.comb!=null && Math.abs(parseFloat(plumb.roi)-Math.round(plumb.comb*10)/10)<0.11, plumb.roi+' vs '+plumb.comb);
+  t('channel fit: card carries the verdict and the three-column table', /Channel fit/i.test(plumb.card) && /Ads first/.test(plumb.card) && /Cost per new customer/.test(plumb.card) && /Combined/i.test(plumb.card), plumb.card.slice(0,200));
+  t('channel fit: section 06 explains the two tests (stated budget vs payback rule)', /payback rule/.test(spa.math) && /The larger one wins/.test(spa.math), spa.math.slice(0,200));
+  const adsOnly=await cfQ('?industry=local&organic=0&ads=1&stay=1');
+  t('channel fit: ads-only quote headlines the ads ROAS', /ROAS — GOOGLE \+ META ADS ONLY/i.test(adsOnly.kicker) && /×$/.test(adsOnly.roi) && adsOnly.mode==='ads-only', adsOnly.kicker+' '+adsOnly.roi);
+  const blk=await cfQ('?industry=highticket&footprint=metro&cpc=4&volume=5000&capacity=2&yearly=50000&convrate=0.1&margin=50&commission=0&years=1&seo=1&geo=1&ads=1&stay=1');
+  t('channel fit: one-time sale uses the half-profit rule (Blake: $12,500 payback allowance vs $7,500 stated)', Math.abs(blk.allow-12500)<1 && blk.basis==='payback', JSON.stringify({allow:blk.allow,basis:blk.basis}));
 
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});

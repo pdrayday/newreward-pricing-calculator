@@ -976,7 +976,7 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
     <div class="row2">
       <div class="fgroup">
         <label class="flabel">Customer acquisition budget
-          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Share of revenue the client is willing to spend to win a new customer. 10–20% is healthy for growth-mode businesses.</span></button>
+          <button class="tip" type="button" aria-label="help">?<span class="tipbox">Share of revenue the client is willing to spend to win a new customer. 10–20% is healthy for growth-mode businesses. For the Google + Meta ads test the calculator uses the LARGER of this stated budget and a payback rule — a retained customer (2+ years) may cost up to a year of gross profit at the keep-rate (12-month payback), a one-time sale up to half its gross profit — so a $3,000/yr med-spa patient is never called "unaffordable" at $800 just because 15% of one year is $450.</span></button>
         </label>
         <div class="fwrap"><input type="number" id="acq" class="has-suffix" value="15" min="0" max="60"><span class="suffix">%</span></div>
       </div>
@@ -1203,11 +1203,11 @@ const IND = {
      are research-heavy → high; urgent local services stay maps/search-led → lowest; e-commerce
      discovery is still Google/Amazon-led → modest. All values sit conservative vs the cited
      Ruler +18% / Adobe +42% / Semrush 4.4x AI-referral studies. */
-  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:3.5, margin:50, cost:1.00, cpc:6, cap:60, stretch:1.30, leadclose:0.40, ailift:1.08, aiconv:0.35, name:'Local service'},
-  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:1.5, margin:65, cost:1.08, cpc:12, cap:30, stretch:1.25, leadclose:0.30, ailift:1.14, aiconv:0.50, name:'High-ticket local'},
-  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.25, margin:22, cost:1.10, cpc:9, cap:0.7, stretch:1.10, leadclose:0.15, ailift:1.15, aiconv:0.50, name:'Ultra high-ticket'},
-  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:1, margin:78, cost:1.10, cpc:10, cap:5, stretch:1.40, leadclose:0.18, ailift:1.18, aiconv:0.55, name:'B2B / SaaS'},
-  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2.5, margin:55, cost:1.12, cpc:3, cap:3000, stretch:1.55, leadclose:null, ailift:1.10, aiconv:0.40, name:'E-commerce / National'}
+  local:      {w:1.00, yr:1200, yrs:3, vol:1100,  conv:3.5, margin:50, cost:1.00, cpc:6, cap:60, stretch:1.30, leadclose:0.40, ailift:1.08, aiconv:0.35, paidconv:1.00, name:'Local service'},
+  highticket: {w:1.45, yr:3000, yrs:3, vol:1200,  conv:1.5, margin:65, cost:1.08, cpc:12, cap:30, stretch:1.25, leadclose:0.30, ailift:1.14, aiconv:0.50, paidconv:0.90, name:'High-ticket local'},
+  ultra:      {w:1.50, yr:250000, yrs:1, vol:400, conv:0.25, margin:22, cost:1.10, cpc:9, cap:0.7, stretch:1.10, leadclose:0.15, ailift:1.15, aiconv:0.50, paidconv:0.85, name:'Ultra high-ticket'},
+  b2b:        {w:1.30, yr:8000, yrs:4, vol:600,    conv:1, margin:78, cost:1.10, cpc:10, cap:5, stretch:1.40, leadclose:0.18, ailift:1.18, aiconv:0.55, paidconv:0.70, name:'B2B / SaaS'},
+  ecom:       {w:1.35, yr:900,  yrs:2, vol:12000,  conv:2.5, margin:55, cost:1.12, cpc:3, cap:3000, stretch:1.55, leadclose:null, ailift:1.10, aiconv:0.40, paidconv:0.90, name:'E-commerce / National'}
 };
 /* Effective benchmark for blank fields = the industry model. Finer vertical accuracy comes
    from the RESEARCH PROMPT: every prefilled quote's inputs are researched for the client's
@@ -1663,10 +1663,35 @@ let adBudgetDirty=false;   // true once the rep edits the budget — auto stops 
 
 /* budgetIn = null → the auto recommendation. Everything else derives from q. */
 function computeAds(s,q,rampMonth,budgetIn){
-  const cpc = q.cpcEff||0, close=q.closeRate;          // researched CPC + the SAME conversion chain
+  /* CHANNEL-FIT LAW (Payton, Sept 28 — "med spas, pest control, plumbers have a great ROAS on
+     Google + Meta; a software company might not — the calculator must distinguish the two"):
+     1. PAID-CLICK CONVERSION — a click bought from an ad is not an organic click. Urgent local
+        buyers ("plumber near me") convert the same either way; research-heavy buyers (B2B/SaaS,
+        big-ticket projects) click ads earlier in the journey and convert below the organic
+        rate. Each vertical carries a paidconv factor on the preset table (local 1.00 …
+        B2B/SaaS 0.70); the ads math runs on close × paidconv, never on the organic rate alone.
+     2. WHAT A CUSTOMER MAY COST — the old test (acq% of FIRST-YEAR revenue) called a $800
+        med-spa customer "inefficient" against a $3,000/yr, 65%-margin, 3-year patient. The
+        allowance is now the LARGER of the stated acquisition budget and a payback rule:
+        retained customers (2+ years) may cost up to their first-year gross profit at the
+        keep-rate (a 12-month payback — the standard test for subscription and retained-service
+        businesses); a one-time sale may cost up to HALF its gross profit (the sale must clear
+        the ad cost with profit left). Very efficient = under half that allowance.
+     3. PAYBACK MONTHS and profit-basis LTV:CAC are exposed so every surface can say WHY.
+     The allowance is tested against the ALL-IN cost per customer (media + management fee). */
+  const cpc = q.cpcEff||0;
+  const paidConv = BENCH(s).paidconv ?? 1;
+  const close = q.closeRate*paidConv;                  // researched CPC + the vertical conversion chain, at the paid-click rate
   const adCAC = (cpc>0&&close>0) ? cpc/close : null;   // media-only CAC, before management
   const acqPct = s.acq!=null ? s.acq : 15;
-  const acqAllowed = acqPct/100*q.yearlyValue;         // what the client says a customer may cost
+  const keepA = keepPct(s)/100;
+  const gpYear = q.yearlyValue*keepA;                  // first-year gross profit per customer at the keep-rate
+  const acqStated = acqPct/100*q.yearlyValue;          // what the client SAYS a customer may cost
+  const paybackAllow = gpYear*(q.retainYears>=2 ? 1.0 : 0.5);
+  const acqAllowed = Math.max(acqStated, paybackAllow);
+  const allowBasis = paybackAllow>acqStated ? 'payback' : 'stated';
+  /* (Sept 17 hardening, merged): the viability test runs on the ALL-IN cost per customer —
+     media plus the management fee — and only when capacity actually remains at pace. */
   const organicOn = q.nScopes>0;
   const roomAtPace = Math.max(0, q.capStretch-(organicOn?q.newCust:0));
   const noRoom = organicOn && roomAtPace<=1e-9;
@@ -1689,6 +1714,9 @@ function computeAds(s,q,rampMonth,budgetIn){
   const allInCAC = testedWins>0 ? (testedBudget+testedFee)/testedWins : null;
   const adsViable = !noRoom && allInCAC!=null && allInCAC<=acqAllowed;
   const veryEfficient = adsViable && allInCAC<=0.5*acqAllowed;
+  const cacEff = allInCAC!=null ? allInCAC : adCAC;                             // the cost per customer every surface talks about
+  const paybackMo = (cacEff!=null && gpYear>0) ? cacEff/(gpYear/12) : null;    // months of gross profit to repay one ads-won customer
+  const ltvCac = (cacEff!=null && cacEff>0) ? gpYear*Math.max(1,q.retainYears||1)/cacEff : null;   // profit-basis LTV : CAC
   const budgetAuto = adsViable ? budgetCandidate : 0;
   const budget = budgetIn!=null ? testedBudget : budgetAuto;
   const fee = adsFee(budget);
@@ -1766,7 +1794,7 @@ function computeAds(s,q,rampMonth,budgetIn){
   const mgnPct   = keepPct(s);   // effective keep-rate: margin net of the client's own sales commission
   const grossMo  = adFull*q.yearlyValue*mgnPct/100;
   const netMo    = grossMo-(budget+fee);
-  return {adCAC, allInCAC, acqAllowed, acqPct, adsViable, veryEfficient, roomAtPace, noRoom, budgetAuto, budget, fee, adFull,
+  return {adCAC, allInCAC, cacEff, acqAllowed, acqPct, acqStated, paybackAllow, allowBasis, paidConv, closeAds:close, gpYear, paybackMo, ltvCac, adsViable, veryEfficient, roomAtPace, noRoom, budgetAuto, budget, fee, adFull,
           roiAds, clickCeil, floorB, demandLimited, scaleMode, taperStart, taperDone, rampFull,
           organicOn, months, adsWinsYr, adsCostYr, adsWinsYrInt, lagM,
           leadClose:lc, clicksMo, leadsMo, cpl, mgnPct, grossMo, netMo};
@@ -1778,6 +1806,44 @@ function adsState(s,q,rampMonth){
 }
 /* ONE sequencing sentence — computed from industry, footprint, capacity, and efficiency;
    never hardcoded per vertical */
+/* CHANNEL FIT — which channel this business should lean on, from its own economics.
+   Returns the verdict plus the three-column comparison every surface prints (site card, PDF
+   ads page). All returns are run-rate at pace, REVENUE basis before margin (ROAS-label law),
+   with the keep-rate net beside them. */
+function channelFit(s,q,n,a){
+  const organicOn = q.nScopes>0 && q.price!=null;
+  const keep = keepPct(s)/100;
+  const orgCost = organicOn ? (n.series.ongoingCost||0) : 0;
+  const orgCust = organicOn ? q.newCust : 0;
+  const adsOn = a && a.budget>0;
+  const adsCost = adsOn ? a.budget+a.fee : 0;
+  const adsCust = adsOn ? a.adFull : 0;
+  const combCust = Math.min(q.capStretch, orgCust+adsCust);
+  const col = (cost,cust,first)=>({cost, cust, cpc: cust>0? cost/cust : null, value: cust*q.yearlyValue,
+    ret: cost>0 && cust>0 ? cust*q.yearlyValue/cost : null, net: cust*q.yearlyValue*keep - cost, first});
+  const org  = organicOn ? col(orgCost, orgCust, 'month '+n.rampMonth) : null;
+  const ads  = adsOn ? col(adsCost, adsCust, 'month '+(a.lagM+1)) : null;
+  const comb = (organicOn&&adsOn) ? col(orgCost+adsCost, combCust, 'month '+(a.lagM+1)) : null;
+  /* the verdict */
+  let mode, label, why;
+  const pb = a ? a.paybackMo : null;
+  if(!organicOn && adsOn){ mode='ads-only'; label='Ads-only quote'; why='SEO/GEO is switched off, so this is the paid channel on its own: '+(a.adsViable?'the economics work — ~'+fmt$(a.cacEff)+' per customer against the '+fmt$(a.acqAllowed)+' this business can justify (payback ~'+Math.max(1,Math.round(pb))+' months).':'be careful — ~'+fmt$(a.cacEff)+' per customer is above the '+fmt$(a.acqAllowed)+' this business can justify; the budget is a manual override.'); }
+  else if(a && a.noRoom){ mode='organic-first'; label='SEO/GEO first — organic already fills the capacity';
+    why='At pace the organic program fills the stated delivery capacity on its own ('+custRate(q.newCust).txt+' against a ceiling of ~'+(q.capStretch<3?q.capStretch.toFixed(1):Math.round(q.capStretch))+'/mo), so a paid budget would buy customers the business cannot serve. Ads become an option if the client confirms more capacity or wants paid demand during the organic build.'; }
+  else if(!a || !a.adsViable){ mode='organic-first'; label='SEO/GEO first — ads don’t pay here';
+    why='Winning a customer with ads costs ~'+(a&&a.cacEff!=null?fmt$(a.cacEff):'—')+' — more than the '+(a?fmt$(a.acqAllowed):'—')+' this business can justify'+(pb!=null?' (a ~'+Math.round(pb)+'-month payback on '+Math.round(keep*100)+'% margin)':'')+'. The same buyers are won organically for a fraction of that, so the budget belongs in SEO/GEO; revisit ads if the click cost falls or the customer value rises.'; }
+  else if(a.veryEfficient && pb!=null && pb<=6 && (!organicOn || n.rampMonth>=4)){ mode='ads-first'; label='Ads first — a fast, profitable channel here';
+    why='Every ~'+fmt$(a.cacEff)+' of spend buys a customer worth '+fmt$(q.yearlyValue)+' — paid for out of gross profit in ~'+Math.max(1,Math.round(pb))+' months, with a profit-basis LTV:CAC of ~'+(a.ltvCac!=null?a.ltvCac.toFixed(1):'—')+'×. Start ads month 1'+(organicOn?' while SEO/GEO builds (first organic wins ~month '+n.rampMonth+'); organic is the compounding asset that lowers the blended cost per customer over time.':'.'); }
+  else { mode='both'; label='Both — ads bridge the ramp, organic lowers the cost';
+    why='Ads pay here (~'+fmt$(a.cacEff)+' per customer, ~'+Math.max(1,Math.round(pb))+'-month payback) but they are not cheap. Run them as the bridge while SEO/GEO builds'+(organicOn?', then let the modeled taper cut spend as organic wins the same demand — organic cost per customer at pace is ~'+(org&&org.cpc!=null?fmt$(Math.round(org.cpc)):'—')+' vs ~'+fmt$(Math.round(ads.cpc))+' with ads.':'.'); }
+  const shortLabel = {'ads-first':'Ads first','both':'Both channels','organic-first':'SEO/GEO first','ads-only':'Ads-only quote'}[mode];
+  const pbS = pb!=null ? (pb<1?'<1 mo':'~'+Math.max(1,Math.round(pb))+' mo') : '—';
+  const shortWhy = mode==='ads-first' ? 'payback '+pbS+' · LTV:CAC ~'+(a.ltvCac!=null?a.ltvCac.toFixed(1):'—')+'x — start ads month 1; SEO/GEO compounds behind it'
+    : mode==='both' ? 'ads pay (payback '+pbS+') but organic wins the same buyer for less at pace — ads bridge the ramp, then taper'
+    : mode==='organic-first' ? (a&&a.noRoom ? 'organic fills the stated capacity at pace — a paid budget would buy customers the business cannot serve' : '~'+(a&&a.cacEff!=null?fmt$(Math.round(a.cacEff)):'—')+' all-in per ads-won customer vs '+(a?fmt$(Math.round(a.acqAllowed)):'—')+' justified — the budget belongs in SEO/GEO')
+    : 'payback '+pbS+' · LTV:CAC ~'+(a.ltvCac!=null?a.ltvCac.toFixed(1):'—')+'x — organic program switched off';
+  return {mode, label, shortLabel, why, shortWhy, org, ads, comb, keep};
+}
 function adsSeqLine(s,q,a,noSide){
   /* noSide: the PDF honest-answer section sits on the same page as the schedule note,
      which already carries the taper sidenote — printing it twice on one page is noise
@@ -2431,16 +2497,19 @@ function render(){
       /* ---- section 06: the ads math, in plain words (reads at a high-school level on purpose) ---- */
       const amEl=document.getElementById('ads-math');
       if(amEl){
-        const convTxt=parseFloat((q.closeRate*100).toFixed(2));
-        let am='<p><b>Ads are simple: you buy clicks, and some clicks become customers.</b> One Google click in this market costs about <span class="sm-big">$'+(q.cpcEff||0)+'</span> (researched for this exact phrase and area). Out of every 100 visitors, about <b style="color:var(--text)">'+convTxt+'</b> become paying customers. So the media cost to win ONE customer is about $'+(q.cpcEff||0)+' ÷ '+convTxt+'% = <span class="sm-big">'+(a.adCAC!=null?fmt$(a.adCAC):'—')+'</span>, before the management fee.</p>'
-          +'<p><b>Is that a good deal for this business?</b> A new customer here is worth '+fmt$(q.yearlyValue)+' in their first year, and this business is willing to spend '+a.acqPct+'% of that — <span class="sm-big">'+fmt$(a.acqAllowed)+'</span> — to win one. '
+        const convTxt=parseFloat((a.closeAds*100).toFixed(2)), orgConvTxt=parseFloat((q.closeRate*100).toFixed(2));
+        const pbTxt=a.paybackMo!=null?(a.paybackMo<1?'under a month':'~'+Math.round(a.paybackMo)+' month'+(Math.round(a.paybackMo)===1?'':'s')):'—';
+        let am='<p><b>Ads are simple: you buy clicks, and some clicks become customers.</b> One Google click in this market costs about <span class="sm-big">$'+(q.cpcEff||0)+'</span> (researched for this exact phrase and area). Out of every 100 people who click an ad, about <b style="color:var(--text)">'+convTxt+'</b> become paying customers'
+          +(a.paidConv<1?' — a little below the organic rate ('+orgConvTxt+'%), because in this vertical a click bought from an ad arrives earlier in the buying journey than a click earned in search; the model prices that in at '+Math.round(a.paidConv*100)+'% of the organic rate.':' — the same rate as organic traffic: urgent, ready-to-buy searchers convert the same whether the click was earned or bought.')
+          +' So winning ONE customer with ads costs about $'+(q.cpcEff||0)+' ÷ '+convTxt+'% = <span class="sm-big">'+(a.adCAC!=null?fmt$(a.adCAC):'—')+'</span> in media'+(a.allInCAC!=null&&a.allInCAC>(a.adCAC||0)+0.5?' — <b style="color:var(--text)">'+fmt$(a.allInCAC)+' all-in</b> once the management fee is counted':'')+'.</p>'
+          +'<p><b>Is that a good deal for this business?</b> A new customer here is worth '+fmt$(q.yearlyValue)+' in their first year and brings ≈'+fmt$(Math.round(a.gpYear))+' in gross profit at the client\'s '+Math.round(keepPct(s))+'% '+keepWordIn(s)+'. Two tests set what a customer may cost: the client\'s stated acquisition budget ('+a.acqPct+'% of first-year value = '+fmt$(a.acqStated)+') and the payback rule ('+(q.retainYears>=2?'a retained customer may cost up to a year of gross profit — a 12-month payback, the standard test for subscription and retained-service businesses':'a one-time sale may cost up to half its gross profit, so the sale still clears the ad cost with profit left')+' = '+fmt$(Math.round(a.paybackAllow))+'). The larger one wins: <span class="sm-big">'+fmt$(Math.round(a.acqAllowed))+'</span>. '
           +(a.noRoom
             ? 'The organic program already fills the stated delivery capacity at full pace, so the recommended ad budget is <span class="sm-big">$0</span>. Paid media becomes an option when the client confirms more capacity or wants temporary demand during the organic build.</p>'
           : a.adsViable
             ? (a.veryEfficient
-              ? fmt$(a.allInCAC)+' all-in is less than HALF of '+fmt$(a.acqAllowed)+' — ads are a genuine bargain in this market.</p>'
-              : fmt$(a.allInCAC)+' all-in is under the '+fmt$(a.acqAllowed)+' line — ads pay for themselves here. A solid deal, not a steal.</p>')
-            : fmt$(a.allInCAC||a.adCAC||0)+' all-in is MORE than the '+fmt$(a.acqAllowed)+' this business allows — every ads-won customer would cost more than it should. That\'s why the recommended budget is <span class="sm-big">$0</span>: put the money into SEO/GEO, where the same demand is won organically.</p>');
+              ? fmt$(a.cacEff)+' all-in is less than HALF of that — ads are a genuine bargain in this market: each ads-won customer repays the spend out of gross profit in '+pbTxt+(a.ltvCac!=null?', a profit-basis LTV:CAC of ~'+a.ltvCac.toFixed(1)+'×':'')+'.</p>'
+              : fmt$(a.cacEff)+' all-in is under the '+fmt$(Math.round(a.acqAllowed))+' line — ads pay for themselves here (payback '+pbTxt+(a.ltvCac!=null?', LTV:CAC ~'+a.ltvCac.toFixed(1)+'×':'')+'). A solid deal, not a steal.</p>')
+            : fmt$(a.cacEff||0)+' all-in is MORE than the '+fmt$(Math.round(a.acqAllowed))+' this business can justify — an ads-won customer would take '+pbTxt+' of gross profit to repay'+(q.retainYears>=2?'':' on a one-time sale')+'. That\'s why the recommended budget is <span class="sm-big">$0</span>: put the money into SEO/GEO, where the same demand is won organically.</p>');
         if(a.adsViable){
           /* whole customers only — sparse verticals speak per YEAR (matching the pace cards),
              so "0.77 a month" or "modeled to bring 0" never prints */
@@ -2493,6 +2562,34 @@ function render(){
         ac+='<div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:8px">$0/mo <span style="font-size:12.5px;font-weight:600;color:var(--muted)">recommended</span></div>'
           +'<div style="margin-bottom:6px">'+adsSeqLine(s,q,a)+'</div>';
       }
+      /* CHANNEL FIT — which channel this business should lean on, and the side-by-side
+         economics (Payton, Sept 28: a med spa's ads ROAS and a SaaS company's must read differently) */
+      (function(){
+        const cf=channelFit(s,q,n,a);
+        const fxR=v=>v==null?'—':(v>30?'30+×':(v>=10?Math.round(v)+'×':v.toFixed(1)+'×'));
+        const cN=v=>{ if(v==null) return '—'; const cr=custRate(v); return cr.v+cr.unit; };   // whole customers only (integer-display law)
+        const cols=[['SEO/GEO',cf.org],['Google + Meta ads',cf.ads],['Combined',cf.comb]].filter(c=>c[1]);
+        const th='<div style="display:grid;grid-template-columns:1.25fr repeat('+cols.length+',1fr);gap:4px 8px;font-size:11.5px;align-items:baseline">';
+        const cell=(v,b)=>'<span style="text-align:right;color:var(--text);font-weight:'+(b?'700':'600')+'">'+v+'</span>';
+        const row=(l,f,b)=>'<span style="color:var(--muted)">'+l+'</span>'+cols.map(c=>cell(f(c[1]),b)).join('');
+        let tbl=th+'<span></span>'+cols.map(c=>'<span style="text-align:right;font-size:10px;letter-spacing:.08em;font-weight:700;color:var(--gold-deep);text-transform:uppercase">'+c[0]+'</span>').join('')
+          +row('Monthly cost at pace', c=>fmt$(Math.round(c.cost)))
+          +row('New customers', c=>cN(c.cust))
+          +row('Cost per new customer', c=>c.cpc!=null?fmt$(Math.round(c.cpc)):'—')
+          +row('First-year value / mo', c=>fmtK(c.value))
+          +row('Return at pace (revenue, before margin)', c=>fxR(c.ret), true)
+          +row('Net / mo at '+Math.round(cf.keep*100)+'% keep-rate', c=>(c.net>0?'+':'−')+fmtK(Math.abs(c.net)))
+          +row('First results', c=>c.first)
+          +'</div>';
+        ac+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gold-line)">'
+          +'<div style="font-size:10px;letter-spacing:.14em;font-weight:700;color:var(--gold-deep);text-transform:uppercase;margin-bottom:5px">Channel fit — where this business\'s money works hardest</div>'
+          +'<div style="font-size:13px;font-weight:700;color:var(--gold-bright);margin-bottom:3px">'+cf.label+'</div>'
+          +'<div style="font-size:11.5px;margin-bottom:8px">'+cf.why+'</div>'
+          +tbl
+          +'<div style="margin-top:6px;font-size:11px;color:var(--muted2)">Run-rate once each channel is at pace; returns are revenue multiples before margin (SEO/GEO return counts the reduced fee + share; ads count spend + management). Modeled from the cited inputs — a floor, not a promise.</div>'
+          +'</div>';
+      })();
+
       /* THE STACK — organic + ads + all-in, so the two prices never blur together */
       if(q.nScopes>0 && a.budget>0 && q.price!=null){
         const orgW=Math.max(1,Math.round(n.series.wonYr));
@@ -2522,7 +2619,32 @@ function render(){
   const adsChart = adsOn && q.price!=null && adsState(s,q,n.rampMonth).budget>0;
   /* CHANNEL-LABEL LAW (Payton, Aug 17): with ads on, every output is either grouped under an
      SEO/GEO label or explicitly marked combined — no unlabeled organic-only number anywhere */
-  set('o-kicker', (adsOn&&q.price!=null)?'Projected Revenue ROAS — SEO/GEO organic':'Projected Revenue ROAS');
+  /* ROI headline by channel mode (Payton, Sept 28): organic-only → SEO/GEO ROI band; organic +
+     ads → the COMBINED return at pace with both channels alone beside it; ads-only → the ads
+     ROAS. Every figure labeled; revenue basis before margin, keep-rate net in the sub-line. */
+  set('o-kicker', 'Projected Revenue ROAS');
+  if(adsOn){
+    const aH=adsState(s,q,n.rampMonth), cfH=channelFit(s,q,n,aH);
+    const fxH=v=>v==null?'—':(v>30?'30+':(v>=10?String(Math.round(v)):v.toFixed(1)));
+    const mjt2=document.getElementById('mjump-txt');
+    if(q.price!=null && aH.budget>0 && cfH.comb){
+      set('o-kicker','Projected revenue ROAS — SEO/GEO + ads, combined');
+      set('o-roi', fxH(cfH.comb.ret)+'×');
+      set('o-roi-unit',' combined revenue ROAS at pace');
+      set('o-roi-sub','Both channels once built: ≈'+fmtK(cfH.comb.value)+'/mo in first-year customer value ('+custRate(cfH.comb.cust).txt+' — organic + ads, capped at delivery capacity) vs ≈'+fmt$(Math.round(cfH.comb.cost))+'/mo all-in (reduced fee'+(n.share>0?' + share':'')+' + ad spend + management) — a revenue multiple, before margin; ≈'+(cfH.comb.net>0?'+':'−')+fmtK(Math.abs(cfH.comb.net))+'/mo net at the client\'s '+Math.round(cfH.keep*100)+'% '+keepWordIn(s)+'. Each channel alone: SEO/GEO '+fx(rrCons)+'–'+fx(rr)+'× · Google + Meta ads '+fxH(aH.roiAds)+'× ROAS. Channel fit: <b>'+cfH.label+'</b> — details on the Paid Media card below. Modeled from the cited inputs against published 2026 benchmarks — a floor, not a promise.');
+      if(mjt2) mjt2.textContent = fmt$(n.price)+'/mo + ads · '+fxH(cfH.comb.ret)+'× combined';
+    } else if(q.price!=null && aH.budget>0){
+      set('o-kicker','Projected Revenue ROAS — SEO/GEO organic');
+    } else if(q.price==null && aH.budget>0){
+      set('o-kicker','Projected ROAS — Google + Meta ads only');
+      set('o-roi', fxH(aH.roiAds)+'×');
+      set('o-roi-unit',' ads ROAS (revenue)');
+      set('o-roi-sub','Ads-only quote: '+fmtK(aH.adFull*q.yearlyValue)+'/mo in first-year customer value ('+custRate(aH.adFull).txt+' at pace) vs '+fmt$(aH.budget+aH.fee)+'/mo all-in (ad spend + management) — a revenue multiple, before margin; '+(aH.netMo>0?'≈+'+fmtK(aH.netMo)+'/mo net at the client\'s '+aH.mgnPct+'% '+keepWordIn(s):'about break-even on first-year profit at the client\'s margin')+'. '+cfH.why+' Turn on the SEO + AEO/GEO program to see the combined plan. Modeled from the cited inputs against published 2026 benchmarks — a floor, not a promise.');
+      if(mjt2) mjt2.textContent = fmt$(aH.budget+aH.fee)+'/mo ads · '+fxH(aH.roiAds)+'× ROAS';
+    } else if(q.price!=null){
+      set('o-kicker','Projected Revenue ROAS — SEO/GEO organic');
+    }
+  }
   set('o-price-lbl', adsOn?'SEO/GEO fixed monthly investment':'Fixed monthly investment');
   set('o-share-lbl', adsOn?'Revenue share — organic wins only':'Revenue share');
   const fanEl=document.getElementById('flat-ads-note');
@@ -2827,7 +2949,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260916-71';
+const BUILD='NR-20260928-72';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3759,13 +3881,38 @@ function buildPDF(mode){
     /* plan boxes — the same numbers as the site card */
     y=29;
     const hA=26;
-    box(L,58,hA,'MONTHLY AD BUDGET', aP.budget>0?fmt$(aP.budget)+'/mo':'$0', adBudgetDirty?'set by agreement — the auto recommendation is '+fmt$(aP.budgetAuto):'auto — fills the capacity organic isn\'t using; never more than half the market\'s clicks', DARK, true, true);
+    box(L,58,hA,'MONTHLY AD BUDGET', aP.budget>0?fmt$(aP.budget)+'/mo':'$0', adBudgetDirty?'set by agreement — the auto recommendation is '+fmt$(aP.budgetAuto):(aP.budget>0?'auto — fills the capacity organic isn\'t using; never more than half the market\'s clicks':'auto — $0: an ads-won customer would cost more than this business can justify (see Channel fit)'), DARK, true, true);
     box(L+62,58,hA,'MANAGEMENT FEE', aP.budget>0?fmt$(aP.fee)+'/mo':'—', '15% of spend, 12% above $15k/mo, $500 floor — benchmark-cited below', DARK, true);
     box(L+124,58,hA,'ADS-ONLY ROAS (REVENUE)', aP.roiAds!=null?fxA(aP.roiAds)+'x':'—', aP.budget>0?'revenue multiple, before margin: '+fmtK(aP.adFull*q.yearlyValue)+'/mo value won vs '+fmt$(aP.budget+aP.fee)+'/mo all-in'+(aP.lagM>0?' — first closings ~month '+(aP.lagM+1):' — month 1, no ramp')+' (net profit: the funnel line below)':'no budget recommended — the verdict is below', DARK, true);
     y+=hA+4;
-    box(L,89,hA,'ALL-IN COST TO WIN A CUSTOMER', aP.allInCAC!=null?fmt$(aP.allInCAC):'—', 'media + management vs '+fmt$(aP.acqAllowed)+' allowed ('+aP.acqPct+'% of customer value) — '+(aP.noRoom?'no capacity remaining':aP.adsViable?(aP.veryEfficient?'very efficient':'viable'):'inefficient: lean on SEO/GEO'), aP.adsViable?DGOLD:[165,60,40], true);
-    box(L+93,89,hA,'MODELED WINS FROM ADS', aP.budget>0?crAP.v+crAP.unit:'0', 'floor-style model: the Google-led budget at the researched Google CPC through the same conversion chain — Meta\'s cheaper clicks only help', DARK, true);
-    y+=hA+5.5;
+    /* CHANNEL FIT (Payton, Sept 28) — the verdict box plus the side-by-side economics that
+       used to be two boxes (cost to win / modeled wins now live in the table's rows) */
+    const cfP=channelFit(s,q,n,aP);
+    const hF=26.5;
+    box(L,58,hF,'CHANNEL FIT', cfP.shortLabel, cfP.shortWhy, cfP.mode==='organic-first'?[165,60,40]:DGOLD, true);
+    (function(){
+      const cols=[['SEO/GEO',cfP.org],['GOOGLE + META ADS',cfP.ads],['COMBINED',cfP.comb]].filter(c=>c[1]);
+      const x0=L+62, w=R-x0, labW=44, cw=(w-8-labW)/cols.length;   // columns end 4mm inside the panel's right edge
+      doc.setFillColor(LBG[0],LBG[1],LBG[2]); doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.setLineWidth(.3);
+      doc.roundedRect(x0,y,w,hF,2,2,'FD');
+      const fxR=v=>v==null?'—':(v>30?'30+x':(v>=10?Math.round(v)+'x':v.toFixed(1)+'x'));
+      const cN=v=>{ if(v==null) return '—'; const cr=custRate(v); return cr.v+cr.unit; };
+      let ty=y+5.4;
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.2); doc.setTextColor(DGOLD[0],DGOLD[1],DGOLD[2]);
+      doc.text('AT PACE, PER MONTH',x0+4,ty,{charSpace:.4});   // short on purpose: it shares the line with the column headers
+      cols.forEach((c,i)=>doc.text(c[0],x0+4+labW+cw*(i+1)-1,ty,{align:'right'}));
+      ty+=3.2;
+      const rows=[['Monthly cost at pace',c=>fmt$(Math.round(c.cost))],['New customers',c=>cN(c.cust)],['Cost per new customer',c=>c.cpc!=null?fmt$(Math.round(c.cpc)):'—'],
+        ['First-year value / mo',c=>fmtK(c.value)],['Return at pace (revenue)',c=>fxR(c.ret),true],['Net / mo at '+Math.round(cfP.keep*100)+'% keep-rate',c=>(c.net>0?'+':'-')+fmtK(Math.abs(c.net))],['First results',c=>c.first]];
+      rows.forEach(r=>{
+        doc.setFont('helvetica',r[2]?'bold':'normal'); doc.setFontSize(6.6); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+        doc.text(r[0],x0+4,ty);
+        doc.setTextColor(DARK[0],DARK[1],DARK[2]);
+        cols.forEach((c,i)=>doc.text(String(r[1](c[1])),x0+4+labW+cw*(i+1)-1,ty,{align:'right'}));
+        ty+=2.8;
+      });
+    })();
+    y+=hF+5.5;
 
     /* the funnel in one line — clicks → leads → customers → net profit (HOTH-referenced) */
     if(aP.budget>0){
@@ -3897,7 +4044,7 @@ function buildPDF(mode){
     ['"How do you prove a win actually came from you?"',
      '100% verifiable attribution, or nothing: tracked phone numbers, forms, and booking links tied to your search and AI visibility. Every win is tracked, so every win is provable — a win is a win, there is no in-between. '+(shareOnP?'If a customer cannot be proven to have come from this program, we do not take a dime of share on them. Period.':'If a customer cannot be proven to have come from this program, we do not claim them. Period.')],
     ['"Why not just run Google Ads?"',
-     'Ads rent attention — the day the spend stops, the leads stop. Rankings and AI recommendations are owned assets that compound. Many clients run both; this program builds the part you keep. And if you already do some SEO: buyers now ask ChatGPT, Gemini, and Perplexity too — the channels feed each other, search visibility earns AI citations and AI answers reinforce search trust.'],
+     'Sometimes you should — and the plan says so when the math does. For many service businesses (med spas, pest control, cleaning, plumbing) a click converts fast and a customer repays the ad cost out of gross profit within a few months, so ads are a fast, profitable channel and this plan puts them first. For research-heavy purchases (software, big-ticket projects) an ad click converts less often and costs more, and the same buyer is won organically for a fraction of the cost — so the budget belongs in SEO/GEO. Either way ads rent attention: the day the spend stops, the leads stop, while rankings and AI recommendations are owned assets that compound. The Channel Fit table'+(adsOnP&&aP&&aP.budget>0?' on page 2':'')+' shows the cost per customer, payback, and return of each channel for THIS business side by side — no favorite, just the numbers.'],
     ['"How fast will I see results?"',
      'Technical and trust fixes land in the first few weeks — you see what shipped from day one. The first '+(n.rampMonth-1)+' months are the build'+(shareOnP?', billed as exactly that — and any customers won during the build are yours share-free. The share begins month '+n.rampMonth+', wins':'; wins')+' ramp to full pace from there, and the visibility asset keeps strengthening through months 12–24. Anyone promising page one in two weeks is selling something else.'],
     ['"I\'ve been burned before — do you guarantee rankings?"',
@@ -3926,6 +4073,8 @@ function buildPDF(mode){
      'Yes — on territory and on paid media, not by splitting the organic work. SEO and AEO/GEO are one program (SEO is the foundation GEO stands on, so a half-program would cost more and deliver less). What you can scale is the footprint: start by winning one local area before tackling a multi-market or metro program — a smaller footprint means less demand to chase and less to build, so a lower monthly fee. And Google + Meta ads are optional on top, added only where the math says they are efficient for your business. Start where the math is tightest, then expand as results come in.'],
     ['"How do things actually get ranked?"',
      'Google rewards relevance and authority: how well a page answers the search, and how much trust the site has earned — helpful content, reputable links, reviews, consistency, and (for local searches) proximity and the Google Business Profile. AI engines recommend businesses they can verify across those same signals. Rankings are earned, not bought — which is why competitor strength, current rank, and the visibility scores drive the difficulty, price, and ramp in this proposal.'],
+    (adsOnP&&aP) ? ['"How do you decide whether ads make sense for my business?"',
+     'Two tests, both from your own numbers. First, what a customer may cost: the larger of your stated acquisition budget and a payback rule — a retained customer (2+ years) may cost up to a year of gross profit at your keep-rate (a 12-month payback, the standard test for subscription and retained-service businesses); a one-time sale may cost up to half its gross profit. Second, what a customer actually costs with ads: the researched click cost ÷ the rate at which ad clicks become customers — and an ad click is not an organic click: urgent local buyers convert the same either way, while research-heavy buyers (software, large projects) convert below the organic rate, which the model prices in per vertical. Under half the allowance = a bargain, ads first. Under the allowance = viable, run both. Over it = the budget belongs in SEO/GEO. The verdict, payback months, and profit-basis LTV:CAC are printed on the Channel Fit table so you can check every step.'] : null,
     (adsOnP&&aP&&aP.budget>0) ? ['"Why is the ad budget capped — and how does the ads management fee work?"',
      'Two guardrails and one fee, all in the open. The budget is never allowed to buy more than HALF of the market\'s clicks — half of the total monthly searches × the researched cost per click — because past that point extra dollars chase buyers who simply aren\'t searching. The management fee follows the published industry model (10–20% of monthly ad spend is the norm): 15% of spend here, sliding to 12% on budgets above $15,000/mo because managing a bigger budget is not proportionally more work, with a $500/mo minimum so a small account still gets real management hours. And the structure keeps us honest: when the organic program starts winning the same demand, the modeled plan tapers the ad budget — cutting our own fee — so the projection never quietly assumes spend runs forever. One sidenote: the taper is a default, not advice to stop advertising. Many successful businesses keep running ads heavily alongside strong organic to keep scaling — if that\'s the goal, the budget simply holds or grows, with the same fee model and the same per-customer math.'] : null
   ].filter(Boolean);
@@ -4005,6 +4154,10 @@ function buildPDF(mode){
     adsOnP ? ['Half-the-market click ceiling','A spending guardrail on the ad budget: it may never buy more than half of all the clicks this market produces in a month (half of total searches × cost per click) — past that point, extra spend chases people who aren\'t searching. Even a manually raised budget only gets credit for the wins that ceiling\'s clicks can deliver.'] : null,
     adsOnP ? ['Ads management fee — 15% / 12% / $500 floor','Running the ad accounts is charged as a percent of spend, the published industry model (10–20% is the 2026 norm): 15% of monthly spend, sliding to 12% above $15,000/mo because the work doesn\'t scale one-for-one with budget, and never less than $500/mo so small accounts still get real management hours. Always billed as spend + fee — the ad money itself goes to Google & Meta, not to us.'] : null,
     adsOnP ? ['ROAS — return on ad spend','A revenue multiple: the first-year customer value the ads win ÷ the all-in ads cost (spend + management fee). It measures revenue, before the client\'s margin — the margin-adjusted net-profit view is always shown separately beside it.'] : null,
+    adsOnP ? ['Channel fit','Which channel this business should lean on, read from its own economics: ads first (a customer repays the ad cost out of gross profit within ~6 months and costs under half the allowance), both (ads pay but organic wins the same buyer for less at pace), or SEO/GEO first (an ads-won customer costs more than the business can justify). Printed as a side-by-side table — cost per customer, return, net, first results — for SEO/GEO, ads, and the two combined.'] : null,
+    adsOnP ? ['Payback (ads)','Months of gross profit, at the keep-rate, needed to repay what one ads-won customer cost. The allowance rule: a retained customer (2+ years) may cost up to a year of gross profit — a 12-month payback, the standard test for subscription and retained-service businesses; a one-time sale up to half its gross profit. The stated acquisition budget counts too — whichever is larger sets what a customer may cost.'] : null,
+    adsOnP ? ['LTV : CAC (profit basis)','Lifetime gross profit of a customer (first-year gross profit at the keep-rate × years retained) divided by what ads paid to win them. 3x is the common health line; service businesses with fast-converting clicks routinely run 5–10x, which is why ads suit them.'] : null,
+    adsOnP ? ['Paid-click conversion factor','An ad click is not an organic click. Urgent local buyers convert the same either way (factor 1.0); research-heavy buyers click ads earlier in the journey and convert below the organic rate — high-ticket local 0.9, e-commerce 0.9, ultra high-ticket 0.85, B2B/SaaS 0.7. The ads math always runs on the organic rate × this factor, never on the organic rate alone.'] : null,
     adsOnP ? ['Budget taper','The modeled step-down of ad spend once the organic program is winning the same demand — included so the projection never quietly bills full ad spend forever. A default, not a rule: many successful, profitable businesses keep running ads heavily alongside strong organic to keep scaling, and the plan works the same way if the budget holds or grows.'] : null,
     ['Customer value / year','What one customer pays per year. Projections use this yearly figure — never lifetime value — so growth is not overstated.'],
     ['Retention','How many years a typical customer stays. Sets the monthly churn in the 12-month projection.'],
