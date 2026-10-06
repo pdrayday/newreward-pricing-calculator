@@ -269,6 +269,25 @@ async function liveTests(htmlPath){
   const {chromium}=require('playwright');
   const path=require('path');
   const url='file://'+path.resolve(htmlPath);
+  /* SITE-IS-LEAN LAW (Payton, Oct 6): the plain-English math moved off the site into the deck.
+     pdfText(qs) builds the PDF for a quote link and returns its text (pdftotext), cached per link. */
+  const _pdfCache={};
+  const pdfText=async function(qs){
+    if(_pdfCache[qs]) return _pdfCache[qs];
+    await page.goto(url+qs,{waitUntil:'load'});
+    await page.addScriptTag({path:'node_modules/jspdf/dist/jspdf.umd.min.js'});
+    const b64=await page.evaluate(()=>new Promise((res,rej)=>{ const ro=window.openPdfPreview;
+      window.openPdfPreview=function(u){ window.openPdfPreview=ro; fetch(u).then(r=>r.arrayBuffer()).then(ab=>{const a=new Uint8Array(ab);let z='';for(let i=0;i<a.length;i++)z+=String.fromCharCode(a[i]);res(btoa(z));}).catch(e=>rej(String(e))); };
+      try{ buildPDF('preview'); }catch(e){ rej(e.message); } }));
+    const fs=require('fs'), cp=require('child_process'), os=require('os'), pth=require('path');
+    const f=pth.join(os.tmpdir(),'nr-harness-'+Date.now()+'.pdf'); fs.writeFileSync(f,Buffer.from(b64,'base64'));
+    const txt=cp.execSync('pdftotext -layout "'+f+'" - 2>/dev/null').toString().replace(/\s+/g,' ');
+    const info=cp.execSync('pdfinfo "'+f+'" 2>/dev/null').toString(), fonts=cp.execSync('pdffonts "'+f+'" 2>/dev/null').toString();
+    _pdfMeta[qs]={pages:+(info.match(/Pages:\s+(\d+)/)||[])[1], size:(info.match(/Page size:\s+([^\n]+)/)||[])[1]||'', inter:(fonts.match(/Inter/g)||[]).length};
+    try{ fs.unlinkSync(f); }catch(e){}
+    _pdfCache[qs]=txt; return txt;
+  };
+  const _pdfMeta={};
   const fs=require('fs');
   const exe=['/opt/pw-browsers/chromium','/opt/pw-browsers/chromium-1194/chrome-linux/chrome']
     .find(p=>{try{return fs.existsSync(p)&&fs.statSync(p).isFile();}catch(e){return false;}});
@@ -354,20 +373,20 @@ async function liveTests(htmlPath){
   const offUi=await page.evaluate(()=>({card:document.getElementById('ads-card').hidden,
     sec:document.getElementById('sec-ads').hidden}));
   t('toggle off: ads card hidden', offUi.card===true);
-  t('toggle off: ads-math section hidden', offUi.sec===true);
+  t('toggle off: ads budget section hidden', offUi.sec===true);
 
   /* flat-retainer mode: no rev-share talk anywhere on the ads surfaces */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&revshare=0&stay=1',{waitUntil:'load'});
   const flat=await page.evaluate(()=>({
     card:document.getElementById('ads-card').textContent,
-    math:document.getElementById('ads-math').textContent,
     sum:document.getElementById('o-summary').textContent,
     sec:document.getElementById('sec-ads').hidden,
     priceSub:document.getElementById('o-price-sub').textContent}));
   const noShare=s=>!/rev[- ]?share|revenue share|share-free|% share|of share|share starts|share begins|no share|the share /i.test(s);
-  t('flat mode: ads-math section visible', flat.sec===false);
+  t('flat mode: ads budget section visible', flat.sec===false);
   t('flat mode: no rev-share talk on the ads card', noShare(flat.card), flat.card.slice(0,200));
-  t('flat mode: no rev-share talk in section 06', noShare(flat.math));
+  const flatPdf=await pdfText('?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&revshare=0&stay=1');
+  t('flat mode: no rev-share talk in the PDF ads math', noShare(flatPdf.slice(flatPdf.indexOf('The Ads Math'), flatPdf.indexOf('The 12-Month Projection'))), 'ads-math pages');
   t('flat mode: no rev-share talk in the summary', noShare(flat.sum));
   t('flat mode: fee subtitle has no share/drop talk', noShare(flat.priceSub) && !/drops/i.test(flat.priceSub), flat.priceSub);
 
@@ -390,11 +409,12 @@ async function liveTests(htmlPath){
 
   /* share mode: section 06 states the exclusion + explains the budget with live numbers */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
-  const shr=await page.evaluate(()=>({math:document.getElementById('ads-math').textContent,
-    inSec:!!document.querySelector('#sec-ads #adbudget')}));
-  t('share mode: section 06 states the rev-share exclusion', /never rev-share billed/.test(shr.math));
-  t('share mode: section 06 explains CAC and guardrails', /simple|clicks become customers/i.test(shr.math) && /guardrail/i.test(shr.math));
-  t('budget input lives inside section 06', shr.inSec===true);
+  const shr=await page.evaluate(()=>({inSec:!!document.querySelector('#sec-ads #adbudget')}));
+  const shrPdf=await pdfText('?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&stay=1');
+  await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
+  t('share mode: PDF ads math states the rev-share exclusion', /never rev-share billed/.test(shrPdf));
+  t('share mode: PDF ads math explains CAC and guardrails', /clicks become customers/i.test(shrPdf) && /guardrail/i.test(shrPdf));
+  t('budget input lives inside the ads budget section', shr.inSec===true);
 
   /* the combined stack: organic + ads + all-in on the card, numbers reconciling exactly */
   const stk=await page.evaluate(()=>{
@@ -410,12 +430,14 @@ async function liveTests(htmlPath){
             cs:{inv:chartSeries.inv, adsC:chartSeries.adsC, allInArr:chartSeries.allIn, ads:chartSeries.ads}};
   });
   const money=v=>'$'+Math.round(v).toLocaleString('en-US');
-  t('stack: card shows the combined all-in month-1 price', stk.card.indexOf(money(stk.allIn))>=0, money(stk.allIn));
-  t('stack: card lists both prices separately', stk.card.indexOf(money(stk.price))>=0 && stk.card.indexOf(money(stk.budget))>=0);
-  t('stack: card shows the combined year-one line', /Year one, combined/.test(stk.card));
-  /* Sept 28 (channel fit): with both channels on the headline is the COMBINED return, with each channel alone named beside it */
-  t('separation: ROI sub names each channel alone when ads are on', /Each channel alone: SEO\/GEO .*Google \+ Meta ads .*ROAS/.test(stk.roiSub), stk.roiSub.slice(-200));
-  t('chart: timeline explains the blue ads segments', /blue segments are ads-won/i.test(stk.tl));
+  t('stack: PDF shows the combined all-in month-1 price', shrPdf.indexOf(money(stk.allIn))>=0 && /All-in, month 1/.test(shrPdf), money(stk.allIn));
+  t('stack: PDF lists both prices separately', shrPdf.indexOf(money(stk.price))>=0 && shrPdf.indexOf(money(stk.budget))>=0);
+  t('stack: PDF shows the combined year-one line', /Year one, combined/.test(shrPdf));
+  t('stack: the site card is lean — no stack block, no funnel paragraph (PDF-only now)', !/Year one, combined/.test(stk.card) && !/The funnel:/.test(stk.card), stk.card.slice(0,200));
+  /* Sept 28 (channel fit) + Oct 6 (lean site): the headline sub names each channel alone, in one line */
+  t('separation: ROI sub names each channel alone when ads are on', /SEO\/GEO alone [\d.–]+× · ads alone [\d.]+×/.test(stk.roiSub), stk.roiSub.slice(-200));
+  t('separation: ROI sub is one lean line (the math is in the PDF)', stk.roiSub.length<260 && /Full math in the PDF/.test(stk.roiSub), String(stk.roiSub.length));
+  t('chart: one-line legend names the blue ads segments', /blue = ads wins/i.test(stk.tl), stk.tl);
   t('chart: blue ads segments drawn in the SVG', /bar-ads/.test(stk.svg));
   t('chart: ads legend key visible, cost key reads all-in', stk.legAds===false && /All-in cost/.test(stk.legCost), stk.legCost);
   t('chart: all-in series = organic bill + ads cost, every month',
@@ -486,7 +508,7 @@ async function liveTests(htmlPath){
     proj:document.getElementById('o-proj-label').textContent,
     ocHidden:document.getElementById('ocards-kicker').hidden,
     fan:document.getElementById('flat-ads-note').textContent}));
-  t('labels control (ads off): kicker plain', lblOff.kick==='Projected Revenue ROAS', lblOff.kick);
+  t('labels control (ads off): kicker says revenue ROI (return-word law: ROI without ads)', lblOff.kick==='Projected Revenue ROI', lblOff.kick);
   t('labels control (ads off): price label plain', lblOff.price==='Fixed monthly investment');
   t('labels control (ads off): projection label plain', lblOff.proj==='12-Month Projection');
   t('labels control (ads off): pace-cards kicker hidden + flat note empty', lblOff.ocHidden===true && lblOff.fan==='');
@@ -499,7 +521,7 @@ async function liveTests(htmlPath){
     options:[...document.getElementById('footprint').options].map(o=>({v:o.value,d:o.disabled})),
     note:document.getElementById('note-seo').innerText.replace(/\s+/g,' ')};});
   t('audit score: calculator uses entered SEO score exactly despite rank 1', auth.seoEntered===12 && auth.seoEff===12, JSON.stringify(auth));
-  t('audit score: UI states the internal audit is used directly', /used directly/i.test(auth.note), auth.note);
+  t('audit score: UI states the audit scores are used as entered', /used (directly|as entered)/i.test(auth.note), auth.note);
   t('B2B footprint: local researched scope remains local', auth.footprint==='local', auth.footprint);
   t('B2B footprint: all footprint choices remain available', auth.options.every(o=>!o.d), JSON.stringify(auth.options));
 
@@ -524,13 +546,13 @@ async function liveTests(htmlPath){
   const lagUi=await page.evaluate(()=>{
     const s=readState(), q=computeQuote(s), n=getNegotiated(q), a=adsState(s,q,n.rampMonth);
     return {card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
-            math:document.getElementById('ads-math').innerText.replace(/\s+/g,' '),
             lag:a.lagM, m12:a.months.map(x=>x.adsW).join(',')};
   });
+  const lagPdf=await pdfText('?industry=highticket&footprint=metro&cpc=4&volume=5000&capacity=2&yearly=40000&convrate=0.1&acq=15&seo=1&geo=1&ads=1&stay=1');
   t('lag UI: big-ticket quote lags 2 months', lagUi.lag===2);
   t('lag UI: card no longer claims "month 1, no ramp"', !/month 1, no ramp/i.test(lagUi.card), lagUi.card.slice(0,260));
-  t('lag UI: card says first closings land ~month 3', /closings land (~|around )?month 3/i.test(lagUi.card), lagUi.card.slice(0,400));
-  t('lag UI: section 06 carries the honest timing note', /timing note/i.test(lagUi.math) && /month 3/.test(lagUi.math));
+  t('lag UI: card says first closings ~month 3', /first closings (land )?(~|around )?month 3/i.test(lagUi.card), lagUi.card.slice(0,400));
+  t('lag UI: PDF ads math carries the honest timing note', /timing note/i.test(lagPdf) && /month 3/.test(lagPdf));
   t('lag UI: schedule wins months 1-2 are zero', lagUi.m12.split(',').slice(0,2).join(',')==='0,0', lagUi.m12);
   /* fast vertical control: local keeps its month-1 delivery claim */
   await page.goto(url+'?industry=local&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
@@ -538,23 +560,23 @@ async function liveTests(htmlPath){
     const s=readState(), q=computeQuote(s), n=getNegotiated(q), a=adsState(s,q,n.rampMonth);
     return {lag:a.lagM, card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')};
   });
-  t('lag control: local service lags 0 and keeps "from month 1, no ramp"', lagC.lag===0 && /from month 1, no ramp/i.test(lagC.card), lagC.card.slice(0,240));
+  t('lag control: local service lags 0 and keeps "from month 1"', lagC.lag===0 && /· from month 1/i.test(lagC.card), lagC.card.slice(0,240));
 
   /* THE FUNNEL on the surfaces (HOTH-referenced, Aug 17) */
   await page.goto(url+'?industry=local&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
-  const fun1=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
-    math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')}));
-  t('funnel: card shows clicks → qualified opportunities → customers', /The funnel: [\d,]+ clicks → ~\d+ qualified opportunities \(\$[\d,]+ each\) → /.test(fun1.card), fun1.card.slice(0,300));
-  t('funnel: card shows the net-after-margin line', /\/mo net after the client|break-even/.test(fun1.card));
-  t('funnel: section 06 walks qualified opportunities with cost each', /become qualified opportunities/.test(fun1.math) && /per opportunity/.test(fun1.math));
-  t('funnel: section 06 distinguishes raw web leads from qualified opportunities', /raw web leads run far higher/.test(fun1.math));
-  t('funnel: section 06 has the profit-terms line', /in profit terms/i.test(fun1.math));
-  t('ROAS: card labels the ads multiple as revenue ROAS, before margin', /revenue ROAS [\d.]+×.*before margin|revenue ROAS/.test(fun1.card), fun1.card.slice(0,300));
+  const fun1=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')}));
+  const fun1Pdf=await pdfText('?industry=local&seo=1&geo=1&ads=1&stay=1');
+  t('funnel: PDF ads plan shows clicks → qualified opportunities → customers', /THE FUNNEL: [\d,]+ clicks\/mo → ~[\d,]+ qualified opportunities \(\$[\d,]+ each\) → /.test(fun1Pdf), fun1Pdf.slice(fun1Pdf.indexOf('THE FUNNEL'),fun1Pdf.indexOf('THE FUNNEL')+200));
+  t('funnel: PDF shows the net-after-margin line', /\/mo net profit at the client|break-even/.test(fun1Pdf));
+  t('funnel: PDF ads math walks qualified opportunities with cost each', /become qualified opportunities/.test(fun1Pdf) && /per opportunity/.test(fun1Pdf));
+  t('funnel: PDF ads math distinguishes raw web leads from qualified opportunities', /raw web leads run far higher/.test(fun1Pdf));
+  t('funnel: PDF ads math has the profit-terms line', /in profit terms/i.test(fun1Pdf));
+  t('ROAS: card labels the ads multiple as ROAS, revenue before margin', /[\d.]+× ROAS \(revenue, before margin\)/.test(fun1.card), fun1.card.slice(0,300));
   await page.goto(url+'?industry=ecom&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
-  const fun2=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '),
-    math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')}));
+  const fun2=await page.evaluate(()=>({card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')}));
+  const fun2Pdf=await pdfText('?industry=ecom&seo=1&geo=1&ads=1&stay=1');
   t('funnel (ecom): no opportunity stage on the card', !/opportunities \(/.test(fun2.card), fun2.card.slice(0,260));
-  t('funnel (ecom): section 06 says buyers purchase directly', /purchase directly|no lead stage/i.test(fun2.math));
+  t('funnel (ecom): PDF ads math says buyers purchase directly', /purchase directly|no lead stage/i.test(fun2Pdf));
 
   /* the revenue card reframes for one-time-sale verticals (Payton, Aug 17: "+$956/mo
      next to $138k/yr" is a contradiction when customers pay once) */
@@ -572,9 +594,11 @@ async function liveTests(htmlPath){
   await page.goto(url+'?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&revshare=0&stay=1',{waitUntil:'load'});
   const mw=await page.evaluate(()=>({tl:document.getElementById('o-timeline').innerText.replace(/\s+/g,' '),
     card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')}));
-  t('margin-aware cover claim: no flat "covers the program many times over"', !/covers the program many times over/.test(mw.tl), mw.tl.slice(0,200));
-  t('margin-aware cover claim: transactions-cover phrasing present', /(One win pays for the entire year.*gross profit at the modeled margin|average closed transactions more than cover)/.test(mw.tl));
-  t('stack: combined multiple labeled revenue ROAS (net line prints only when positive)', /revenue ROAS \(before margin\)/.test(mw.card) && /(net profit at the client|The month-by-month)/.test(mw.card), mw.card.slice(-360));
+  const mwPdf=await pdfText('?industry=ultra&yearly=50000&seo=1&geo=1&ads=1&revshare=0&stay=1');
+  t('margin-aware cover claim: no flat "covers the program many times over"', !/covers the program many times over/.test(mwPdf+mw.tl), mw.tl.slice(0,200));
+  t('margin-aware cover claim: transactions-cover phrasing present in the PDF', /(One win pays for the entire year.*gross profit at the modeled margin|average closed transactions more than cover)/.test(mwPdf));
+  t('site timeline is one lean line (the reading guide lives in the PDF)', mw.tl.length<330 && /reading guide is in the PDF/.test(mw.tl), String(mw.tl.length));
+  t('stack: PDF combined multiple labeled revenue ROAS (net line prints only when positive)', /revenue ROAS, before margin/.test(mwPdf) && /(net profit at the client|The combined 12-month chart)/.test(mwPdf), mwPdf.slice(mwPdf.indexOf('Year one, combined'),mwPdf.indexOf('Year one, combined')+300));
   await page.goto(url+'?industry=b2b&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const ai1=await page.evaluate(()=>computeQuote(readState()).aiLift);
   await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
@@ -603,13 +627,15 @@ async function liveTests(htmlPath){
      sales commission input for the percent he charges?") */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&commission=10&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
   const kc1=await page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q);
-    return {mgn:adsState(s,q,n.rampMonth).mgnPct, math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')};});
+    return {mgn:adsState(s,q,n.rampMonth).mgnPct};});
+  const kc1Pdf=await pdfText('?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&commission=10&seo=1&geo=1&ads=1&stay=1');
   t('keep-rate UI: commission 10 on 65% margin → 55% effective', kc1.mgn===55, kc1.mgn);
-  t('keep-rate UI: profit line says effective margin when commission > 0', /effective margin \(after their sales commission\)/.test(kc1.math), kc1.math.slice(-300));
+  t('keep-rate UI: PDF profit line says effective margin when commission > 0', /effective margin \(after their sales commission\)/.test(kc1Pdf), kc1Pdf.slice(-300));
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&commission=0&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});
   const kc2=await page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q);
-    return {mgn:adsState(s,q,n.rampMonth).mgnPct, math:document.getElementById('ads-math').innerText.replace(/\s+/g,' ')};});
-  t('keep-rate UI: commission 0 → full 65% margin, plain "margin" word', kc2.mgn===65 && !/effective margin \(after/.test(kc2.math));
+    return {mgn:adsState(s,q,n.rampMonth).mgnPct};});
+  const kc2Pdf=await pdfText('?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&commission=0&seo=1&geo=1&ads=1&stay=1');
+  t('keep-rate UI: commission 0 → full 65% margin, plain "margin" word', kc2.mgn===65 && !/effective margin \(after/.test(kc2Pdf));
   const tip=await page.evaluate(()=>document.querySelectorAll('#commission')[0].closest('.fgroup').querySelector('.tipbox').innerText.replace(/\s+/g,' '));
   t('commission tipbox: warns it is NOT the rate charged to customers', /NOT the rate the business charges its customers/i.test(tip));
   t('commission tipbox: states the output effect (margin minus this percentage)', /margin minus this percentage|effective keep-rate/i.test(tip));
@@ -618,13 +644,13 @@ async function liveTests(htmlPath){
      many successful businesses still run ads heavily") */
   await page.goto(url+'?industry=local&volume=5000&cpc=14&yearly=1200&capacity=40&seo=1&geo=1&ads=1&stay=1',{waitUntil:'load'});   // viable-but-not-cheap ads with room at pace → the taper case (very-efficient ads never taper; no-room zeroes the budget)
   const tn=await page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q),a=adsState(s,q,n.rampMonth);
-    return {taper:a.taperStart, math:document.getElementById('ads-math').innerText.replace(/\s+/g,' '),
-            card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')};});
+    return {taper:a.taperStart, card:document.getElementById('ads-card').innerText.replace(/\s+/g,' ')};});
+  const tnPdf=await pdfText('?industry=local&volume=5000&cpc=14&yearly=1200&capacity=40&seo=1&geo=1&ads=1&stay=1');
   t('taper-sidenote: fixture actually tapers', tn.taper!=null, 'taperStart='+tn.taper);
-  t('taper-sidenote: sec-06 frames taper as default, not directive', /the default, not a directive/.test(tn.math), tn.math.slice(-420));
-  t('taper-sidenote: sec-06 says businesses keep running ads to scale', /keep running ads heavily alongside strong organic/.test(tn.math));
-  t('taper-sidenote: card sequencing line carries the sidenote', /modeled default, not a rule/.test(tn.card), tn.card.slice(-320));
-  t('taper-sidenote: no "paying for it twice" preaching anywhere', !/paying for it twice|stops making sense|instead of running forever/.test(tn.math+tn.card));
+  t('taper-sidenote: PDF ads math frames taper as default, not directive', /the default, not a directive/.test(tnPdf), tnPdf.slice(-420));
+  t('taper-sidenote: PDF says businesses keep running ads to scale', /keep running ads heavily alongside strong organic/.test(tnPdf));
+  t('taper-sidenote: PDF schedule note and honest answer carry the sidenote', /modeled default, not a (rule|directive)/.test(tnPdf), tnPdf.slice(tnPdf.indexOf('Sidenote'),tnPdf.indexOf('Sidenote')+200));
+  t('taper-sidenote: no "paying for it twice" preaching anywhere', !/paying for it twice|stops making sense|instead of running forever/.test(tnPdf+tn.card));
 
   /* SCALABLE-DELIVERY LAW (Payton, Sept 15: "if the demand supports 226/mo it inputs 226 for
      situations like these") — borderless B2B, low-ticket transaction, capacity blank → the auto
@@ -665,7 +691,7 @@ async function liveTests(htmlPath){
   const cfQ=async(qs)=>{ await page.goto(url+qs,{waitUntil:'load'}); return page.evaluate(()=>{const s=readState(),q=computeQuote(s),n=getNegotiated(q),a=adsState(s,q,n.rampMonth),cf=channelFit(s,q,n,a);
     return {mode:cf.mode, viable:a.adsViable, veryEff:a.veryEfficient, basis:a.allowBasis, allow:a.acqAllowed, adCAC:a.adCAC, pb:a.paybackMo, ltv:a.ltvCac, paidConv:a.paidConv, roas:a.roiAds,
             comb:cf.comb?cf.comb.ret:null, org:cf.org?cf.org.ret:null, kicker:document.getElementById('o-kicker').innerText, roi:document.getElementById('o-roi').innerText,
-            card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '), math:document.getElementById('ads-math').innerText.replace(/\s+/g,' '), roiSub:document.getElementById('o-roi-sub').innerText.replace(/\s+/g,' ')};}); };
+            card:document.getElementById('ads-card').innerText.replace(/\s+/g,' '), roiSub:document.getElementById('o-roi-sub').innerText.replace(/\s+/g,' ')};}); };
   const spa=await cfQ('?industry=highticket&seo=1&geo=1&ads=1&stay=1');
   t('channel fit: med-spa preset is VIABLE on the payback rule (was "inefficient" at 15% of first-year value)', spa.viable && spa.basis==='payback' && spa.allow>spa.adCAC, JSON.stringify({allow:spa.allow,adCAC:spa.adCAC,basis:spa.basis}));
   t('channel fit: med-spa paid clicks convert at 90% of organic (adCAC = 12 ÷ 1.35%)', Math.abs(spa.paidConv-0.9)<1e-9 && Math.abs(spa.adCAC-12/0.0135)<0.01, spa.adCAC);
@@ -675,10 +701,12 @@ async function liveTests(htmlPath){
   t('channel fit: SaaS with $45 clicks at 0.4% → SEO/GEO FIRST, ads inviable, $0 budget', saas.mode==='organic-first' && !saas.viable && /PROJECTED REVENUE ROAS — SEO\/GEO ORGANIC/i.test(saas.kicker), JSON.stringify({mode:saas.mode,adCAC:saas.adCAC,allow:saas.allow,kicker:saas.kicker}));
   t('channel fit: SaaS paid clicks convert at 70% of organic', Math.abs(saas.paidConv-0.7)<1e-9, saas.paidConv);
   t('channel fit: the two verticals read differently (ads-first vs organic-first)', plumb.mode!==saas.mode);
-  t('channel fit: combined headline shows the COMBINED return with both channels beside it', /COMBINED/i.test(plumb.kicker) && /×$/.test(plumb.roi) && /Each channel alone: SEO\/GEO .*Google \+ Meta ads .*ROAS/.test(plumb.roiSub), plumb.kicker+' '+plumb.roi+' | '+plumb.roiSub.slice(-160));
+  t('channel fit: combined headline shows the COMBINED return with both channels beside it', /COMBINED/i.test(plumb.kicker) && /×$/.test(plumb.roi) && /SEO\/GEO alone .*ads alone/.test(plumb.roiSub), plumb.kicker+' '+plumb.roi+' | '+plumb.roiSub.slice(-160));
+  t('return-word law: the combined headline says ROAS (ads in the plan)', /Revenue ROAS/i.test(plumb.kicker), plumb.kicker);
   t('channel fit: combined return = combined value ÷ combined cost (matches the card table)', plumb.comb!=null && Math.abs(parseFloat(plumb.roi)-Math.round(plumb.comb*10)/10)<0.11, plumb.roi+' vs '+plumb.comb);
   t('channel fit: card carries the verdict and the three-column table', /Channel fit/i.test(plumb.card) && /Ads first/.test(plumb.card) && /Cost per new customer/.test(plumb.card) && /Combined/i.test(plumb.card), plumb.card.slice(0,200));
-  t('channel fit: section 06 explains the two tests (stated budget vs payback rule)', /payback rule/.test(spa.math) && /The larger one wins/.test(spa.math), spa.math.slice(0,200));
+  const spaPdf=await pdfText('?industry=highticket&seo=1&geo=1&ads=1&stay=1');
+  t('channel fit: PDF ads math explains the two tests (stated budget vs payback rule)', /payback rule/.test(spaPdf) && /The larger one wins/.test(spaPdf), spaPdf.slice(spaPdf.indexOf('Two tests'),spaPdf.indexOf('Two tests')+200));
   const adsOnly=await cfQ('?industry=local&organic=0&ads=1&stay=1');
   t('channel fit: ads-only quote headlines the ads ROAS', /ROAS — GOOGLE \+ META ADS ONLY/i.test(adsOnly.kicker) && /×$/.test(adsOnly.roi) && adsOnly.mode==='ads-only', adsOnly.kicker+' '+adsOnly.roi);
   const blk=await cfQ('?industry=highticket&footprint=metro&cpc=4&volume=5000&capacity=2&yearly=50000&convrate=0.1&margin=50&commission=0&years=1&seo=1&geo=1&ads=1&stay=1');
@@ -725,6 +753,21 @@ async function liveTests(htmlPath){
     legAds:document.getElementById('legend-ads').hidden, legCost:document.getElementById('legend-cost').textContent}));
   t('chart control: no ads segments when ads off', !/bar-ads/.test(noAds.svg));
   t('chart control: ads legend hidden, cost key restored', noAds.legAds===true && /fixed \+ share/.test(noAds.legCost), noAds.legCost);
+
+  /* THE AUDIT THEME (Payton, Oct 6): Letter, Inter embedded, named page references, PAGE N footers,
+     and the return-word law on the tiles */
+  const thA=await pdfText('?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1');
+  const thAm=_pdfMeta['?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1'];
+  t('theme: the deck is US Letter', /612 x 792/.test(thAm.size), thAm.size);
+  t('theme: Inter is embedded (all four weights)', thAm.inter>=4, String(thAm.inter));
+  t('theme: footers carry NEW REWARD · PAGE N · tagline', /N ?E ?W +R ?E ?W ?A ?R ?D/.test(thA) && /PAGE 2/.test(thA) && /Get Found\. Get Trusted\. Get Chosen\./.test(thA));
+  t('theme: body copy names pages instead of numbering them', !/on page \d/.test(thA) && /Inputs & Sources page/.test(thA), (thA.match(/on page \d[^.]{0,60}/)||[''])[0]);
+  t('return-word law: organic-only deck says REVENUE ROI on the tiles, never ROAS', /ONGOING REVENUE ROI/.test(thA) && /YEAR-1 REVENUE ROI/.test(thA) && !/REVENUE ROAS/.test(thA), (thA.match(/REVENUE RO\w+/g)||[]).join('|'));
+  t('return-word law: glossary explains ROI vs ROAS', /Revenue ROI vs revenue ROAS/.test(thA));
+  const thB=shrPdf;
+  t('return-word law: deck with ads says REVENUE ROAS on the tiles', /ONGOING REVENUE ROAS/.test(thB) && /YEAR-1 REVENUE ROAS/.test(thB), (thB.match(/REVENUE RO\w+/g)||[]).join('|'));
+  t('theme: the ads deck carries the plain-words ads math (moved off the site)', /The Ads Math, in Plain Words/.test(thB) && /How the monthly budget is built/.test(thB) && /who gets paid what/.test(thB));
+  t('lean site: no section-05 share-math or section-06 ads-math prose on the page', await page.evaluate(()=>!document.getElementById('share-math') && !document.getElementById('ads-math') && !/Full Transparency/.test(document.body.innerText)));
 
   /* PDF fit-to-page flow (Sept 8 audit): the how-to-read (p3) and honest-answer (p2) sections
      must keep every paragraph AND land above the footer/footnote — no dropped copy, font ≥ 7.8 */
