@@ -1119,6 +1119,9 @@ input.roi-flag::placeholder{color:rgba(200,55,42,.6)}
       <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#6b5523"/><stop offset=".5" stop-color="#e9c172"/><stop offset="1" stop-color="#6b5523"/></linearGradient></defs>
     </svg>
 
+    <!-- pre-export guard: any open realism / intent / pairing check on an input is repeated here, because
+         the PDF prints the projection exactly as entered (Payton, Oct 6 — the McEwen audit) -->
+    <div class="no-print auto-note" id="export-guard" hidden style="margin:8px 0 2px;color:var(--gold-bright);line-height:1.45"></div>
     <div class="no-print" style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
       <button class="btn btn-ghost" style="flex:1 1 130px;min-width:0" onclick="previewPDF()" title="See exactly what the PDF will contain — nothing is downloaded">Preview PDF</button>
       <button class="btn btn-gold" id="pdfbtn" style="flex:1 1 130px;min-width:0" onclick="downloadPDF()">Download PDF</button>
@@ -1843,6 +1846,33 @@ function channelFit(s,q,n,a){
     : mode==='organic-first' ? (a&&a.noRoom ? 'organic fills the stated capacity at pace — a paid budget would buy customers the business cannot serve' : '~'+(a&&a.cacEff!=null?fmt$(Math.round(a.cacEff)):'—')+' all-in per ads-won customer vs '+(a?fmt$(Math.round(a.acqAllowed)):'—')+' justified — the budget belongs in SEO/GEO')
     : 'payback '+pbS+' · LTV:CAC ~'+(a.ltvCac!=null?a.ltvCac.toFixed(1):'—')+'x — organic program switched off';
   return {mode, label, shortLabel, why, shortWhy, org, ads, comb, keep};
+}
+/* REALISM GUARDS (Payton, Oct 6 — the McEwen audit): the calculator's math was right and the
+   INPUTS were wrong twice over — a 5,000/mo "realtor Lehi Utah" volume that only holds for the
+   whole listing-browse cluster (Keyword Planner: 10–100/mo for the agent-hiring phrase), and a
+   1–1.5% visit-to-closing rate that belongs to med spas, not agents (the repo rule: 0.1–0.25%).
+   These helpers spot that shape and say so under the input — soft, visible, never silent. */
+const RE_AGENT = /realtor|real[- ]estate|listing agent|buyer'?s agent|sell (my|your) (house|home)|homes? for sale|houses? for sale|mls/i;
+const RE_BROWSE = /homes? for sale|houses? for sale|listings?|zillow|redfin|mls|condos? for sale|land for sale/i;
+function bigTicketOneTime(s,q){
+  /* real-estate-agent phrase, OR a one-time ($25k+) ticket on a local vertical — the shape
+     where a med-spa conversion rate quietly inflates the projection ten-fold.
+     TWO CONSISTENT PAIRINGS for an agent, never mixed: (A) the WHOLE real-estate cluster
+     (listing-browse included, thousands per market) × the 0.1–0.25% standard that assumes most
+     of that traffic is browsing; or (B) the agent-hiring cluster alone (low hundreds per market)
+     × a hiring-intent rate of ~1–1.5%. Mixing A's volume with B's rate overstates ten-fold;
+     mixing B's volume with A's rate double-discounts. */
+  const agentPhrase = RE_AGENT.test(s.phrase||'');
+  const oneTimeBig = (q.retainYears||1)<=1 && q.yearlyValue>=25000 && (s.industry==='highticket'||s.industry==='ultra');
+  const spread = Math.max(1, (typeof MKTS!=='undefined'&&MKTS.length)?MKTS.length:1, (q.units||1)*((FOOT[s.footprint]||{}).reach||1));
+  const perMkt = q.vol/spread;
+  const geo = s.footprint!=='nongeo';
+  /* thousands per market, or thousands in total across a footprint = the listing-browse cluster;
+     low hundreds per market AND in total = the agent-hiring cluster alone. The band between is
+     ambiguous (a small resort town's whole cluster can be a few hundred) and raises nothing. */
+  const clusterSized = geo && (perMkt>1500 || q.vol>=3000);
+  const hiringSized  = geo && perMkt<500 && q.vol<1500;
+  return {agentPhrase, oneTimeBig, perMkt, clusterSized, hiringSized, flag: agentPhrase||oneTimeBig};
 }
 function adsSeqLine(s,q,a,noSide){
   /* noSide: the PDF honest-answer section sits on the same page as the schedule note,
@@ -2722,9 +2752,25 @@ function render(){
       volAdv='<span style="display:block;margin-top:4px">Scope changed since research ('+prefillScope.units+' unit'+(prefillScope.units===1?'':'s')+' on '+FOOT[prefillScope.footprint].name+') — demand for the new scope ≈ <a href="#" data-sug="'+sug+'"><b>'+sug.toLocaleString()+'/mo — apply</b></a></span>';
     }
   }
-  document.getElementById('note-vol').innerHTML = q.volIsAuto
+  (function(){
+    const base = q.volIsAuto
       ? 'Auto: '+BENCH(s).name+' baseline '+BENCH(s).vol.toLocaleString()
         +' × '+parseFloat(effReach(s.footprint,q.units).toFixed(2))+'× reach'+(s.footprint==='multi'&&q.units>2?' ('+Math.min(q.units,5)+' markets)':'')+' = <b>'+q.vol.toLocaleString()+' searches/mo</b>' : volScaleNote+volAdv;
+    /* VOLUME-INTENT GUARD: an agent-hiring cluster for ONE city ("realtor Lehi Utah" + variants)
+       sits in the low hundreds in Keyword Planner; thousands per market means listing-browse
+       phrases were counted. Per-market demand = volume ÷ the markets it is spread across. */
+    let guard='';
+    const bt = bigTicketOneTime(s,q);
+    if(!q.volIsAuto && bt.agentPhrase && s.footprint!=='nongeo'){
+      const rate = q.closeRate*100;
+      const browse = RE_BROWSE.test(s.phrase||'');
+      if(browse) guard = '<span style="display:block;margin-top:4px;color:var(--gold-bright)">&#9888; <b>Intent check:</b> "'+s.phrase+'" is a listing-browse phrase — those searchers are shopping homes, not hiring an agent. Make the money phrase the agent-hiring query (realtor / listing agent / real estate agent + city); the volume may stay the whole real-estate cluster only if the conversion rate is the 0.1–0.25% standard that assumes browse traffic.</span>';
+      else if(bt.clusterSized && rate>0.5) guard = '<span style="display:block;margin-top:4px;color:var(--gold-bright)">&#9888; <b>Intent check:</b> ~'+Math.round(bt.perMkt).toLocaleString()+' searches/mo per market is the whole real-estate cluster — Keyword Planner puts a single city\'s agent-hiring cluster ("realtor + city" and variants) in the low hundreds; the thousands come from listing-browse phrases ("homes for sale …"). That is a legitimate way to size it <b>only</b> paired with the 0.1–0.25% conversion standard — and the rate here is '+parseFloat(rate.toFixed(2))+'%, so the projection is overstated (see the conversion check below). Label it as the cluster, not as agent-hiring demand.</span>';
+      /* correctly paired cluster (Blake, McEwen at 0.25%): no warning glyph — a sizing note for the pitch */
+      else if(bt.clusterSized) guard = '<span style="display:block;margin-top:4px"><b>Sizing note:</b> ~'+Math.round(bt.perMkt).toLocaleString()+' searches/mo per market is the whole real-estate cluster (listing-browse included), correctly paired with the '+parseFloat(rate.toFixed(2))+'% standard — present it as the cluster, not as agent-hiring demand.</span>';
+    }
+    document.getElementById('note-vol').innerHTML = base+guard;
+  })();
   const isEcom = s.industry==='ecom';
   document.getElementById('row-aov').style.display = isEcom ? '' : 'none';       // AOV × purchases shown only for ecom
   document.getElementById('fg-yearly').style.display = isEcom ? 'none' : '';     // annual-value field hidden for ecom (AOV replaces it)
@@ -2771,8 +2817,34 @@ function render(){
   (function(){ var g=document.getElementById('volsource').closest('.fgroup'); if(g) g.style.display=(s.volume>0)?'':'none'; })();
   /* AOV x frequency only applies to e-commerce — hide the fields everywhere else */
   ['aov','freq'].forEach(function(id){ var g=document.getElementById(id).closest('.fgroup'); if(g) g.style.display = (s.industry==='ecom')?'':'none'; });
-  document.getElementById('note-conv').innerHTML = (s.convrate>0)
-      ? '' : 'Auto: '+BENCH(s).name+' typical = <b>'+BENCH(s).conv+'%</b> visit-to-customer — set the real rate if known';
+  (function(){
+    const base = (s.convrate>0) ? '' : 'Auto: '+BENCH(s).name+' typical = <b>'+BENCH(s).conv+'%</b> visit-to-customer — set the real rate if known';
+    const bt = bigTicketOneTime(s,q);
+    const rate = q.closeRate*100, rateTxt = parseFloat(rate.toFixed(2))+'%';
+    const altAt = v => custRate(computeQuote(Object.assign({}, s, {convrate: v})).newCust).txt;
+    const nowTxt = custRate(q.newCust).txt;
+    let guard='';
+    if(bt.agentPhrase && !q.volIsAuto && bt.clusterSized && rate>0.5){
+      /* pairing A's volume with pairing B's rate — the McEwen shape */
+      guard = '<span style="display:block;margin-top:4px;color:var(--gold-bright)">&#9888; <b>Realism check:</b> ~'+Math.round(bt.perMkt).toLocaleString()+' searches/mo per market is the WHOLE real-estate cluster (listing-browse included), and that volume only pairs with the agent standard of <b>0.1–0.25%</b> (0.1 for luxury-only books) — most of those searchers are browsing homes, not hiring an agent. '+rateTxt+' is a med-spa / clinic rate: at '+rateTxt+' the projection models '+nowTxt+'; at the 0.25% standard it models <b>'+altAt(0.25)+'</b>. Either keep this volume at 0.1–0.25%, or count only the agent-hiring phrases (low hundreds) at ~1–1.5% — never both.</span>';
+    } else if(bt.agentPhrase && !q.volIsAuto && bt.hiringSized && rate<0.5){
+      /* pairing B's volume with pairing A's rate — double-discounted (the band between the two
+         cluster sizes is ambiguous and stays silent; Blake's six resort towns live there) */
+      guard = '<span style="display:block;margin-top:4px;color:var(--gold-bright)">&#9888; <b>Pairing check:</b> ~'+Math.round(bt.perMkt).toLocaleString()+' searches/mo per market is the size of the agent-hiring cluster alone (Keyword Planner\'s "realtor + city" range). If that is what was counted, those searchers are looking for an agent and that intent converts at roughly <b>1–1.5%</b> — the 0.1–0.25% standard assumes listing-browse traffic that is not in this count, so '+rateTxt+' discounts twice. At '+rateTxt+' the projection models '+nowTxt+'; at 1% it models <b>'+altAt(1)+'</b>. Keep '+rateTxt+' only if this really is a small town\'s whole real-estate cluster.</span>';
+    } else if(bt.oneTimeBig && !bt.agentPhrase && rate>0.5){
+      guard = '<span style="display:block;margin-top:4px;color:var(--gold-bright)">&#9888; <b>Realism check:</b> this reads as a one-time, big-ticket purchase ($25k+, no repeat). The visit-to-signed standard for such projects is <b>0.1–0.25%</b>; '+rateTxt+' is a med-spa / clinic number. At '+rateTxt+' the projection models '+nowTxt+'; at the 0.25% standard it models <b>'+altAt(0.25)+'</b>. Use the standard unless live tracking data proves otherwise.</span>';
+    }
+    document.getElementById('note-conv').innerHTML = base+guard;
+  })();
+  /* EXPORT GUARD: mirror any open warning (the glyph) from the two input notes next to the PDF
+     buttons — the proposal prints whatever is entered, so an unresolved check must be seen first */
+  (function(){
+    const g=document.getElementById('export-guard'); if(!g) return;
+    const open=[['note-vol','Search volume'],['note-conv','Conversion rate']]
+      .filter(([id])=>/\u26a0/.test(document.getElementById(id).innerText)).map(([,l])=>l);
+    g.hidden=!open.length;
+    g.innerHTML=open.length ? '&#9888; <b>Open realism check</b> on '+open.join(' and ')+' — the PDF prints the projection exactly as entered. Read the note under that input and settle it before exporting or sending a quote link.' : '';
+  })();
   document.getElementById('note-yrs').innerHTML = (s.years>0)
       ? '' : 'Auto: '+BENCH(s).name+' typical = <b>'+BENCH(s).yrs+' yrs</b>';
   document.getElementById('note-margin').innerHTML = (s.margin>0)
@@ -2949,7 +3021,7 @@ function render(){
    an AI. Paste it, and the AI returns a prefill link (using THIS calculator's field spec) that
    loads every input. A static page can't run live web research itself, so this hands the work to
    an AI with web access — far more accurate than a generic "guess a price" prompt. */
-const BUILD='NR-20260928-72';
+const BUILD='NR-20261006-73';
 setTimeout(function(){try{
   fetch(location.pathname,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
     var m=t.match(/const BUILD='([^']+)'/);
@@ -3057,7 +3129,9 @@ function researchWithAI(){
   const prompt=promptRaw+'\n\nFINAL CLASSIFICATION OVERRIDES — THESE OUTRANK ANY CONFLICTING RULE ABOVE:\n'
     +'- B2B is NOT automatically borderless. Choose footprint from actual service reach: local for one market, multi for 2–5 named markets, metro for one region, national for many geographic markets, and nongeo only when customers can be served without geographic limits. Offices alone are not markets, but industrial services, commercial contractors, MSPs, and other B2B firms can be geographically bounded.\n'
     +'- seoScore and geoScore come from New Reward\'s internal visibility audit. Leave both fields blank unless audited scores were explicitly supplied; write "blank — pending New Reward audit" in the table and omit both parameters from the link. Never invent directional substitutes.\n'
-    +'- Client-economics values must be marked for client confirmation before a final proposal. Research provides a starting point, not a claim that the client verified it.';
+    +'- Client-economics values must be marked for client confirmation before a final proposal. Research provides a starting point, not a claim that the client verified it.\n'
+    +'- REAL-ESTATE AGENTS (the McEwen rule): the money phrase is the AGENT-HIRING query (realtor / listing agent / real estate agent + city), never a listing-browse phrase ("homes for sale …"). Volume and conversion come as ONE of two consistent pairings — never mixed: (A) the WHOLE real-estate cluster for the footprint (listing-browse included; thousands per market) with convrate 0.25 (0.1 luxury-only), the standard that assumes most of that traffic is browsing; or (B) the agent-hiring cluster alone (Keyword Planner puts a single city\'s "realtor + city" cluster in the low hundreds) with a hiring-intent convrate of 1–1.5. Default to (A). A\'s volume with B\'s rate overstates ten-fold (the McEwen error); B\'s volume with A\'s rate double-discounts. Name the pairing and the Keyword Planner range you saw for the head phrase in the Why.\n'
+    +'- VISIBILITY CHECKS (for whoever runs New Reward\'s audit, and for any screenshots in the pitch): run them in a logged-out / incognito session — a signed-in ChatGPT or Google is personalized toward the business being researched. Query BOTH the business name AND the principal\'s personal name for owner-branded businesses (agents, attorneys, doctors, advisors) — AI engines usually name the person. Report Google ORGANIC (the website in the top 10) and the MAP PACK (the Business Profile) separately; "not on page one" is false if the profile shows in the map pack.';
   const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   const openChat=()=>{
     /* Plain NEW CHAT, never Claude Code: the claude.ai/new universal link opens a fresh chat in

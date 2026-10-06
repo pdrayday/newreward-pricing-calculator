@@ -684,6 +684,41 @@ async function liveTests(htmlPath){
   const blk=await cfQ('?industry=highticket&footprint=metro&cpc=4&volume=5000&capacity=2&yearly=50000&convrate=0.1&margin=50&commission=0&years=1&seo=1&geo=1&ads=1&stay=1');
   t('channel fit: one-time sale uses the half-profit rule (Blake: $12,500 payback allowance vs $7,500 stated)', Math.abs(blk.allow-12500)<1 && blk.basis==='payback', JSON.stringify({allow:blk.allow,basis:blk.basis}));
 
+  /* REALISM GUARDS (Payton, Oct 6 — the McEwen audit: right math, wrong inputs) */
+  const rgQ=async(qs)=>{ await page.goto(url+qs,{waitUntil:'load'}); return page.evaluate(()=>({conv:document.getElementById('note-conv').innerText.replace(/\s+/g,' '), vol:document.getElementById('note-vol').innerText.replace(/\s+/g,' '), pace:computeQuote(readState()).newCust, xg:(function(){const g=document.getElementById('export-guard'); return g.hidden?'':g.innerText.replace(/\s+/g,' ');})()})); };
+  const mc=await rgQ('?client=McEwen&phrase=realtor+Lehi+Utah&industry=highticket&footprint=local&volume=5000&convrate=1.5&yearly=15000&years=1&seo=1&geo=1&stay=1');
+  t('realism: agent phrase at 1.5% conversion gets the 0.1–0.25% standard check', /Realism check/.test(mc.conv) && /0\.1–0\.25%/.test(mc.conv) && /at the 0\.25% standard it models/.test(mc.conv), mc.conv.slice(0,160));
+  t('realism: 5,000/mo for one city\'s agent-hiring phrase gets the listing-browse intent check', /Intent check/.test(mc.vol) && /low hundreds/.test(mc.vol), mc.vol.slice(0,160));
+  t('realism: an open check is repeated next to the PDF buttons, naming both inputs', /Open realism check/.test(mc.xg) && /Search volume and Conversion rate/.test(mc.xg) && /exactly as entered/.test(mc.xg), mc.xg);
+  const FLAG=/Realism check|Intent check|Pairing check|\u26a0/;
+  const mcOk=await rgQ('?client=McEwen&phrase=realtor+Lehi+Utah&industry=highticket&footprint=local&volume=5000&convrate=0.25&yearly=15000&years=1&seo=1&geo=1&stay=1');
+  t('realism: corrected McEwen inputs (whole cluster 5,000/mo at 0.25% — pairing A) raise no warning, only the sizing note', !FLAG.test(mcOk.conv+mcOk.vol) && /Sizing note/.test(mcOk.vol) && /correctly paired/.test(mcOk.vol), (mcOk.conv+mcOk.vol).slice(0,200));
+  t('realism: corrected McEwen reproduces the audit document (5,000 × 0.25% → ~1.1 closings/mo)', mcOk.pace>1.0 && mcOk.pace<1.25, String(mcOk.pace));
+  const mcDD=await rgQ('?client=McEwen&phrase=realtor+Lehi+Utah&industry=highticket&footprint=local&volume=400&convrate=0.25&yearly=15000&years=1&seo=1&geo=1&stay=1');
+  t('realism: the agent-hiring cluster alone (400/mo) at 0.25% is called out as a double discount (pairing B wants 1–1.5%)', /Pairing check/.test(mcDD.conv) && /1–1.5%/.test(mcDD.conv) && /at 1% it models/.test(mcDD.conv) && !/Realism check|Intent check/.test(mcDD.conv+mcDD.vol), mcDD.conv.slice(0,200));
+  t('realism: export guard names only the flagged input (conversion rate for the double discount)', /Open realism check on Conversion rate —/.test(mcDD.xg), mcDD.xg);
+  const mcDDok=await rgQ('?client=McEwen&phrase=realtor+Lehi+Utah&industry=highticket&footprint=local&volume=400&convrate=1.2&yearly=15000&years=1&seo=1&geo=1&stay=1');
+  t('realism: the agent-hiring cluster alone (400/mo) at 1.2% — pairing B — raises nothing', !FLAG.test(mcDDok.conv+mcDDok.vol), (mcDDok.conv+mcDDok.vol).slice(0,200));
+  const br=await rgQ('?phrase=homes+for+sale+Lehi+Utah&industry=highticket&footprint=local&volume=5000&convrate=0.25&yearly=15000&years=1&seo=1&geo=1&stay=1');
+  t('realism: a listing-browse money phrase is called out as the wrong phrase', /listing-browse phrase/.test(br.vol), br.vol.slice(0,160));
+  const bkR=await rgQ('?phrase=park+city+real+estate+agent&industry=highticket&footprint=metro&units=1&volume=5000&cpc=4&capacity=2&yearly=50000&years=1&convrate=0.1&margin=50&commission=0&seo=1&geo=1&markets=Park+City%7E2500%7CHeber+City%7E1200%7CMidway%7E450%7CKamas%7E250%7CHideout%7E350%7CSurrounding%7E250&stay=1');
+  t('realism: Blake (5,000 across six resort towns, 0.1% luxury) raises no warning — the band between the two cluster sizes stays silent', !FLAG.test(bkR.conv+bkR.vol), (bkR.conv+bkR.vol).slice(0,200));
+  t('realism: export guard stays hidden when nothing is flagged (Blake)', bkR.xg==='', bkR.xg);
+  const bkBad=await rgQ('?phrase=park+city+real+estate+agent&industry=highticket&footprint=metro&units=1&volume=5000&cpc=4&capacity=2&yearly=50000&years=1&convrate=1.5&margin=50&commission=0&seo=1&geo=1&markets=Park+City%7E2500%7CHeber+City%7E1200%7CMidway%7E450%7CKamas%7E250%7CHideout%7E350%7CSurrounding%7E250&stay=1');
+  t('realism: Blake\'s footprint at a 1.5% med-spa rate IS flagged — 5,000 in total across a footprint is cluster-sized', /Realism check/.test(bkBad.conv) && /Intent check/.test(bkBad.vol), (bkBad.conv+bkBad.vol).slice(0,200));
+  const spaR=await rgQ('?phrase=med+spa+provo&industry=highticket&volume=8000&convrate=2.5&yearly=2500&seo=1&geo=1&stay=1');
+  t('realism: a med spa at 2.5% is not flagged (repeat-purchase, mid ticket)', !FLAG.test(spaR.conv+spaR.vol));
+  const bld=await rgQ('?industry=ultra&yearly=400000&years=1&convrate=1.5&seo=1&geo=1&stay=1');
+  t('realism: a $400k one-time project at 1.5% gets the big-ticket check', /Realism check/.test(bld.conv) && /\$25k\+, no repeat/.test(bld.conv) && /0\.1–0\.25%/.test(bld.conv), bld.conv.slice(0,160));
+  /* the research prompt carries the McEwen rule: capture it by stubbing window.open + clipboard */
+  await page.goto(url+'?industry=highticket&stay=1',{waitUntil:'load'});
+  const pr=await page.evaluate(()=>new Promise(res=>{ let got='';
+    window.open=function(u){ got=decodeURIComponent(String(u).split('q=')[1]||''); return null; };
+    Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{ got=got||t; return Promise.resolve(); }},configurable:true});
+    document.getElementById('website').value='https://example.com'; researchWithAI(); setTimeout(()=>res(got),600); }));
+  t('realism: research prompt carries the real-estate phrase/volume/conversion rule', /REAL-ESTATE AGENTS \(the McEwen rule\)/.test(pr) && /low hundreds/.test(pr) && /convrate 0\.25 \(0\.1 luxury-only\)/.test(pr) && /never mixed/.test(pr) && /Default to \(A\)/.test(pr), pr.slice(-400));
+  t('realism: research prompt tells the audit to run logged-out and to query the principal\'s name too', /logged-out \/ incognito/.test(pr) && /principal\'s personal name/.test(pr) && /MAP PACK/.test(pr));
+
   /* ads off (control): no blue segments, organic legend restored */
   await page.goto(url+'?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1',{waitUntil:'load'});
   const noAds=await page.evaluate(()=>({svg:document.getElementById('o-chart').innerHTML,
