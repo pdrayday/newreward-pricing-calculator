@@ -754,6 +754,41 @@ async function liveTests(htmlPath){
   t('chart control: no ads segments when ads off', !/bar-ads/.test(noAds.svg));
   t('chart control: ads legend hidden, cost key restored', noAds.legAds===true && /fixed \+ share/.test(noAds.legCost), noAds.legCost);
 
+  /* THE HONEST READ (Payton, Oct 14): a skeptical feasibility verdict on the left under Client
+     Economics — rule-built from the inputs/outputs, replaced by a researched read via &verdict= */
+  const fzQ=async(qs)=>{ await page.goto(url+qs,{waitUntil:'load'}); return page.evaluate(()=>({txt:document.getElementById('feas').innerText.replace(/\s+/g,' '), label:document.querySelector('#feas .feas-label').innerText, chip:document.querySelector('#feas .feas-chip').className, paras:document.querySelectorAll('#feas > p').length, order:[...document.querySelectorAll('.inputs .section')].map(d=>(d.querySelector('.sec-title')||{}).innerText)})); };
+  const fz1=await fzQ('?client=Radiant+Med+Spa&industry=highticket&volume=8000&volsource=kwp&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1');
+  t('honest read: section sits on the left under Client Economics, before the ads budget', fz1.order.findIndex(x=>/THE HONEST READ/i.test(x))===fz1.order.findIndex(x=>/CLIENT ECONOMICS/i.test(x))+1 && fz1.order.findIndex(x=>/Ads Budget/i.test(x))>fz1.order.findIndex(x=>/THE HONEST READ/i.test(x)), fz1.order.join(' | '));
+  t('honest read: two or three short paragraphs with a verdict chip', fz1.paras>=2 && fz1.paras<=3 && fz1.txt.split(' ').length<330, String(fz1.txt.split(' ').length));
+  t('honest read: measured, viable med spa reads likely profitable / with conditions', /Likely profitable|with conditions/.test(fz1.label) && /good|cond/.test(fz1.chip), fz1.label);
+  t('honest read: it questions its own assumptions with sensitivity numbers and a bottom line', /skeptic/.test(fz1.txt) && /at half that rate the return is [\d.]+×/.test(fz1.txt) && /Bottom line:/.test(fz1.txt));
+  const fz2=await fzQ('?client=Blake+Rustand&phrase=park+city+real+estate+agent&industry=highticket&footprint=metro&compstr=strong&volume=5000&cpc=4&capacity=2&yearly=50000&years=1&convrate=0.1&margin=50&seo=1&geo=1&stage=idea&stay=1');
+  t('honest read: a pre-launch idea is never called likely profitable — it is a bet on an idea', /bet on an idea/i.test(fz2.label) && /risk/.test(fz2.chip) && /does not exist yet/.test(fz2.txt) && /shape of the prize/.test(fz2.txt), fz2.label);
+  t('honest read: the startup bottom line asks for proofs before scaling', /Treat year one as a test/.test(fz2.txt) && /Keyword Planner/.test(fz2.txt));
+  t('honest read: at the 0.1% conversion floor it says so instead of a fake halving', /already the floor the model allows/.test(fz2.txt));
+  const fz3=await fzQ('?client=Tiny&industry=ultra&footprint=national&units=20&volume=200&convrate=0.1&yearly=100000&seo=1&geo=1&stay=1');
+  t('honest read: below the viability bar reads Not a fit at this scope', /Not a fit/.test(fz3.label) && /bad/.test(fz3.chip) && /does not work/.test(fz3.txt), fz3.label);
+  const fz4=await fzQ('?client=Peak+Outfitters&industry=ecom&footprint=nongeo&volume=50000&mktshare=70&seo=1&geo=1&stay=1');
+  t('marketplaces: the read names Amazon / TikTok Shop and the on-site slice', /Amazon, TikTok Shop/.test(fz4.txt) && /on-site slice/.test(fz4.txt), fz4.txt.slice(0,200));
+  const mk=await page.evaluate(()=>({vis:document.getElementById('fg-mktshare').style.display!=='none', note:document.getElementById('note-mktshare').innerText}));
+  t('marketplaces: the share input shows for e-commerce with its on-site note', mk.vis && /Only the on-site 30%/.test(mk.note), mk.note);
+  await page.goto(url+'?industry=local&seo=1&geo=1&stay=1',{waitUntil:'load'});
+  t('marketplaces: the share input is hidden outside e-commerce', await page.evaluate(()=>document.getElementById('fg-mktshare').style.display==='none'));
+  const vTxt='Verdict: Profitable with conditions — if the reviews come. || Plumbing demand in Provo is real. || But the map pack decides it.';
+  const fz5=await fzQ('?client=Acme&industry=local&seo=1&geo=1&stage=new&verdict='+encodeURIComponent(vTxt)+'&stay=1');
+  t('researched read: &verdict= shows first with its own verdict line', /if the reviews come/.test(fz5.label) && /cond/.test(fz5.chip) && /map pack decides it/.test(fz5.txt) && /Researched read/.test(fz5.txt), fz5.label);
+  const fzLink=await page.evaluate(()=>{ let got=''; Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{got=t;return Promise.resolve();}},configurable:true}); copyQuoteLink(); return got; });
+  t('quote link carries stage, mktshare and the researched verdict', /stage=new/.test(fzLink) && /verdict=Verdict/.test(fzLink), fzLink.slice(0,200));
+  await page.goto(url+'?industry=ecom&stay=1',{waitUntil:'load'});
+  const pr2=await page.evaluate(()=>new Promise(res=>{ let got='';
+    window.open=function(u){ got=decodeURIComponent(String(u).split('q=')[1]||''); return null; };
+    Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{ got=got||t; return Promise.resolve(); }},configurable:true});
+    document.getElementById('website').value='https://example.com'; researchWithAI(); setTimeout(()=>res(got),600); }));
+  t('research prompt asks for THE HONEST READ as a devil\'s advocate and encodes it as &verdict=', /THE HONEST READ/.test(pr2) && /devil\'s advocate/i.test(pr2) && /QUESTION YOUR OWN QUESTIONS/.test(pr2) && /behavioral economics/.test(pr2) && /&verdict=/.test(pr2) && /stage=STAGE/.test(pr2) && /mktshare=NUM/.test(pr2));
+  t('research prompt: stage and marketplace share are fields with rules', /stage: established/.test(pr2) && /mktshare \(e-commerce only\)/.test(pr2) && /Business stage, Marketplace share/.test(pr2));
+  const fzPdf=await pdfText('?client=Radiant+Med+Spa&industry=highticket&volume=8000&volsource=kwp&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stage=new&stay=1');
+  t('honest read: never printed in the proposal; the inputs page lists the business stage', !/Honest Read|skeptic/.test(fzPdf) && /under 2 years/.test(fzPdf) && /assumes a trading/.test(fzPdf));
+
   /* THE AUDIT THEME (Payton, Oct 6): Letter, Inter embedded, named page references, PAGE N footers,
      and the return-word law on the tiles */
   const thA=await pdfText('?industry=highticket&volume=8000&cpc=8&convrate=2.5&yearly=2500&capacity=20&seo=1&geo=1&stay=1');
